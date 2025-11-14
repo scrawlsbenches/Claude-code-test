@@ -115,6 +115,31 @@ curl -X POST http://localhost:5000/api/v1/deployments \
   }'
 ```
 
+## Comprehensive API Examples
+
+A complete example application demonstrating **full utilization** of all API endpoints is available in `examples/ApiUsageExample/`.
+
+**Features:**
+- ✅ All deployment strategies (Direct, Rolling, Blue-Green, Canary)
+- ✅ Cluster monitoring and health checks
+- ✅ Time-series metrics retrieval
+- ✅ Deployment lifecycle management
+- ✅ Rollback scenarios
+- ✅ Error handling and retry logic
+- ✅ Production-ready patterns
+
+**Quick Start:**
+```bash
+# Run comprehensive examples
+cd examples/ApiUsageExample
+./run-example.sh
+
+# Or with custom API URL
+./run-example.sh http://your-api:5000
+```
+
+See [examples/ApiUsageExample/README.md](examples/ApiUsageExample/README.md) for detailed documentation.
+
 ## Technology Stack
 
 **Core Framework:**
@@ -144,6 +169,8 @@ Claude-code-test/
 │   ├── HotSwap.Distributed.Infrastructure/  # Telemetry, security, metrics
 │   ├── HotSwap.Distributed.Orchestrator/    # Core orchestration, strategies
 │   └── HotSwap.Distributed.Api/             # REST API controllers
+├── examples/
+│   └── ApiUsageExample/                     # Comprehensive API usage examples
 ├── tests/
 │   └── HotSwap.Distributed.Tests/           # Unit tests (15+ tests)
 ├── .github/workflows/
