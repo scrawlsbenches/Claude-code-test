@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using OpenTelemetry.Trace;
 
 namespace HotSwap.Distributed.Infrastructure.Telemetry;
 

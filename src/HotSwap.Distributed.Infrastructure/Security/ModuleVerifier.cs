@@ -100,9 +100,13 @@ public class ModuleVerifier : IModuleVerifier
             // Verify signature (this validates the signature matches the hash)
             try
             {
+                // Create ContentInfo with the hash
                 var content = new ContentInfo(hash);
-                signedCms.ContentInfo = content;
-                signedCms.CheckSignature(true); // Verify signature
+
+                // Create a new SignedCms with the content for verification
+                var verifyCms = new SignedCms(content, true); // true = detached signature
+                verifyCms.Decode(descriptor.Signature);
+                verifyCms.CheckSignature(true); // Verify signature
 
                 result.IsValid = true;
                 _logger.LogInformation("Signature verified successfully for {ModuleName} v{Version}",
