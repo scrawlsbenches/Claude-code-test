@@ -8,6 +8,7 @@ COPY ["src/HotSwap.Distributed.Domain/HotSwap.Distributed.Domain.csproj", "src/H
 COPY ["src/HotSwap.Distributed.Infrastructure/HotSwap.Distributed.Infrastructure.csproj", "src/HotSwap.Distributed.Infrastructure/"]
 COPY ["src/HotSwap.Distributed.Orchestrator/HotSwap.Distributed.Orchestrator.csproj", "src/HotSwap.Distributed.Orchestrator/"]
 COPY ["src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj", "src/HotSwap.Distributed.Api/"]
+COPY ["tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj", "tests/HotSwap.Distributed.Tests/"]
 
 # Restore dependencies
 RUN dotnet restore "DistributedKernel.sln"
@@ -19,8 +20,14 @@ COPY . .
 WORKDIR "/src/src/HotSwap.Distributed.Api"
 RUN dotnet build "HotSwap.Distributed.Api.csproj" -c Release -o /app/build
 
+# Test stage
+FROM build AS test
+WORKDIR /src
+RUN dotnet test "tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj" --configuration Release --no-restore --verbosity normal
+
 # Publish
 FROM build AS publish
+WORKDIR "/src/src/HotSwap.Distributed.Api"
 RUN dotnet publish "HotSwap.Distributed.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime stage
