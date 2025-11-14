@@ -1,0 +1,43 @@
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy solution and project files
+COPY ["DistributedKernel.sln", "./"]
+COPY ["src/HotSwap.Distributed.Domain/HotSwap.Distributed.Domain.csproj", "src/HotSwap.Distributed.Domain/"]
+COPY ["src/HotSwap.Distributed.Infrastructure/HotSwap.Distributed.Infrastructure.csproj", "src/HotSwap.Distributed.Infrastructure/"]
+COPY ["src/HotSwap.Distributed.Orchestrator/HotSwap.Distributed.Orchestrator.csproj", "src/HotSwap.Distributed.Orchestrator/"]
+COPY ["src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj", "src/HotSwap.Distributed.Api/"]
+
+# Restore dependencies
+RUN dotnet restore "DistributedKernel.sln"
+
+# Copy source code
+COPY . .
+
+# Build
+WORKDIR "/src/src/HotSwap.Distributed.Api"
+RUN dotnet build "HotSwap.Distributed.Api.csproj" -c Release -o /app/build
+
+# Publish
+FROM build AS publish
+RUN dotnet publish "HotSwap.Distributed.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+COPY --from=publish --chown=appuser:appuser /app/publish .
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["dotnet", "HotSwap.Distributed.Api.dll"]
