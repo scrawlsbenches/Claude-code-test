@@ -142,6 +142,15 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Configure HSTS (HTTP Strict Transport Security)
+builder.Services.AddHsts(options =>
+{
+    var hstsConfig = builder.Configuration.GetSection("Hsts");
+    options.MaxAge = TimeSpan.FromDays(hstsConfig.GetValue<int>("MaxAge", 365));
+    options.IncludeSubDomains = hstsConfig.GetValue<bool>("IncludeSubDomains", true);
+    options.Preload = hstsConfig.GetValue<bool>("Preload", false);
+});
+
 // Register infrastructure services
 builder.Services.AddSingleton<TelemetryProvider>();
 builder.Services.AddSingleton<IMetricsProvider, InMemoryMetricsProvider>();
@@ -270,23 +279,29 @@ if (!app.Environment.IsProduction())
     });
 }
 
-// 5. HTTPS redirection
+// 5. HSTS (HTTP Strict Transport Security) - only in production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+// 6. HTTPS redirection
 app.UseHttpsRedirection();
 
-// 6. CORS
+// 7. CORS
 app.UseCors();
 
-// 7. Rate limiting (after CORS, before authentication)
+// 8. Rate limiting (after CORS, before authentication)
 app.UseMiddleware<RateLimitingMiddleware>();
 
-// 8. Authentication & Authorization
+// 9. Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 9. Map controllers
+// 10. Map controllers
 app.MapControllers();
 
-// 10. Health check endpoint
+// 11. Health check endpoint
 app.MapHealthChecks("/health");
 
 // Graceful shutdown

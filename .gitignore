@@ -52,3 +52,26 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+#############################################
+# SSL/TLS Certificates
+#############################################
+# Development certificates (aspnetapp.*) are committed to the repository
+# for convenience - they are self-signed and contain no real secrets.
+# DO NOT commit production certificates!
+
+# Production certificates (NEVER commit these)
+*.production.pfx
+*.production.pem
+*.production.crt
+*.production.key
+certificates/production.*
+certificates/prod.*
+appsettings.Production.json
+
+# Certificate Signing Requests
+*.csr
+
+# Let's Encrypt certificates (if using certbot)
+# Symlink to /etc/letsencrypt if needed
+letsencrypt/

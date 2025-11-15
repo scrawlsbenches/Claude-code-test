@@ -7,12 +7,17 @@ services:
       dockerfile: Dockerfile
     container_name: distributed-kernel-api
     ports:
-      - "5000:8080"
+      - "5000:8080"   # HTTP
+      - "5001:8081"   # HTTPS
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/app/certificates/aspnetapp.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=
       - Redis__ConnectionString=redis:6379
       - Telemetry__JaegerEndpoint=http://jaeger:14268/api/traces
+    volumes:
+      - ./src/HotSwap.Distributed.Api/certificates:/app/certificates:ro
     depends_on:
       - redis
       - jaeger
