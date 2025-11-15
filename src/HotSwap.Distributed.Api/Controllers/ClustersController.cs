@@ -2,16 +2,19 @@ using HotSwap.Distributed.Api.Models;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HotSwap.Distributed.Api.Controllers;
 
 /// <summary>
 /// API endpoints for cluster management and monitoring.
+/// Available to all authenticated users (read-only operations).
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[Authorize(Roles = "Viewer,Deployer,Admin")] // All endpoints are read-only, available to all authenticated users
 public class ClustersController : ControllerBase
 {
     private readonly DistributedKernelOrchestrator _orchestrator;

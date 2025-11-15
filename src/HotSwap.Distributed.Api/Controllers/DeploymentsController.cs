@@ -3,16 +3,19 @@ using HotSwap.Distributed.Api.Validation;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Orchestrator.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HotSwap.Distributed.Api.Controllers;
 
 /// <summary>
 /// API endpoints for managing module deployments.
+/// Requires authentication with Deployer or Admin role.
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[Authorize] // All endpoints require authentication
 public class DeploymentsController : ControllerBase
 {
     private readonly DistributedKernelOrchestrator _orchestrator;
@@ -29,16 +32,22 @@ public class DeploymentsController : ControllerBase
 
     /// <summary>
     /// Creates and executes a deployment pipeline.
+    /// Requires Deployer or Admin role.
     /// </summary>
     /// <param name="request">Deployment request with module information</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Deployment execution details with 202 Accepted status</returns>
     /// <response code="202">Deployment accepted and started</response>
     /// <response code="400">Invalid request</response>
+    /// <response code="401">Unauthorized - authentication required</response>
+    /// <response code="403">Forbidden - requires Deployer or Admin role</response>
     /// <response code="500">Server error</response>
     [HttpPost]
+    [Authorize(Roles = "Deployer,Admin")]
     [ProducesResponseType(typeof(DeploymentResponse), StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateDeployment(
         [FromBody] CreateDeploymentRequest request,
@@ -101,13 +110,17 @@ public class DeploymentsController : ControllerBase
 
     /// <summary>
     /// Gets the status and result of a deployment execution.
+    /// Available to all authenticated users (Viewer, Deployer, Admin).
     /// </summary>
     /// <param name="executionId">Execution ID from deployment creation</param>
     /// <returns>Deployment execution status and results</returns>
     /// <response code="200">Deployment status retrieved</response>
+    /// <response code="401">Unauthorized - authentication required</response>
     /// <response code="404">Deployment not found</response>
     [HttpGet("{executionId}")]
+    [Authorize(Roles = "Viewer,Deployer,Admin")]
     [ProducesResponseType(typeof(DeploymentStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public IActionResult GetDeployment(Guid executionId)
     {
@@ -146,14 +159,20 @@ public class DeploymentsController : ControllerBase
 
     /// <summary>
     /// Rolls back a deployment to the previous version.
+    /// Requires Deployer or Admin role.
     /// </summary>
     /// <param name="executionId">Execution ID of the deployment to rollback</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Rollback status</returns>
     /// <response code="202">Rollback accepted and started</response>
+    /// <response code="401">Unauthorized - authentication required</response>
+    /// <response code="403">Forbidden - requires Deployer or Admin role</response>
     /// <response code="404">Deployment not found</response>
     [HttpPost("{executionId}/rollback")]
+    [Authorize(Roles = "Deployer,Admin")]
     [ProducesResponseType(typeof(RollbackResponse), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RollbackDeployment(
         Guid executionId,
@@ -194,11 +213,15 @@ public class DeploymentsController : ControllerBase
 
     /// <summary>
     /// Lists recent deployments.
+    /// Available to all authenticated users (Viewer, Deployer, Admin).
     /// </summary>
     /// <returns>List of recent deployments</returns>
     /// <response code="200">Deployments retrieved</response>
+    /// <response code="401">Unauthorized - authentication required</response>
     [HttpGet]
+    [Authorize(Roles = "Viewer,Deployer,Admin")]
     [ProducesResponseType(typeof(List<DeploymentSummary>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     public IActionResult ListDeployments()
     {
         var deployments = _executionResults.Values

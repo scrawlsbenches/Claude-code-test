@@ -1,6 +1,8 @@
+using System.Text;
 using HotSwap.Distributed.Api.Middleware;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Authentication;
 using HotSwap.Distributed.Infrastructure.Coordination;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Metrics;
@@ -10,6 +12,9 @@ using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -31,15 +36,41 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Distributed Kernel Orchestration API",
         Version = "v1",
-        Description = "API for managing distributed kernel module deployments",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        Description = "API for managing distributed kernel module deployments with JWT authentication",
+        Contact = new OpenApiContact
         {
             Name = "Distributed Kernel Team",
             Email = "team@example.com"
+        }
+    });
+
+    // Add JWT Bearer authentication to Swagger
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
         }
     });
 
@@ -71,6 +102,45 @@ builder.Services.AddOpenTelemetry()
             // Jaeger configuration would go here
         }
     });
+
+// Register JWT configuration
+var jwtConfig = new JwtConfiguration
+{
+    SecretKey = builder.Configuration["Jwt:SecretKey"] ?? "DistributedKernelSecretKey-ChangeInProduction-MinimumLength32Characters",
+    Issuer = builder.Configuration["Jwt:Issuer"] ?? "DistributedKernelOrchestrator",
+    Audience = builder.Configuration["Jwt:Audience"] ?? "DistributedKernelApi",
+    ExpirationMinutes = builder.Configuration.GetValue<int>("Jwt:ExpirationMinutes", 60)
+};
+builder.Services.AddSingleton(jwtConfig);
+
+// Register authentication services
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
+
+// Configure JWT authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // Require HTTPS in production
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.SecretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtConfig.Issuer,
+        ValidateAudience = true,
+        ValidAudience = jwtConfig.Audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero // No tolerance for expired tokens
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // Register infrastructure services
 builder.Services.AddSingleton<TelemetryProvider>();
@@ -206,10 +276,11 @@ app.UseHttpsRedirection();
 // 6. CORS
 app.UseCors();
 
-// 7. Rate limiting (after CORS, before authorization)
+// 7. Rate limiting (after CORS, before authentication)
 app.UseMiddleware<RateLimitingMiddleware>();
 
-// 8. Authentication & Authorization (would be added here)
+// 8. Authentication & Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 // 9. Map controllers
