@@ -1,3 +1,4 @@
+using HotSwap.Distributed.Api.Middleware;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Coordination;
 using HotSwap.Distributed.Infrastructure.Interfaces;
@@ -122,40 +123,90 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
 // Add health checks
 builder.Services.AddHealthChecks();
 
-// Add CORS
+// Register middleware configurations
+builder.Services.AddSingleton(sp =>
+{
+    var config = new RateLimitConfiguration();
+    builder.Configuration.GetSection("RateLimiting").Bind(config);
+    return config;
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = new SecurityHeadersConfiguration();
+    builder.Configuration.GetSection("SecurityHeaders").Bind(config);
+    return config;
+});
+
+// Add CORS with improved configuration
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? new[] { "http://localhost:3000", "http://localhost:8080" };
+
+        if (builder.Environment.IsDevelopment())
+        {
+            // More permissive in development
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            // Restrictive in production
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials()
+                  .SetIsOriginAllowedToAllowWildcardSubdomains();
+        }
     });
 });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+
+// 1. Exception handling (must be first to catch all exceptions)
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// 2. Security headers (early in pipeline)
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// 3. Serilog request logging
+app.UseSerilogRequestLogging();
+
+// 4. Swagger (only in development/staging)
+if (!app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Distributed Kernel API v1");
         options.RoutePrefix = string.Empty; // Serve Swagger UI at root
+        options.DisplayRequestDuration();
+        options.EnableTryItOutByDefault();
     });
 }
 
-app.UseSerilogRequestLogging();
-
+// 5. HTTPS redirection
 app.UseHttpsRedirection();
 
+// 6. CORS
 app.UseCors();
 
+// 7. Rate limiting (after CORS, before authorization)
+app.UseMiddleware<RateLimitingMiddleware>();
+
+// 8. Authentication & Authorization (would be added here)
 app.UseAuthorization();
 
+// 9. Map controllers
 app.MapControllers();
 
+// 10. Health check endpoint
 app.MapHealthChecks("/health");
 
 // Graceful shutdown

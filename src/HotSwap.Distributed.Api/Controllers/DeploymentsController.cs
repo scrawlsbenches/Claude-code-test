@@ -1,4 +1,5 @@
 using HotSwap.Distributed.Api.Models;
+using HotSwap.Distributed.Api.Validation;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Orchestrator.Core;
@@ -43,79 +44,59 @@ public class DeploymentsController : ControllerBase
         [FromBody] CreateDeploymentRequest request,
         CancellationToken cancellationToken)
     {
-        try
+        _logger.LogInformation("Received deployment request for {ModuleName} v{Version} to {Environment}",
+            request.ModuleName, request.Version, request.TargetEnvironment);
+
+        // Validate request - exception will be caught by ExceptionHandlingMiddleware
+        DeploymentRequestValidator.ValidateAndThrow(request);
+
+        // Create deployment request
+        var deploymentRequest = new DeploymentRequest
         {
-            _logger.LogInformation("Received deployment request for {ModuleName} v{Version} to {Environment}",
-                request.ModuleName, request.Version, request.TargetEnvironment);
-
-            // Validate request
-            if (string.IsNullOrWhiteSpace(request.ModuleName))
+            Module = new ModuleDescriptor
             {
-                return BadRequest(new ErrorResponse { Error = "Module name is required" });
-            }
+                Name = request.ModuleName,
+                Version = Version.Parse(request.Version),
+                Description = request.Description ?? string.Empty,
+                Author = request.RequesterEmail
+            },
+            TargetEnvironment = Enum.Parse<EnvironmentType>(request.TargetEnvironment, true),
+            RequesterEmail = request.RequesterEmail,
+            RequireApproval = request.RequireApproval,
+            Metadata = request.Metadata ?? new Dictionary<string, string>(),
+            ExecutionId = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow
+        };
 
-            if (string.IsNullOrWhiteSpace(request.RequesterEmail))
-            {
-                return BadRequest(new ErrorResponse { Error = "Requester email is required" });
-            }
-
-            // Create deployment request
-            var deploymentRequest = new DeploymentRequest
-            {
-                Module = new ModuleDescriptor
-                {
-                    Name = request.ModuleName,
-                    Version = Version.Parse(request.Version),
-                    Description = request.Description ?? string.Empty,
-                    Author = request.RequesterEmail
-                },
-                TargetEnvironment = Enum.Parse<EnvironmentType>(request.TargetEnvironment, true),
-                RequesterEmail = request.RequesterEmail,
-                RequireApproval = request.RequireApproval,
-                Metadata = request.Metadata ?? new Dictionary<string, string>(),
-                ExecutionId = Guid.NewGuid(),
-                CreatedAt = DateTime.UtcNow
-            };
-
-            // Start deployment asynchronously
-            _ = Task.Run(async () =>
-            {
-                var result = await _orchestrator.ExecuteDeploymentPipelineAsync(
-                    deploymentRequest,
-                    cancellationToken);
-
-                _executionResults[deploymentRequest.ExecutionId] = result;
-            }, cancellationToken);
-
-            // Return 202 Accepted with execution details
-            var response = new DeploymentResponse
-            {
-                ExecutionId = deploymentRequest.ExecutionId,
-                Status = "Running",
-                StartTime = DateTime.UtcNow,
-                EstimatedDuration = "PT30M",
-                TraceId = deploymentRequest.ExecutionId.ToString(),
-                Links = new Dictionary<string, string>
-                {
-                    ["self"] = $"/api/v1/deployments/{deploymentRequest.ExecutionId}",
-                    ["trace"] = $"https://jaeger.example.com/trace/{deploymentRequest.ExecutionId}"
-                }
-            };
-
-            return AcceptedAtAction(
-                nameof(GetDeployment),
-                new { executionId = deploymentRequest.ExecutionId },
-                response);
-        }
-        catch (Exception ex)
+        // Start deployment asynchronously
+        _ = Task.Run(async () =>
         {
-            _logger.LogError(ex, "Failed to create deployment");
-            return StatusCode(500, new ErrorResponse
+            var result = await _orchestrator.ExecuteDeploymentPipelineAsync(
+                deploymentRequest,
+                cancellationToken);
+
+            _executionResults[deploymentRequest.ExecutionId] = result;
+        }, cancellationToken);
+
+        // Return 202 Accepted with execution details
+        var response = new DeploymentResponse
+        {
+            ExecutionId = deploymentRequest.ExecutionId,
+            Status = "Running",
+            StartTime = DateTime.UtcNow,
+            EstimatedDuration = "PT30M",
+            TraceId = deploymentRequest.ExecutionId.ToString(),
+            Links = new Dictionary<string, string>
             {
-                Error = "Failed to create deployment",
-                Details = ex.Message
-            });
-        }
+                ["self"] = $"/api/v1/deployments/{deploymentRequest.ExecutionId}",
+                ["trace"] = $"https://jaeger.example.com/trace/{deploymentRequest.ExecutionId}"
+            }
+        };
+
+        return AcceptedAtAction(
+            nameof(GetDeployment),
+            new { executionId = deploymentRequest.ExecutionId },
+            response);
     }
 
     /// <summary>
@@ -130,52 +111,37 @@ public class DeploymentsController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public IActionResult GetDeployment(Guid executionId)
     {
-        try
+        _logger.LogInformation("Getting deployment status for execution {ExecutionId}", executionId);
+
+        if (!_executionResults.TryGetValue(executionId, out var result))
         {
-            _logger.LogInformation("Getting deployment status for execution {ExecutionId}", executionId);
-
-            if (!_executionResults.TryGetValue(executionId, out var result))
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Error = $"Deployment execution {executionId} not found"
-                });
-            }
-
-            var response = new DeploymentStatusResponse
-            {
-                ExecutionId = result.ExecutionId,
-                ModuleName = result.ModuleName,
-                Version = result.Version.ToString(),
-                Status = result.Success ? "Succeeded" : "Failed",
-                StartTime = result.StartTime,
-                EndTime = result.EndTime,
-                Duration = result.Duration.ToString(),
-                Stages = result.StageResults.Select(s => new StageResult
-                {
-                    Name = s.StageName,
-                    Status = s.Status.ToString(),
-                    StartTime = s.StartTime,
-                    Duration = s.Duration.ToString(),
-                    Strategy = s.Strategy,
-                    NodesDeployed = s.NodesDeployed,
-                    NodesFailed = s.NodesFailed,
-                    Message = s.Message
-                }).ToList(),
-                TraceId = result.TraceId
-            };
-
-            return Ok(response);
+            throw new KeyNotFoundException($"Deployment execution {executionId} not found");
         }
-        catch (Exception ex)
+
+        var response = new DeploymentStatusResponse
         {
-            _logger.LogError(ex, "Failed to get deployment status");
-            return StatusCode(500, new ErrorResponse
+            ExecutionId = result.ExecutionId,
+            ModuleName = result.ModuleName,
+            Version = result.Version.ToString(),
+            Status = result.Success ? "Succeeded" : "Failed",
+            StartTime = result.StartTime,
+            EndTime = result.EndTime,
+            Duration = result.Duration.ToString(),
+            Stages = result.StageResults.Select(s => new StageResult
             {
-                Error = "Failed to get deployment status",
-                Details = ex.Message
-            });
-        }
+                Name = s.StageName,
+                Status = s.Status.ToString(),
+                StartTime = s.StartTime,
+                Duration = s.Duration.ToString(),
+                Strategy = s.Strategy,
+                NodesDeployed = s.NodesDeployed,
+                NodesFailed = s.NodesFailed,
+                Message = s.Message
+            }).ToList(),
+            TraceId = result.TraceId
+        };
+
+        return Ok(response);
     }
 
     /// <summary>
@@ -193,52 +159,37 @@ public class DeploymentsController : ControllerBase
         Guid executionId,
         CancellationToken cancellationToken)
     {
-        try
+        _logger.LogInformation("Rolling back deployment {ExecutionId}", executionId);
+
+        if (!_executionResults.TryGetValue(executionId, out var result))
         {
-            _logger.LogInformation("Rolling back deployment {ExecutionId}", executionId);
-
-            if (!_executionResults.TryGetValue(executionId, out var result))
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Error = $"Deployment execution {executionId} not found"
-                });
-            }
-
-            // Create rollback request (simplified - would need original request in production)
-            var rollbackRequest = new DeploymentRequest
-            {
-                Module = new ModuleDescriptor
-                {
-                    Name = result.ModuleName,
-                    Version = result.Version
-                },
-                TargetEnvironment = EnvironmentType.Production, // Would be stored from original request
-                RequesterEmail = "system@rollback",
-                ExecutionId = executionId
-            };
-
-            // Execute rollback
-            await _orchestrator.RollbackDeploymentAsync(rollbackRequest, cancellationToken);
-
-            var response = new RollbackResponse
-            {
-                RollbackId = Guid.NewGuid(),
-                Status = "InProgress",
-                NodesAffected = result.StageResults.Sum(s => s.NodesDeployed ?? 0)
-            };
-
-            return Accepted(response);
+            throw new KeyNotFoundException($"Deployment execution {executionId} not found");
         }
-        catch (Exception ex)
+
+        // Create rollback request (simplified - would need original request in production)
+        var rollbackRequest = new DeploymentRequest
         {
-            _logger.LogError(ex, "Failed to rollback deployment");
-            return StatusCode(500, new ErrorResponse
+            Module = new ModuleDescriptor
             {
-                Error = "Failed to rollback deployment",
-                Details = ex.Message
-            });
-        }
+                Name = result.ModuleName,
+                Version = result.Version
+            },
+            TargetEnvironment = EnvironmentType.Production, // Would be stored from original request
+            RequesterEmail = "system@rollback",
+            ExecutionId = executionId
+        };
+
+        // Execute rollback
+        await _orchestrator.RollbackDeploymentAsync(rollbackRequest, cancellationToken);
+
+        var response = new RollbackResponse
+        {
+            RollbackId = Guid.NewGuid(),
+            Status = "InProgress",
+            NodesAffected = result.StageResults.Sum(s => s.NodesDeployed ?? 0)
+        };
+
+        return Accepted(response);
     }
 
     /// <summary>
