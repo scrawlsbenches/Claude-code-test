@@ -311,4 +311,15 @@ public class ApprovalService : IApprovalService
 
         return expiredCount;
     }
+
+    /// <summary>
+    /// Clears all approval requests and waiters from the in-memory storage.
+    /// WARNING: This method is for testing purposes only and should not be used in production.
+    /// </summary>
+    public void ClearAllApprovalsForTesting()
+    {
+        _approvalRequests.Clear();
+        _approvalWaiters.Clear();
+        _logger.LogDebug("Cleared all approval requests and waiters (testing only)");
+    }
 }
