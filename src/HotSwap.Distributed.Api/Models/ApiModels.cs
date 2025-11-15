@@ -16,6 +16,16 @@ public class CreateDeploymentRequest
     public Dictionary<string, string>? Metadata { get; set; }
 }
 
+/// <summary>
+/// Request to approve or reject a deployment.
+/// </summary>
+public class ApprovalDecisionRequest
+{
+    public required string ApproverEmail { get; set; }
+    public required bool Approved { get; set; }
+    public string? Reason { get; set; }
+}
+
 #endregion
 
 #region Response Models
@@ -163,6 +173,41 @@ public class ErrorResponse
 {
     public required string Error { get; set; }
     public string? Details { get; set; }
+}
+
+/// <summary>
+/// Approval request response.
+/// </summary>
+public class ApprovalResponse
+{
+    public Guid ApprovalId { get; set; }
+    public Guid DeploymentExecutionId { get; set; }
+    public required string ModuleName { get; set; }
+    public required string Version { get; set; }
+    public required string TargetEnvironment { get; set; }
+    public required string RequesterEmail { get; set; }
+    public required string Status { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public DateTime? RespondedAt { get; set; }
+    public string? RespondedBy { get; set; }
+    public string? ResponseReason { get; set; }
+    public DateTime TimeoutAt { get; set; }
+}
+
+/// <summary>
+/// Pending approval summary.
+/// </summary>
+public class PendingApprovalSummary
+{
+    public Guid ApprovalId { get; set; }
+    public Guid DeploymentExecutionId { get; set; }
+    public required string ModuleName { get; set; }
+    public required string Version { get; set; }
+    public required string TargetEnvironment { get; set; }
+    public required string RequesterEmail { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public DateTime TimeoutAt { get; set; }
+    public required string TimeRemaining { get; set; }
 }
 
 #endregion

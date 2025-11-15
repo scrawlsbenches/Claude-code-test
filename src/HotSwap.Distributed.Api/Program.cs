@@ -1,11 +1,15 @@
 using HotSwap.Distributed.Api.Middleware;
+using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Coordination;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Metrics;
+using HotSwap.Distributed.Infrastructure.Notifications;
 using HotSwap.Distributed.Infrastructure.Security;
 using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Orchestrator.Core;
+using HotSwap.Distributed.Orchestrator.Interfaces;
+using HotSwap.Distributed.Orchestrator.Services;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -95,6 +99,11 @@ builder.Services.AddSingleton(sp =>
     builder.Configuration.GetSection("Pipeline").Bind(config);
     return config;
 });
+
+// Register approval workflow services
+builder.Services.AddSingleton<INotificationService, LoggingNotificationService>();
+builder.Services.AddSingleton<IApprovalService, ApprovalService>();
+builder.Services.AddHostedService<ApprovalTimeoutBackgroundService>();
 
 // Register orchestrator as singleton
 builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
