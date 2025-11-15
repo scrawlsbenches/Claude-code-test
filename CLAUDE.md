@@ -265,6 +265,50 @@ dotnet build -v detailed
 #       0 Error(s)
 ```
 
+#### First Time Build and Test
+
+**After installing .NET SDK 8.0 for the first time**, run these commands in order:
+
+```bash
+# Step 1: Clean any existing build artifacts (if any)
+dotnet clean
+
+# Expected output:
+#   Build succeeded.
+#       0 Warning(s)
+#       0 Error(s)
+#   Time Elapsed 00:00:02.30
+
+# Step 2: Restore all NuGet packages
+dotnet restore
+
+# Expected output:
+#   Determining projects to restore...
+#   Restored /home/user/Claude-code-test/src/HotSwap.Distributed.Domain/...
+#   Restored /home/user/Claude-code-test/examples/ApiUsageExample/...
+#   ... (6 projects restored)
+
+# Step 3: Build the entire solution (non-incremental for first build)
+dotnet build --no-incremental
+
+# Expected output:
+#   Build succeeded.
+#       1 Warning(s)  (CS1998 in DeploymentsController.cs - non-blocking)
+#       0 Error(s)
+#   Time Elapsed 00:00:13.99
+
+# Step 4: Run all tests
+dotnet test
+
+# Expected output:
+#   Passed!  - Failed:     0, Passed:    23, Skipped:     0, Total:    23, Duration: 3 s
+```
+
+**Important Notes:**
+- The build may show 1 warning (CS1998) in DeploymentsController.cs - this is expected and non-blocking
+- Test count should be 23 passing tests (may vary as tests are added)
+- Total setup time: approximately 20-30 seconds after .NET SDK installation
+
 #### Build Specific Projects
 
 ```bash
@@ -461,6 +505,57 @@ git push -u origin claude/your-feature-name-sessionid
 # Linux/macOS: Add to ~/.bashrc or ~/.zshrc
 export PATH="$PATH:/usr/local/share/dotnet"
 ```
+
+#### Installing .NET SDK on Linux (When Running as Root or sudo Issues)
+
+If you encounter sudo permission errors or are running as root, follow these exact steps:
+
+```bash
+# Step 1: Download Microsoft package repository configuration
+wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+
+# Step 2: Install the repository configuration
+# If running as root (uid=0), omit sudo:
+dpkg -i packages-microsoft-prod.deb
+
+# If running as regular user with sudo access:
+sudo dpkg -i packages-microsoft-prod.deb
+
+# Step 3: Clean up the downloaded file
+rm packages-microsoft-prod.deb
+
+# Step 4: Fix /tmp permissions if you encounter GPG errors during apt-get update
+# Error example: "Couldn't create temporary file /tmp/apt.conf.xxxxx"
+# Solution:
+chmod 1777 /tmp
+
+# Step 5: Update package lists
+# As root:
+apt-get update
+
+# As regular user:
+sudo apt-get update
+
+# Step 6: Install .NET SDK 8.0
+# As root:
+apt-get install -y dotnet-sdk-8.0
+
+# As regular user:
+sudo apt-get install -y dotnet-sdk-8.0
+
+# Step 7: Verify installation
+dotnet --version
+# Expected output: 8.0.416 or later
+
+dotnet --list-sdks
+# Expected output: 8.0.xxx [/usr/share/dotnet/sdk]
+```
+
+**Common Installation Errors:**
+
+1. **403 Forbidden errors from PPA repositories** - These are non-critical and won't prevent .NET SDK installation
+2. **GPG/temporary file errors** - Fix with `chmod 1777 /tmp`
+3. **sudo.conf ownership errors** - Run as root directly using `dpkg -i` instead of `sudo dpkg -i`
 
 #### Package Restore Fails
 
@@ -1116,6 +1211,25 @@ public async Task<string?> AuthenticateAsync(string username, string password)
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-15 (Installation and Build Instructions)
+- **Added comprehensive .NET SDK installation troubleshooting** for Linux environments
+  - Step-by-step installation process for root and non-root users
+  - Fixed /tmp permissions issue resolution
+  - Common installation errors and solutions
+  - Handling sudo.conf ownership errors
+  - PPA repository 403 Forbidden error handling
+- **Added "First Time Build and Test" section** with exact workflow
+  - Complete 4-step process: clean, restore, build, test
+  - Expected output for each command
+  - Documented known warnings (CS1998 in DeploymentsController.cs)
+  - Build and test timing expectations
+  - Current test count documentation (23 passing tests)
+- **Verified installation process** on Ubuntu 24.04 LTS
+  - .NET SDK 8.0.416 installation confirmed
+  - All 23 tests passing
+  - Build succeeds with expected 1 warning
+- Total additions: ~60 lines of installation and first-run documentation
 
 ### 2025-11-15 (TASK_LIST.md Integration)
 - **Added comprehensive "Working with TASK_LIST.md" section** to AI Assistant Guidelines
