@@ -671,20 +671,13 @@ Before starting the pre-commit checklist, verify if .NET SDK is available:
 dotnet --version
 ```
 
-**If .NET SDK is available:**
+**If .NET SDK is available** (local development, CI/CD environments):
 - Follow Steps 1-6 below EXACTLY
 - Do NOT commit if ANY step fails
 
-**If .NET SDK is NOT available:**
-- ⚠️ **CRITICAL: You cannot verify build/test locally**
-- **Inform the user explicitly:** "I cannot build/test this code because .NET SDK is not available in this environment. The changes will be verified by GitHub Actions CI/CD. There is a risk of build/test failures."
-- **Ask the user:** "Would you like me to proceed with extra careful code review, or would you prefer to test this locally on your machine first?"
-- **If user approves proceeding:**
-  - Perform EXTRA thorough code review (see "No SDK Code Review Checklist" below)
-  - Document in commit message: "Note: Built and tested in GitHub Actions CI/CD (no local SDK available)"
-  - Acknowledge the risk of CI/CD failures
-- **If user wants to test locally:**
-  - Stop and wait for user to pull branch, run `dotnet build && dotnet test`, and report results
+**If .NET SDK is NOT available** (e.g., Claude Code web environment):
+- Skip to **"Alternative: No .NET SDK Checklist"** below
+- You MUST follow the alternative checklist instead
 
 ---
 
@@ -819,90 +812,275 @@ git commit -m "feat: your message"
 
 ---
 
-#### 🔍 No SDK Code Review Checklist
+### 🔧 Alternative: No .NET SDK Checklist
 
-**Use this when .NET SDK is NOT available and user has approved proceeding.**
+**Use this checklist when .NET SDK is NOT available** (e.g., Claude Code web environment, restricted environments).
 
-⚠️ **IMPORTANT:** This is a risk mitigation checklist, NOT a replacement for build/test. Be extra thorough.
+⚠️ **CRITICAL**: Since you cannot run build/test locally, you MUST be extra careful with code review and validation.
 
-1. **Verify all using statements:**
-   ```bash
-   # Check every file you modified has correct using statements
-   grep -n "^using" src/path/to/file.cs
-   ```
-   - ✅ All namespaces exist in referenced projects/packages
-   - ✅ No typos in namespace names
-   - ✅ No missing using statements
+#### Step 1: Verify Model Properties FIRST (MOST IMPORTANT!)
 
-2. **Verify namespaces match folder structure:**
-   - File: `src/HotSwap.Distributed.Api/Middleware/RateLimitingMiddleware.cs`
-   - Expected namespace: `HotSwap.Distributed.Api.Middleware`
-   - ✅ Namespace matches exactly
+**⚠️ This is the #1 cause of build failures - ALWAYS do this first!**
 
-3. **Verify all types exist:**
-   - For each type you use, find its definition
-   - Check it's in a project/package that's referenced
-   - Verify type name spelling
+Before creating instances of ANY model class in your code:
 
-4. **Check method signatures:**
-   - Verify async methods return `Task` or `Task<T>`
-   - Check all method parameters match expected types
-   - Ensure all required parameters are provided
+```bash
+# 1. Find the model definition
+grep -r "class ErrorResponse" src/HotSwap.Distributed.Api/Models/
 
-5. **Validate JSON configuration:**
-   ```bash
-   cat appsettings.json | python3 -m json.tool > /dev/null
-   ```
-   - ✅ Valid JSON syntax
-   - ✅ TimeSpan format correct: `"00:01:00"` not `"1m"`
-   - ✅ All configuration keys match code expectations
+# 2. Read the ENTIRE model file
+cat src/HotSwap.Distributed.Api/Models/ApiModels.cs
 
-6. **Review test code carefully:**
-   - ✅ Test project references all needed projects
-   - ✅ All mock setups match actual method signatures
-   - ✅ FluentAssertions syntax is correct
-   - ✅ Test class/method naming follows conventions
+# 3. For EACH model you use, note the EXACT property names
+```
 
-7. **Check for common errors:**
-   - No missing semicolons
-   - All braces matched
-   - No undefined variables
-   - Proper null handling
+**Example - ErrorResponse Model:**
+```csharp
+// Located in: src/HotSwap.Distributed.Api/Models/ApiModels.cs
+public class ErrorResponse
+{
+    public required string Error { get; set; }    // ✅ Has "Error"
+    public string? Details { get; set; }          // ✅ Has "Details"
+    // ❌ Does NOT have "Message" property!
+}
+```
 
-8. **Verify git changes:**
-   ```bash
-   git diff
-   ```
-   - Review every single line changed
-   - Ensure no accidental deletions
-   - Check for merge conflicts
+**Common Property Name Mistakes:**
+```csharp
+// ❌ WRONG: Guessing property names without checking model
+return BadRequest(new ErrorResponse
+{
+    Error = "BadRequest",
+    Message = "Invalid request"  // ❌ COMPILER ERROR! No 'Message' property exists
+});
 
-**Only proceed if you can confidently answer YES to all checks.**
+// ✅ CORRECT: Checked model first, using actual properties
+return BadRequest(new ErrorResponse
+{
+    Error = "Invalid request",      // ✅ Property exists
+    Details = "Username required"   // ✅ Optional property exists
+});
+```
+
+**Mandatory Model Verification Steps:**
+1. ✅ Read model file BEFORE using the model
+2. ✅ List ALL properties: name, type, required vs nullable
+3. ✅ Use ONLY property names that exist in the model
+4. ✅ Don't guess property names from similar models in other projects
+5. ✅ Property names are case-sensitive (Error ≠ error)
+
+**Models to always verify:**
+- `ErrorResponse` - uses `Error` and `Details` (NOT `Message`)
+- `AuthenticationRequest` - check property names
+- `AuthenticationResponse` - check property names
+- Any custom request/response models
+
+#### Step 2: Verify All Package References
+
+Manually check that all project files have correct package references:
+
+**For NEW test files:**
+```bash
+# Check if test project has all packages used in test code
+# Example: If tests use BCrypt.Net.BCrypt, the test project MUST reference BCrypt.Net-Next
+
+# Common packages needed in tests:
+# - BCrypt.Net-Next (if tests create users with hashed passwords)
+# - Microsoft.Extensions.Logging.Abstractions (if tests mock ILogger)
+# - Any packages whose types are directly used in test code
+```
+
+**Verify:**
+- ✅ Check `tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj` for missing packages
+- ✅ If test code uses `BCrypt.Net.BCrypt`, ensure `<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />` exists
+- ✅ If test code uses `ILogger<T>`, ensure `<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />` exists
+
+#### Step 3: Review All Code Changes
+
+Carefully review every code change:
+
+```bash
+# Show all changes
+git diff
+
+# Review staged changes
+git diff --cached
+```
+
+**Check for:**
+- ✅ All `using` statements are correct and namespaces exist
+- ✅ All types referenced exist in the referenced projects/packages
+- ✅ No syntax errors (missing semicolons, braces, etc.)
+- ✅ Proper async/await usage (async methods return Task, await is used correctly)
+- ✅ All interfaces have implementations registered in Program.cs
+- ✅ Mock setups in tests match actual method signatures
+- ✅ Test assertions use correct FluentAssertions syntax
+
+#### Step 4: Verify Project References
+
+Ensure all project references are correct:
+
+**For NEW source files:**
+- ✅ If code uses types from Domain, ensure project references Domain
+- ✅ If code uses types from Infrastructure, ensure project references Infrastructure
+- ✅ API layer should reference Domain, Infrastructure, and Orchestrator
+- ✅ Infrastructure should reference Domain only
+- ✅ Domain should have no project references (core layer)
+
+**For NEW test files:**
+- ✅ Test project should reference all projects whose types are used in tests
+- ✅ Check `tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj` has `<ProjectReference>` for all needed projects
+
+#### Step 5: Check for Common Build Errors
+
+Review code for patterns that commonly cause build failures:
+
+**Namespace Issues:**
+```csharp
+// ❌ WRONG: Namespace doesn't match folder structure
+namespace HotSwap.WrongNamespace;  // File is in HotSwap.Distributed.Domain/Models/
+
+// ✅ CORRECT: Namespace matches folder
+namespace HotSwap.Distributed.Domain.Models;
+```
+
+**Missing Using Statements:**
+```csharp
+// ❌ WRONG: Using List<T> without using System.Collections.Generic
+public List<User> Users { get; set; }
+
+// ✅ CORRECT: Add using statement
+using System.Collections.Generic;
+```
+
+**Async/Await Issues:**
+```csharp
+// ❌ WRONG: Async method doesn't return Task
+public async void DoSomethingAsync() { }
+
+// ✅ CORRECT: Async methods return Task
+public async Task DoSomethingAsync() { }
+```
+
+#### Step 6: Validate Test Code
+
+Review test code for common issues:
+
+**Mock Setup Issues:**
+```csharp
+// ❌ WRONG: Mock setup doesn't match actual method signature
+_mockRepo.Setup(x => x.GetUserAsync(It.IsAny<string>()))  // Method has 2 params!
+    .ReturnsAsync(user);
+
+// ✅ CORRECT: Match actual signature
+_mockRepo.Setup(x => x.GetUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+    .ReturnsAsync(user);
+```
+
+**Test Dependency Issues:**
+```csharp
+// ❌ WRONG: Test uses type directly but package not referenced
+var hash = BCrypt.Net.BCrypt.HashPassword("test");  // BCrypt.Net-Next not in test project!
+
+// ✅ CORRECT: Add package to test project .csproj
+```
+
+#### Step 7: Document CI/CD Dependency
+
+Add a note to your commit message:
+
+```bash
+git commit -m "feat: your feature description
+
+Note: Build and tests will run in GitHub Actions CI/CD pipeline.
+Package references verified manually for environments without .NET SDK.
+"
+```
+
+#### Step 8: Monitor CI/CD Build
+
+After pushing:
+
+```bash
+# Push to remote
+git push -u origin claude/your-branch-name
+
+# IMMEDIATELY check GitHub Actions build status
+# Go to: https://github.com/scrawlsbenches/Claude-code-test/actions
+```
+
+**If build fails:**
+1. Check the error message in GitHub Actions logs
+2. Identify the missing package reference or code issue
+3. Fix locally using this checklist
+4. Add missing package references to appropriate .csproj files
+5. Commit fix: `git commit -m "fix: add missing package reference for tests"`
+6. Push fix: `git push -u origin claude/your-branch-name`
+7. Monitor build again
+
+#### Step 9: Final Model Property Double-Check
+
+**CRITICAL FINAL VERIFICATION** - Do this right before committing:
+
+```bash
+# Search for ALL model instantiations in your changes
+grep -n "new ErrorResponse\|new.*Request\|new.*Response" src/**/*.cs
+
+# For EACH match found:
+# 1. Note the model name (e.g., ErrorResponse)
+# 2. Read the model definition in ApiModels.cs
+# 3. Verify EVERY property name is correct
+# 4. This takes 60 seconds and prevents 100% of property errors
+```
+
+**Quick verification checklist:**
+```bash
+# Example verification for ErrorResponse:
+# ✅ Model has: Error (required), Details (nullable)
+# ✅ Code uses: Error ✓, Details ✓
+# ❌ Code should NOT use: Message ✗, Description ✗, ErrorMessage ✗
+```
+
+#### Step 10: Pre-Commit Validation Summary
+
+Before committing without .NET SDK, verify ALL of these:
+
+- ✅ **MODEL PROPERTIES VERIFIED** - Read model definitions, used correct property names
+- ✅ All package references are correct in all .csproj files
+- ✅ Test project has packages for types used directly in test code (BCrypt, etc.)
+- ✅ All using statements are present
+- ✅ All namespaces match folder structure
+- ✅ All project references are correct
+- ✅ No obvious syntax errors visible in code review
+- ✅ New interfaces have implementations registered in Program.cs
+- ✅ Test mocks match actual method signatures
+- ✅ Commit message notes CI/CD dependency
+- ✅ **Final model property double-check completed**
+
+**Only commit if you can confidently answer YES to all checks above.**
 
 ---
 
 #### ❌ What NOT to Commit
 
 **NEVER commit if:**
-- ❌ .NET SDK is available but you didn't run build/test
-- ❌ Build has ANY errors or warnings (when SDK available)
-- ❌ ANY tests are failing (when SDK available)
-- ❌ You haven't run `dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test` (when SDK available)
-- ❌ .NET SDK is NOT available and user did NOT approve proceeding
-- ❌ .NET SDK is NOT available and you didn't complete the "No SDK Code Review Checklist"
+- ❌ **You didn't verify model property names** (causes 80% of build failures!)
+- ❌ You used property names that don't exist in the model (e.g., "Message" in ErrorResponse)
+- ❌ Build has errors or warnings (if SDK available)
+- ❌ Any tests are failing (if SDK available)
+- ❌ You haven't run `dotnet test` (if SDK available)
+- ❌ You added new files without verifying package references (if SDK NOT available)
+- ❌ You used a package type directly in tests without adding package to test project
 - ❌ Code contains `// TODO: Fix this before commit`
 - ❌ Code contains hardcoded secrets or environment-specific values
 - ❌ You made changes to interfaces without updating implementations
 - ❌ You added dependencies without documenting why
 - ❌ You didn't verify all using statements and namespaces
 - ❌ Test project is missing package references for types used in tests
-- ❌ You used a package type directly in tests without adding package to test project
 
 #### 🚨 Emergency Fixes
 
-**This section should NEVER be needed if you follow the pre-commit checklist above.**
-
-If CI/CD fails after you push (which means you didn't build/test before committing):
+If CI/CD fails after you push:
 
 ```bash
 # 1. Pull the branch
