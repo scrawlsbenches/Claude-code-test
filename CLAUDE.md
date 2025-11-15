@@ -1815,6 +1815,499 @@ public async Task<string?> AuthenticateAsync(string username, string password)
 }
 ```
 
+### Avoiding Stale Documentation
+
+**⚠️ CRITICAL**: Stale documentation is worse than no documentation. Outdated docs mislead developers, waste time, and cause bugs. Follow these practices to keep documentation current.
+
+#### Mandatory Documentation Update Triggers
+
+**ALWAYS update documentation when you:**
+
+1. **Change public APIs** - Update XML comments, README, and API docs
+   ```bash
+   # Before committing API changes:
+   # 1. Update XML documentation in code
+   # 2. Update README.md if it mentions the API
+   # 3. Update any architecture docs that reference it
+   # 4. Update examples that use the API
+   ```
+
+2. **Add or remove NuGet packages** - Update CLAUDE.md Technology Stack section
+   ```bash
+   # After adding/removing packages:
+   # 1. Update "Technology Stack" section in CLAUDE.md
+   # 2. Include version numbers
+   # 3. Update README.md if user-facing
+   # 4. Update setup instructions if installation steps changed
+   ```
+
+3. **Change build/test processes** - Update CLAUDE.md and README.md
+   ```bash
+   # If build or test commands change:
+   # 1. Update Pre-Commit Checklist in CLAUDE.md
+   # 2. Update Development Environment Setup in CLAUDE.md
+   # 3. Update CI/CD documentation if applicable
+   # 4. Update validation scripts (validate-code.sh, test-critical-paths.sh)
+   ```
+
+4. **Update test counts** - Update multiple docs with current test counts
+   ```bash
+   # After adding/removing tests:
+   # Files to update:
+   # - CLAUDE.md (line 16: "Build Status: ✅ Passing (X/X tests)")
+   # - CLAUDE.md (line 309: expected test count in "First Time Build")
+   # - CLAUDE.md (line 351: expected test count in "Run All Tests")
+   # - CLAUDE.md (line 389: expected test count in "Critical Path Tests")
+   # - README.md (test count badge if present)
+   # - PROJECT_STATUS_REPORT.md (test statistics)
+
+   # Quick grep to find all occurrences:
+   grep -n "Passed.*tests\|tests.*Passed\|Total.*tests" CLAUDE.md README.md
+   ```
+
+5. **Change project structure** - Update CLAUDE.md Project Structure section
+   ```bash
+   # If you add/remove/move projects or folders:
+   # 1. Update "Project Structure" tree in CLAUDE.md (lines 20-50)
+   # 2. Update "Key Components" section in CLAUDE.md
+   # 3. Update README.md structure section
+   # 4. Update file references in other docs
+   ```
+
+6. **Complete tasks from TASK_LIST.md** - Update multiple docs
+   ```bash
+   # When completing a task:
+   # 1. Update TASK_LIST.md (status from ⏳ to ✅)
+   # 2. Update PROJECT_STATUS_REPORT.md (if status changed)
+   # 3. Update ENHANCEMENTS.md (add implementation details)
+   # 4. Update README.md (if user-facing feature)
+   # 5. Update CLAUDE.md (if it affects setup, testing, or workflows)
+   ```
+
+7. **Change configuration or environment** - Update setup docs
+   ```bash
+   # If prerequisites, ports, URLs, or env vars change:
+   # 1. Update "Development Environment Setup" in CLAUDE.md
+   # 2. Update docker-compose.yml documentation
+   # 3. Update .env.example if exists
+   # 4. Update troubleshooting section if new issues may arise
+   ```
+
+#### Documentation Synchronization Checklist
+
+**Before EVERY commit that includes code changes, verify:**
+
+```bash
+# 1. Check for API signature changes
+git diff --staged | grep -E "public|internal|protected" | grep -E "class|interface|method|property"
+
+# If API changes found → Update XML documentation, README, architecture docs
+
+# 2. Check for package.json or .csproj changes
+git diff --staged | grep -E "PackageReference|TargetFramework"
+
+# If package changes found → Update CLAUDE.md Technology Stack section
+
+# 3. Check for test file changes
+git diff --staged tests/
+
+# If test changes found → Run dotnet test, update test counts in docs
+
+# 4. Check for documentation file changes
+git diff --staged | grep -E "\.md$"
+
+# If doc changes found → Verify dates are updated in Changelog
+
+# 5. Verify all edited docs have current dates
+grep -n "Last Updated:\|### 2025-" CLAUDE.md README.md
+```
+
+#### Version Tracking Requirements
+
+**All documentation files MUST include:**
+
+1. **Last Updated Date** at the top
+   ```markdown
+   **Last Updated**: 2025-11-15
+   ```
+
+2. **Changelog Section** at the bottom
+   ```markdown
+   ## Changelog
+
+   ### 2025-11-15 (Description of Changes)
+   - Specific change 1
+   - Specific change 2
+   ```
+
+3. **Version-Specific Information** when applicable
+   ```markdown
+   **For .NET 8.0+**: Use this approach
+   **For .NET 6.0-7.0**: Use legacy approach
+   ```
+
+#### Documentation Review Process
+
+**Monthly Documentation Audit (AI Assistant Responsibility):**
+
+When starting a new session at the beginning of a month, perform this audit:
+
+```bash
+# 1. Check "Last Updated" dates in all docs
+grep -r "Last Updated:" *.md
+
+# 2. Identify docs older than 90 days
+# These need review even if code hasn't changed
+
+# 3. Verify test counts match actual test count
+dotnet test --verbosity quiet
+# Compare output with documented test counts
+
+# 4. Verify package versions match actual packages
+dotnet list package
+# Compare output with Technology Stack in CLAUDE.md
+
+# 5. Check for broken file references
+grep -r "src/.*\.cs\|tests/.*\.cs" *.md
+# Verify these files still exist
+
+# 6. Validate code examples compile
+# Extract code blocks from README.md and verify they compile
+```
+
+#### Automated Documentation Validation
+
+**Create validation script (docs-check.sh):**
+
+```bash
+#!/bin/bash
+# docs-check.sh - Validates documentation freshness
+
+echo "🔍 Checking for stale documentation..."
+
+# Check 1: Verify test counts match
+ACTUAL_TESTS=$(dotnet test --verbosity quiet 2>&1 | grep -oP "Passed:\s+\K\d+")
+DOCUMENTED_TESTS=$(grep -oP "Passing \(\K\d+" CLAUDE.md | head -1)
+
+if [ "$ACTUAL_TESTS" != "$DOCUMENTED_TESTS" ]; then
+    echo "❌ Test count mismatch: Actual=$ACTUAL_TESTS, Documented=$DOCUMENTED_TESTS"
+    echo "   Update CLAUDE.md line 16, 309, 351, 389"
+    exit 1
+fi
+
+# Check 2: Verify package versions are documented
+UNDOCUMENTED_PACKAGES=$(dotnet list package | grep ">" | awk '{print $2}' | while read pkg; do
+    grep -q "$pkg" CLAUDE.md || echo "$pkg"
+done)
+
+if [ -n "$UNDOCUMENTED_PACKAGES" ]; then
+    echo "❌ Undocumented packages found:"
+    echo "$UNDOCUMENTED_PACKAGES"
+    echo "   Update CLAUDE.md Technology Stack section"
+    exit 1
+fi
+
+# Check 3: Verify "Last Updated" is recent (within 30 days)
+LAST_UPDATED=$(grep "Last Updated:" CLAUDE.md | grep -oP "\d{4}-\d{2}-\d{2}")
+DAYS_OLD=$(( ($(date +%s) - $(date -d "$LAST_UPDATED" +%s)) / 86400 ))
+
+if [ $DAYS_OLD -gt 30 ]; then
+    echo "⚠️  CLAUDE.md last updated $DAYS_OLD days ago (review recommended)"
+fi
+
+echo "✅ Documentation validation passed"
+```
+
+**Run before major releases:**
+```bash
+chmod +x docs-check.sh
+./docs-check.sh
+```
+
+#### Documentation-in-Code Proximity
+
+**Keep docs close to what they document:**
+
+1. **XML documentation** - Directly above code elements
+   ```csharp
+   /// <summary>Documentation here</summary>
+   public class MyClass { }
+   ```
+
+2. **Component README** - In same directory as component
+   ```
+   src/HotSwap.Distributed.Api/
+   ├── README.md           # API-specific docs
+   ├── Controllers/
+   └── Models/
+   ```
+
+3. **Test documentation** - In test file comments
+   ```csharp
+   // Test covers: User authentication with valid credentials
+   // Related docs: CLAUDE.md#authentication, README.md#security
+   [Fact]
+   public async Task AuthenticateAsync_WithValidCredentials_ReturnsToken() { }
+   ```
+
+#### Deprecation and Outdated Content
+
+**When documenting deprecated features:**
+
+```markdown
+## ⚠️ DEPRECATED: Old Feature Name
+
+**Deprecated**: 2025-11-15
+**Removed In**: v2.0.0
+**Replacement**: Use `NewFeatureName` instead
+**Migration Guide**: See [migration.md](migration.md)
+
+~~Old documentation content strikethrough~~
+```
+
+**When removing outdated sections:**
+
+```bash
+# Don't just delete - add changelog entry
+git commit -m "docs: remove outdated XYZ section from CLAUDE.md
+
+Section documented legacy behavior that was removed in commit abc123.
+See CHANGELOG.md for details."
+```
+
+#### Documentation Testing
+
+**Test all code examples in documentation:**
+
+```bash
+# Before committing docs with code examples:
+
+# 1. Extract code examples to temp files
+cat README.md | grep -A 10 '```csharp' > temp_examples.txt
+
+# 2. Validate they compile (manual check for now)
+# TODO: Automate this with a script
+
+# 3. Run examples if they're runnable
+cd examples/ApiUsageExample
+dotnet run
+# Verify output matches documented output
+```
+
+**Validate all command examples:**
+
+```bash
+# Test documented commands actually work:
+
+# From CLAUDE.md Development Environment Setup:
+dotnet --version          # Should succeed
+dotnet restore            # Should succeed
+dotnet build              # Should succeed
+dotnet test               # Should succeed
+
+# If any fail → Update documentation with correct commands
+```
+
+#### Common Stale Documentation Patterns to Avoid
+
+**❌ DON'T:**
+
+1. **Copy-paste from other projects** without verifying accuracy
+   ```markdown
+   ❌ "This project uses .NET 6.0" (when it uses .NET 8.0)
+   ❌ "Run npm install" (when it's a .NET project)
+   ```
+
+2. **Document implementation details** that change frequently
+   ```markdown
+   ❌ "The UserService.cs file is located at line 42 of..."
+   ✅ "The UserService implements IUserService interface"
+   ```
+
+3. **Hardcode version numbers** without a plan to update
+   ```markdown
+   ❌ "As of version 1.2.3, the API supports..."
+   ✅ "The API supports feature X (added in v1.2.3)"
+   ```
+
+4. **Leave TODO comments** in documentation
+   ```markdown
+   ❌ "TODO: Update this section when feature is complete"
+   ✅ Complete the section or remove it
+   ```
+
+5. **Document temporary workarounds** without expiration dates
+   ```markdown
+   ❌ "Use this workaround for now"
+   ✅ "Temporary workaround (until issue #123 is fixed): ..."
+   ```
+
+**✅ DO:**
+
+1. **Use relative references** that auto-update
+   ```markdown
+   ✅ "See the [Authentication section](#authentication)"
+   ✅ "Refer to TASK_LIST.md for current priorities"
+   ```
+
+2. **Document behavior, not implementation**
+   ```markdown
+   ✅ "The service authenticates users via JWT tokens"
+   ❌ "The service uses the BCrypt library at version 4.0.3"
+   ```
+
+3. **Link to authoritative sources**
+   ```markdown
+   ✅ "Follows [Microsoft .NET coding conventions](URL)"
+   ❌ Copy-pasting conventions that may change
+   ```
+
+4. **Date all temporal statements**
+   ```markdown
+   ✅ "As of 2025-11-15, the project supports..."
+   ❌ "Currently, the project supports..."
+   ```
+
+5. **Use CI/CD to validate docs**
+   ```yaml
+   # .github/workflows/docs-check.yml
+   - name: Validate documentation
+     run: ./docs-check.sh
+   ```
+
+#### AI Assistant Responsibilities
+
+**When you (AI assistant) make changes:**
+
+1. **Update all affected documentation** in the SAME commit
+   ```bash
+   # Good commit:
+   git commit -m "feat: add rate limiting
+
+   - Implements rate limiting middleware
+   - Updates CLAUDE.md with rate limiting setup
+   - Updates README.md with rate limiting configuration
+   - Updates TASK_LIST.md (mark Task #5 as complete)
+   - Adds rate limiting tests"
+
+   # Bad commit:
+   git commit -m "feat: add rate limiting"
+   # (Forgot to update docs!)
+   ```
+
+2. **Update the Changelog** in CLAUDE.md
+   ```markdown
+   ### 2025-11-15 (Rate Limiting Implementation)
+   - Added rate limiting middleware to API
+   - Updated Technology Stack with AspNetCoreRateLimit package
+   - Updated Development Environment Setup with rate limit config
+   ```
+
+3. **Verify documentation accuracy** before marking todos complete
+   ```bash
+   # Before marking "Implement feature X" as complete:
+   # ✅ Feature implemented
+   # ✅ Tests passing
+   # ✅ CLAUDE.md updated (if setup/testing affected)
+   # ✅ README.md updated (if user-facing)
+   # ✅ TASK_LIST.md updated (status changed)
+   # ✅ Changelog updated in relevant docs
+   ```
+
+4. **Flag documentation debt** if you can't update everything
+   ```bash
+   # If you don't have time to update all docs:
+   git commit -m "feat: add feature X
+
+   Note: Documentation updates pending:
+   - TODO: Update CLAUDE.md with new setup steps
+   - TODO: Add examples to README.md
+   - TODO: Update API documentation"
+
+   # Then create a TASK_LIST.md entry to track it
+   ```
+
+#### Documentation Staleness Detection
+
+**Red flags that indicate stale documentation:**
+
+1. **Mismatch between code and docs**
+   ```bash
+   # Example: Docs say "23 tests" but actual count is 38
+   grep "tests" CLAUDE.md | grep -oP "\d+"
+   dotnet test | grep -oP "Passed:\s+\K\d+"
+   ```
+
+2. **References to removed files**
+   ```bash
+   # Check for broken file references
+   grep -oP "src/[^\s]+" CLAUDE.md | while read file; do
+       [ -f "$file" ] || echo "Missing: $file"
+   done
+   ```
+
+3. **Old dates in "Last Updated"**
+   ```bash
+   # Docs older than 90 days should be reviewed
+   ```
+
+4. **Package versions don't match**
+   ```bash
+   # Technology Stack lists wrong versions
+   dotnet list package | grep "OpenTelemetry"
+   grep "OpenTelemetry" CLAUDE.md
+   ```
+
+5. **Documented commands fail**
+   ```bash
+   # Setup instructions don't work
+   # Test commands produce different output
+   ```
+
+#### Summary: Documentation Maintenance Workflow
+
+**For EVERY code commit:**
+
+```mermaid
+Code Change → Check API Changes? → Update XML Docs
+           → Check Package Changes? → Update CLAUDE.md
+           → Check Test Changes? → Update Test Counts
+           → Check Structure Changes? → Update Project Structure
+           → Update Changelog
+           → Commit Code + Docs Together
+```
+
+**Monthly (start of session):**
+
+```bash
+1. Run ./docs-check.sh (validation script)
+2. Review "Last Updated" dates
+3. Update stale sections
+4. Verify all examples still work
+5. Update Changelog with review date
+```
+
+**Before major releases:**
+
+```bash
+1. Full documentation audit
+2. Test all examples and commands
+3. Update all version numbers
+4. Verify all links work
+5. Update README.md badges/stats
+6. Update PROJECT_STATUS_REPORT.md
+```
+
+---
+
+**Remember**: Documentation is code. Treat it with the same care:
+- Version it
+- Test it
+- Review it
+- Keep it DRY (Don't Repeat Yourself)
+- Refactor it when needed
+- Delete it when obsolete
+
 ## Quality Standards
 
 ### Code Quality
@@ -1864,6 +2357,29 @@ public async Task<string?> AuthenticateAsync(string username, string password)
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-15 (Avoiding Stale Documentation)
+- **Added comprehensive "Avoiding Stale Documentation" section** (~500 lines)
+  - Mandatory documentation update triggers (7 key scenarios)
+  - Documentation synchronization checklist for every commit
+  - Version tracking requirements (dates, changelog, version-specific info)
+  - Monthly documentation audit process
+  - Automated documentation validation script (docs-check.sh)
+  - Documentation-in-code proximity guidelines
+  - Deprecation and outdated content handling
+  - Documentation testing procedures
+  - Common stale documentation patterns to avoid (5 don'ts, 5 dos)
+  - AI assistant responsibilities for documentation maintenance
+  - Documentation staleness detection (5 red flags)
+  - Summary workflow: per-commit, monthly, and pre-release processes
+  - Emphasizes: "Documentation is code" - version, test, review, refactor
+- **Impact**: Prevents documentation from becoming outdated, misleading, or inaccurate
+- **Benefits**:
+  - Ensures docs stay synchronized with code changes
+  - Reduces onboarding time for new developers
+  - Prevents bugs caused by following outdated documentation
+  - Establishes clear ownership and review processes
+- Total additions: ~500 lines of documentation maintenance best practices
 
 ### 2025-11-15 (TDD and .NET SDK Installation Requirements)
 - **Added mandatory .NET SDK installation verification** to Initial Analysis Checklist
