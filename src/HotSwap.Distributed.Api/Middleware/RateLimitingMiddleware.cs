@@ -43,7 +43,14 @@ public class RateLimitingMiddleware
             return;
         }
 
-        // Get client identifier (IP address)
+        // Skip rate limiting if disabled in configuration
+        if (!_config.Enabled)
+        {
+            await _next(context);
+            return;
+        }
+
+        // Get client identifier (token-based for authenticated users, IP-based for others)
         var clientId = GetClientIdentifier(context);
 
         // Get or create client info
@@ -90,15 +97,35 @@ public class RateLimitingMiddleware
 
     private string GetClientIdentifier(HttpContext context)
     {
+        // For authenticated users, use token-based limiting (by username/subject)
+        // This ensures each user gets their own rate limit quota
+        if (context.User?.Identity?.IsAuthenticated == true)
+        {
+            var username = context.User.Identity.Name;
+            if (!string.IsNullOrEmpty(username))
+            {
+                return $"user:{username}";
+            }
+
+            // Fallback to subject claim if Name is not available
+            var subjectClaim = context.User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+            if (subjectClaim != null)
+            {
+                return $"user:{subjectClaim.Value}";
+            }
+        }
+
+        // For unauthenticated requests, use IP-based limiting
         // Check for X-Forwarded-For header (when behind proxy)
         var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
         if (!string.IsNullOrEmpty(forwardedFor))
         {
-            return forwardedFor.Split(',')[0].Trim();
+            return $"ip:{forwardedFor.Split(',')[0].Trim()}";
         }
 
         // Fall back to direct connection IP
-        return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return $"ip:{remoteIp}";
     }
 
     private RateLimit GetRateLimitForEndpoint(PathString path)
@@ -142,6 +169,11 @@ public class RateLimitingMiddleware
 public class RateLimitConfiguration
 {
     /// <summary>
+    /// Enable or disable rate limiting globally
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
     /// Global rate limit applied to all endpoints
     /// </summary>
     public RateLimit GlobalLimit { get; set; } = new RateLimit
@@ -152,6 +184,7 @@ public class RateLimitConfiguration
 
     /// <summary>
     /// Endpoint-specific rate limits
+    /// Key is the endpoint path prefix (e.g., "/api/v1/deployments")
     /// </summary>
     public Dictionary<string, RateLimit> EndpointLimits { get; set; } = new()
     {
