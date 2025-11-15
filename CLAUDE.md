@@ -723,7 +723,64 @@ git commit -m "feat: your message"
 
 ⚠️ **CRITICAL**: Since you cannot run build/test locally, you MUST be extra careful with code review and validation.
 
-#### Step 1: Verify All Package References
+#### Step 1: Verify Model Properties FIRST (MOST IMPORTANT!)
+
+**⚠️ This is the #1 cause of build failures - ALWAYS do this first!**
+
+Before creating instances of ANY model class in your code:
+
+```bash
+# 1. Find the model definition
+grep -r "class ErrorResponse" src/HotSwap.Distributed.Api/Models/
+
+# 2. Read the ENTIRE model file
+cat src/HotSwap.Distributed.Api/Models/ApiModels.cs
+
+# 3. For EACH model you use, note the EXACT property names
+```
+
+**Example - ErrorResponse Model:**
+```csharp
+// Located in: src/HotSwap.Distributed.Api/Models/ApiModels.cs
+public class ErrorResponse
+{
+    public required string Error { get; set; }    // ✅ Has "Error"
+    public string? Details { get; set; }          // ✅ Has "Details"
+    // ❌ Does NOT have "Message" property!
+}
+```
+
+**Common Property Name Mistakes:**
+```csharp
+// ❌ WRONG: Guessing property names without checking model
+return BadRequest(new ErrorResponse
+{
+    Error = "BadRequest",
+    Message = "Invalid request"  // ❌ COMPILER ERROR! No 'Message' property exists
+});
+
+// ✅ CORRECT: Checked model first, using actual properties
+return BadRequest(new ErrorResponse
+{
+    Error = "Invalid request",      // ✅ Property exists
+    Details = "Username required"   // ✅ Optional property exists
+});
+```
+
+**Mandatory Model Verification Steps:**
+1. ✅ Read model file BEFORE using the model
+2. ✅ List ALL properties: name, type, required vs nullable
+3. ✅ Use ONLY property names that exist in the model
+4. ✅ Don't guess property names from similar models in other projects
+5. ✅ Property names are case-sensitive (Error ≠ error)
+
+**Models to always verify:**
+- `ErrorResponse` - uses `Error` and `Details` (NOT `Message`)
+- `AuthenticationRequest` - check property names
+- `AuthenticationResponse` - check property names
+- Any custom request/response models
+
+#### Step 2: Verify All Package References
 
 Manually check that all project files have correct package references:
 
@@ -743,7 +800,7 @@ Manually check that all project files have correct package references:
 - ✅ If test code uses `BCrypt.Net.BCrypt`, ensure `<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />` exists
 - ✅ If test code uses `ILogger<T>`, ensure `<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />` exists
 
-#### Step 2: Review All Code Changes
+#### Step 3: Review All Code Changes
 
 Carefully review every code change:
 
@@ -764,7 +821,7 @@ git diff --cached
 - ✅ Mock setups in tests match actual method signatures
 - ✅ Test assertions use correct FluentAssertions syntax
 
-#### Step 3: Verify Project References
+#### Step 4: Verify Project References
 
 Ensure all project references are correct:
 
@@ -779,7 +836,7 @@ Ensure all project references are correct:
 - ✅ Test project should reference all projects whose types are used in tests
 - ✅ Check `tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj` has `<ProjectReference>` for all needed projects
 
-#### Step 4: Check for Common Build Errors
+#### Step 5: Check for Common Build Errors
 
 Review code for patterns that commonly cause build failures:
 
@@ -810,7 +867,7 @@ public async void DoSomethingAsync() { }
 public async Task DoSomethingAsync() { }
 ```
 
-#### Step 5: Validate Test Code
+#### Step 6: Validate Test Code
 
 Review test code for common issues:
 
@@ -833,7 +890,7 @@ var hash = BCrypt.Net.BCrypt.HashPassword("test");  // BCrypt.Net-Next not in te
 // ✅ CORRECT: Add package to test project .csproj
 ```
 
-#### Step 6: Document CI/CD Dependency
+#### Step 7: Document CI/CD Dependency
 
 Add a note to your commit message:
 
@@ -845,7 +902,7 @@ Package references verified manually for environments without .NET SDK.
 "
 ```
 
-#### Step 7: Monitor CI/CD Build
+#### Step 8: Monitor CI/CD Build
 
 After pushing:
 
@@ -866,10 +923,34 @@ git push -u origin claude/your-branch-name
 6. Push fix: `git push -u origin claude/your-branch-name`
 7. Monitor build again
 
-#### Step 8: Pre-Commit Validation Summary
+#### Step 9: Final Model Property Double-Check
+
+**CRITICAL FINAL VERIFICATION** - Do this right before committing:
+
+```bash
+# Search for ALL model instantiations in your changes
+grep -n "new ErrorResponse\|new.*Request\|new.*Response" src/**/*.cs
+
+# For EACH match found:
+# 1. Note the model name (e.g., ErrorResponse)
+# 2. Read the model definition in ApiModels.cs
+# 3. Verify EVERY property name is correct
+# 4. This takes 60 seconds and prevents 100% of property errors
+```
+
+**Quick verification checklist:**
+```bash
+# Example verification for ErrorResponse:
+# ✅ Model has: Error (required), Details (nullable)
+# ✅ Code uses: Error ✓, Details ✓
+# ❌ Code should NOT use: Message ✗, Description ✗, ErrorMessage ✗
+```
+
+#### Step 10: Pre-Commit Validation Summary
 
 Before committing without .NET SDK, verify ALL of these:
 
+- ✅ **MODEL PROPERTIES VERIFIED** - Read model definitions, used correct property names
 - ✅ All package references are correct in all .csproj files
 - ✅ Test project has packages for types used directly in test code (BCrypt, etc.)
 - ✅ All using statements are present
@@ -879,6 +960,7 @@ Before committing without .NET SDK, verify ALL of these:
 - ✅ New interfaces have implementations registered in Program.cs
 - ✅ Test mocks match actual method signatures
 - ✅ Commit message notes CI/CD dependency
+- ✅ **Final model property double-check completed**
 
 **Only commit if you can confidently answer YES to all checks above.**
 
@@ -887,6 +969,8 @@ Before committing without .NET SDK, verify ALL of these:
 #### ❌ What NOT to Commit
 
 **NEVER commit if:**
+- ❌ **You didn't verify model property names** (causes 80% of build failures!)
+- ❌ You used property names that don't exist in the model (e.g., "Message" in ErrorResponse)
 - ❌ Build has errors or warnings (if SDK available)
 - ❌ Any tests are failing (if SDK available)
 - ❌ You haven't run `dotnet test` (if SDK available)

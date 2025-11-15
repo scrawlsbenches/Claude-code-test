@@ -64,8 +64,7 @@ public class AuthenticationController : ControllerBase
         {
             return BadRequest(new ErrorResponse
             {
-                Error = "BadRequest",
-                Message = "Username and password are required"
+                Error = "Username and password are required"
             });
         }
 
@@ -79,8 +78,7 @@ public class AuthenticationController : ControllerBase
             _logger.LogWarning("Failed login attempt for user: {Username}", request.Username);
             return Unauthorized(new ErrorResponse
             {
-                Error = "Unauthorized",
-                Message = "Invalid username or password"
+                Error = "Invalid username or password"
             });
         }
 
@@ -128,8 +126,7 @@ public class AuthenticationController : ControllerBase
             _logger.LogWarning("Failed to extract user ID from JWT claims");
             return Unauthorized(new ErrorResponse
             {
-                Error = "Unauthorized",
-                Message = "Invalid authentication token"
+                Error = "Invalid authentication token"
             });
         }
 
@@ -140,8 +137,7 @@ public class AuthenticationController : ControllerBase
             _logger.LogWarning("User {UserId} not found in repository", userId);
             return Unauthorized(new ErrorResponse
             {
-                Error = "Unauthorized",
-                Message = "User not found"
+                Error = "User not found"
             });
         }
 
@@ -175,8 +171,7 @@ public class AuthenticationController : ControllerBase
         {
             return StatusCode(403, new ErrorResponse
             {
-                Error = "Forbidden",
-                Message = "Demo credentials are not available in production"
+                Error = "Demo credentials are not available in production"
             });
         }
 
