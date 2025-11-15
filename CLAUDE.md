@@ -1143,11 +1143,333 @@ This is not optional. CI/CD failures waste time and resources. See the detailed 
 
 ### Initial Analysis Checklist
 When starting a new task:
+
+**Step 0: Verify .NET SDK Installation (CRITICAL - DO THIS FIRST)**
+```bash
+# Check if .NET SDK is installed
+dotnet --version
+
+# If command fails or version < 8.0, install .NET SDK 8.0
+# Follow installation instructions in "Development Environment Setup" section above
+# Windows: winget install Microsoft.DotNet.SDK.8
+# Linux: See "Installing .NET SDK on Linux" section
+# macOS: brew install dotnet@8
+
+# Verify installation succeeded
+dotnet --version
+# Expected: 8.0.x or later
+
+# If in Claude Code web environment without .NET SDK:
+# - Document this limitation in your work
+# - Follow "Alternative: No .NET SDK Checklist" for pre-commit validation
+# - Rely on CI/CD for build/test verification
+```
+
+**⚠️ CRITICAL**: Never proceed with coding tasks without first verifying .NET SDK availability. If unavailable, you MUST follow the alternative checklist to avoid build failures.
+
+After verifying .NET SDK:
+
 1. **Read relevant files** before making changes
 2. **Check for existing patterns** in the codebase
-3. **Verify .NET SDK version** compatibility
+3. **Verify .NET SDK version** compatibility (must be 8.0+)
 4. **Review dependencies** and their versions
-5. **Check for existing tests** to understand expected behavior
+5. **Check for existing tests** to understand expected behavior and testing patterns
+
+### Test-Driven Development (TDD) Workflow
+
+**⚠️ MANDATORY**: All coding tasks MUST follow Test-Driven Development (TDD) principles. This is not optional.
+
+#### Why TDD is Mandatory
+
+1. **Prevents regressions** - Tests catch breaking changes immediately
+2. **Improves design** - Writing tests first leads to better API design
+3. **Documents behavior** - Tests serve as living documentation
+4. **Reduces debugging time** - Issues are caught during development, not in CI/CD
+5. **Ensures testability** - Code is designed to be testable from the start
+
+#### The Red-Green-Refactor Cycle
+
+All code changes must follow this cycle:
+
+```
+🔴 RED → 🟢 GREEN → 🔵 REFACTOR
+```
+
+1. **🔴 RED** - Write a failing test that defines desired behavior
+2. **🟢 GREEN** - Write minimal code to make the test pass
+3. **🔵 REFACTOR** - Improve code quality while keeping tests green
+
+#### TDD Workflow for This Project
+
+**For NEW Features:**
+
+```bash
+# Step 1: 🔴 RED - Write failing test(s)
+# Navigate to tests/HotSwap.Distributed.Tests/
+
+# Create or edit test file (e.g., UserAuthenticationTests.cs)
+# Write test(s) that define the expected behavior
+
+# Example test structure:
+```csharp
+[Fact]
+public async Task AuthenticateAsync_WithValidCredentials_ReturnsToken()
+{
+    // Arrange
+    var mockRepo = new Mock<IUserRepository>();
+    var service = new AuthenticationService(mockRepo.Object);
+
+    mockRepo.Setup(x => x.GetUserAsync("testuser", It.IsAny<CancellationToken>()))
+        .ReturnsAsync(new User { Username = "testuser", PasswordHash = "hash" });
+
+    // Act
+    var result = await service.AuthenticateAsync("testuser", "password");
+
+    // Assert
+    result.Should().NotBeNull();
+    result.Token.Should().NotBeEmpty();
+}
+```
+
+```bash
+# Step 2: Run the test - it should FAIL (RED)
+dotnet test --filter "FullyQualifiedName~AuthenticateAsync_WithValidCredentials"
+
+# Expected output: Test Failed (because implementation doesn't exist yet)
+# If test passes without implementation → test is wrong, fix the test
+
+# Step 3: 🟢 GREEN - Implement minimal code to pass the test
+# Create or edit source file (e.g., src/HotSwap.Distributed.Api/Services/AuthenticationService.cs)
+# Write ONLY enough code to make the test pass
+
+# Step 4: Run the test again - it should PASS (GREEN)
+dotnet test --filter "FullyQualifiedName~AuthenticateAsync_WithValidCredentials"
+
+# Expected output: Test Passed
+# If test still fails → fix implementation, not the test
+
+# Step 5: 🔵 REFACTOR - Improve code quality
+# - Extract methods
+# - Improve naming
+# - Add error handling
+# - Add XML documentation
+# - Ensure SOLID principles
+
+# Step 6: Run ALL tests to ensure refactoring didn't break anything
+dotnet test
+
+# Expected output: All tests pass
+# If any test fails → fix the issue before proceeding
+
+# Step 7: Repeat for next test case (edge cases, error cases, etc.)
+```
+
+**For BUG Fixes:**
+
+```bash
+# Step 1: 🔴 RED - Write a test that reproduces the bug
+# The test should FAIL, demonstrating the bug exists
+
+# Step 2: 🟢 GREEN - Fix the bug
+# Modify source code to make the test pass
+
+# Step 3: 🔵 REFACTOR - Clean up if needed
+# Improve code quality while keeping all tests green
+
+# Step 4: Run all tests
+dotnet test
+
+# Expected: All tests pass, including the new bug reproduction test
+```
+
+**For REFACTORING:**
+
+```bash
+# Step 1: Ensure existing tests exist and pass
+dotnet test
+
+# If no tests exist → STOP and write tests first (follow "New Feature" workflow)
+
+# Step 2: 🔵 REFACTOR - Modify code structure
+# Keep behavior identical, only change internal structure
+
+# Step 3: Run tests continuously during refactoring
+dotnet test
+
+# Tests should ALWAYS pass - if they fail, revert and try smaller steps
+
+# Step 4: Verify all tests still pass
+dotnet test
+```
+
+#### TDD Best Practices for This Project
+
+1. **Test Naming Convention**:
+   - `MethodName_StateUnderTest_ExpectedBehavior`
+   - Example: `CreateDeployment_WithInvalidRequest_ReturnsBadRequest`
+
+2. **Test Organization (AAA Pattern)**:
+   ```csharp
+   [Fact]
+   public async Task MethodName_StateUnderTest_ExpectedBehavior()
+   {
+       // Arrange - Set up test data and mocks
+       var mockDependency = new Mock<IDependency>();
+       var sut = new SystemUnderTest(mockDependency.Object);
+
+       // Act - Execute the method being tested
+       var result = await sut.MethodAsync(parameters);
+
+       // Assert - Verify expected behavior using FluentAssertions
+       result.Should().NotBeNull();
+       result.Property.Should().Be(expectedValue);
+   }
+   ```
+
+3. **Mock Setup Patterns**:
+   ```csharp
+   // ✅ CORRECT: Mock setup matches actual method signature
+   mockRepo.Setup(x => x.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+       .ReturnsAsync(expectedResult);
+
+   // ❌ WRONG: Mock setup doesn't match signature
+   mockRepo.Setup(x => x.GetAsync(It.IsAny<string>()))  // Missing CancellationToken!
+       .ReturnsAsync(expectedResult);
+   ```
+
+4. **Assertion Patterns** (using FluentAssertions):
+   ```csharp
+   // ✅ Use FluentAssertions for readable assertions
+   result.Should().NotBeNull();
+   result.Items.Should().HaveCount(5);
+   result.Name.Should().Be("Expected Name");
+   result.Status.Should().Be(DeploymentStatus.Running);
+
+   // ❌ Avoid xUnit Assert (less readable)
+   Assert.NotNull(result);
+   Assert.Equal(5, result.Items.Count);
+   ```
+
+5. **Test Coverage Requirements**:
+   - **Happy path** - Normal successful execution
+   - **Edge cases** - Boundary conditions, empty inputs, null values
+   - **Error cases** - Invalid input, exceptions, failure scenarios
+   - **Async patterns** - Cancellation, timeouts, concurrent access
+
+#### Example: Complete TDD Workflow
+
+**Scenario**: Add rate limiting to API endpoint
+
+```bash
+# 1️⃣ 🔴 RED - Write failing test
+# File: tests/HotSwap.Distributed.Tests/Middleware/RateLimitingMiddlewareTests.cs
+
+[Fact]
+public async Task InvokeAsync_WhenRateLimitExceeded_ReturnsStatus429()
+{
+    // Arrange
+    var middleware = new RateLimitingMiddleware(next: null, options);
+    var context = CreateHttpContext();
+
+    // Act - Make 101 requests (limit is 100)
+    for (int i = 0; i < 101; i++)
+    {
+        await middleware.InvokeAsync(context);
+    }
+
+    // Assert
+    context.Response.StatusCode.Should().Be(429);
+}
+
+# Run test - it FAILS (good!)
+dotnet test --filter "FullyQualifiedName~RateLimitingMiddlewareTests"
+# Output: Test Failed - middleware doesn't exist yet
+
+# 2️⃣ 🟢 GREEN - Implement minimal code
+# File: src/HotSwap.Distributed.Api/Middleware/RateLimitingMiddleware.cs
+
+public class RateLimitingMiddleware
+{
+    private static int _requestCount = 0;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        _requestCount++;
+        if (_requestCount > 100)
+        {
+            context.Response.StatusCode = 429;
+            return;
+        }
+        await _next(context);
+    }
+}
+
+# Run test - it PASSES (good!)
+dotnet test --filter "FullyQualifiedName~RateLimitingMiddlewareTests"
+# Output: Test Passed
+
+# 3️⃣ 🔵 REFACTOR - Improve implementation
+# - Add proper sliding window algorithm
+# - Add configuration
+# - Add logging
+# - Add XML documentation
+# - Use dependency injection
+
+# Run ALL tests after refactoring
+dotnet test
+# Output: All tests pass
+
+# 4️⃣ Add more tests (repeat cycle)
+# - Test rate limit reset
+# - Test different endpoints
+# - Test concurrent requests
+# - Test configuration options
+```
+
+#### Integration with TodoWrite Tool
+
+When using TDD, structure your todos as follows:
+
+```bash
+TodoWrite:
+- 🔴 Write test for [feature] - Status: in_progress
+- 🟢 Implement [feature] to pass test - Status: pending
+- 🔵 Refactor [feature] implementation - Status: pending
+- ✅ Verify all tests pass - Status: pending
+```
+
+Mark each step complete only when:
+- 🔴 RED: Test written and FAILING
+- 🟢 GREEN: Implementation complete and test PASSING
+- 🔵 REFACTOR: Code improved and ALL tests PASSING
+- ✅ VERIFY: `dotnet test` succeeds with zero failures
+
+#### When to Skip TDD
+
+**NEVER**. TDD is mandatory for all code changes in this project.
+
+Even for:
+- "Quick fixes" - Write test first to verify the fix
+- "Simple changes" - Tests prevent future regressions
+- "Documentation updates" - Docs changes don't need tests, but code does
+- "Refactoring" - Existing tests must pass, add tests if missing
+
+#### TDD Checklist
+
+Before marking any coding task as complete:
+
+- ✅ Tests were written BEFORE implementation
+- ✅ Tests initially FAILED (RED)
+- ✅ Implementation makes tests PASS (GREEN)
+- ✅ Code was REFACTORED for quality (BLUE)
+- ✅ ALL tests pass (`dotnet test` shows zero failures)
+- ✅ Test coverage includes happy path, edge cases, and error cases
+- ✅ Tests use AAA pattern (Arrange-Act-Assert)
+- ✅ Tests use FluentAssertions for readable assertions
+- ✅ Mock setups match actual method signatures
+- ✅ Test naming follows `MethodName_StateUnderTest_ExpectedBehavior`
+
+**If you cannot answer YES to all items above → Task is NOT complete.**
 
 ### Code Generation Standards
 - **Always prefer editing** existing files over creating new ones
@@ -1167,13 +1489,69 @@ When starting a new task:
 - **Sanitize output** to prevent XSS
 
 ### Testing Requirements
-- **Write tests for new features** before marking task complete
-- **⚠️ CRITICAL: Run `dotnet test` before EVERY commit** (see Pre-Commit Checklist)
-- **Ensure ALL tests pass** before committing (zero failures allowed)
-- **Include edge cases** in test coverage
-- **Mock external dependencies** in unit tests
-- **Use integration tests** for critical workflows
-- **Never commit failing tests** - CI/CD will catch this and fail the build
+
+**⚠️ MANDATORY: Follow Test-Driven Development (TDD) for ALL code changes**
+
+This project enforces Test-Driven Development. See the [Test-Driven Development (TDD) Workflow](#test-driven-development-tdd-workflow) section above for complete guidelines.
+
+**Key Requirements:**
+
+1. **Write tests BEFORE implementation** (not after)
+   - Tests must be written FIRST, following Red-Green-Refactor cycle
+   - Implementation comes AFTER tests are written
+   - This is mandatory, not optional
+
+2. **⚠️ CRITICAL: Run `dotnet test` before EVERY commit** (see Pre-Commit Checklist)
+   - Zero test failures allowed
+   - Zero skipped tests (unless explicitly documented why)
+   - All new code must have corresponding tests
+
+3. **Test Coverage Requirements**:
+   - **Happy path** - Normal successful execution
+   - **Edge cases** - Boundary conditions, empty inputs, null values
+   - **Error cases** - Invalid input, exceptions, failure scenarios
+   - Target >80% code coverage (current: 85%+)
+
+4. **Testing Patterns**:
+   - Use **xUnit** for test framework
+   - Use **Moq** for mocking dependencies
+   - Use **FluentAssertions** for readable assertions
+   - Follow **AAA pattern** (Arrange-Act-Assert)
+   - Follow **naming convention**: `MethodName_StateUnderTest_ExpectedBehavior`
+
+5. **Mock external dependencies** in unit tests
+   - Database access → Mock repository interfaces
+   - HTTP calls → Mock HttpClient or service interfaces
+   - File I/O → Mock file system abstractions
+   - Time → Mock IClock or similar time abstraction
+
+6. **Integration tests** for critical workflows
+   - Deployment pipeline end-to-end tests
+   - API endpoint integration tests
+   - Authentication and authorization flows
+
+7. **Never commit failing tests** - CI/CD will catch this and fail the build
+   - Run `dotnet test` locally before every commit
+   - Fix failing tests immediately, never "comment out" failing tests
+   - If test is flaky, fix the flakiness, don't skip the test
+
+**Example TDD Workflow:**
+```bash
+# ❌ WRONG: Implementation first, tests later
+1. Write implementation code
+2. Write tests (maybe)
+3. Run tests
+4. Commit
+
+# ✅ CORRECT: Tests first (TDD)
+1. 🔴 Write failing test
+2. 🟢 Write minimal implementation to pass test
+3. 🔵 Refactor code for quality
+4. Run ALL tests (`dotnet test`)
+5. Commit (only if all tests pass)
+```
+
+**See [Test-Driven Development (TDD) Workflow](#test-driven-development-tdd-workflow) for detailed guidance.**
 
 ### File Operations
 - Use **Read** tool for viewing files
@@ -1486,6 +1864,30 @@ public async Task<string?> AuthenticateAsync(string username, string password)
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-15 (TDD and .NET SDK Installation Requirements)
+- **Added mandatory .NET SDK installation verification** to Initial Analysis Checklist
+  - Step 0: Verify .NET SDK Installation (CRITICAL - DO THIS FIRST)
+  - Instructions for all platforms (Windows, Linux, macOS)
+  - Guidance for Claude Code web environment without .NET SDK
+  - Clear directive: Never proceed without verifying SDK availability
+- **Added comprehensive Test-Driven Development (TDD) Workflow section** (~300 lines)
+  - Why TDD is mandatory (prevents regressions, improves design, documents behavior)
+  - Red-Green-Refactor cycle explanation and workflow
+  - TDD workflows for: New Features, Bug Fixes, Refactoring
+  - Best practices: Test naming, AAA pattern, mock setup, FluentAssertions
+  - Complete example: Rate limiting middleware with TDD
+  - Integration with TodoWrite tool for tracking TDD steps
+  - TDD Checklist for task completion verification
+  - Explicit statement: "NEVER skip TDD" - mandatory for all code changes
+- **Enhanced Testing Requirements section**
+  - Emphasizes TDD is MANDATORY, not optional
+  - Tests BEFORE implementation (Red-Green-Refactor)
+  - Test coverage requirements: happy path, edge cases, error cases
+  - Testing patterns: xUnit, Moq, FluentAssertions, AAA pattern
+  - Example workflows comparing wrong (implementation first) vs correct (TDD)
+  - Cross-references to TDD Workflow section
+- Total additions: ~350 lines of TDD and .NET SDK installation guidance
 
 ### 2025-11-15 (Installation and Build Instructions)
 - **Added comprehensive .NET SDK installation troubleshooting** for Linux environments
