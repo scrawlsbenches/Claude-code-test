@@ -567,7 +567,26 @@ Follow conventional commits:
 
 **NEVER commit code without completing ALL steps below.** This prevents CI/CD failures and ensures code quality.
 
-#### Step 1: Clean Build
+#### Prerequisites: Check .NET SDK Availability
+
+Before starting the pre-commit checklist, verify if .NET SDK is available:
+
+```bash
+# Check if dotnet is available
+dotnet --version
+```
+
+**If .NET SDK is available** (local development, CI/CD environments):
+- Follow Steps 1-6 below EXACTLY
+- Do NOT commit if ANY step fails
+
+**If .NET SDK is NOT available** (e.g., Claude Code web environment):
+- Skip to **"Alternative: No .NET SDK Checklist"** below
+- You MUST follow the alternative checklist instead
+
+---
+
+#### Step 1: Clean Build (Requires .NET SDK)
 
 ```bash
 # Clean all build artifacts
@@ -696,17 +715,189 @@ git diff --staged
 git commit -m "feat: your message"
 ```
 
+---
+
+### 🔧 Alternative: No .NET SDK Checklist
+
+**Use this checklist when .NET SDK is NOT available** (e.g., Claude Code web environment, restricted environments).
+
+⚠️ **CRITICAL**: Since you cannot run build/test locally, you MUST be extra careful with code review and validation.
+
+#### Step 1: Verify All Package References
+
+Manually check that all project files have correct package references:
+
+**For NEW test files:**
+```bash
+# Check if test project has all packages used in test code
+# Example: If tests use BCrypt.Net.BCrypt, the test project MUST reference BCrypt.Net-Next
+
+# Common packages needed in tests:
+# - BCrypt.Net-Next (if tests create users with hashed passwords)
+# - Microsoft.Extensions.Logging.Abstractions (if tests mock ILogger)
+# - Any packages whose types are directly used in test code
+```
+
+**Verify:**
+- ✅ Check `tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj` for missing packages
+- ✅ If test code uses `BCrypt.Net.BCrypt`, ensure `<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />` exists
+- ✅ If test code uses `ILogger<T>`, ensure `<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />` exists
+
+#### Step 2: Review All Code Changes
+
+Carefully review every code change:
+
+```bash
+# Show all changes
+git diff
+
+# Review staged changes
+git diff --cached
+```
+
+**Check for:**
+- ✅ All `using` statements are correct and namespaces exist
+- ✅ All types referenced exist in the referenced projects/packages
+- ✅ No syntax errors (missing semicolons, braces, etc.)
+- ✅ Proper async/await usage (async methods return Task, await is used correctly)
+- ✅ All interfaces have implementations registered in Program.cs
+- ✅ Mock setups in tests match actual method signatures
+- ✅ Test assertions use correct FluentAssertions syntax
+
+#### Step 3: Verify Project References
+
+Ensure all project references are correct:
+
+**For NEW source files:**
+- ✅ If code uses types from Domain, ensure project references Domain
+- ✅ If code uses types from Infrastructure, ensure project references Infrastructure
+- ✅ API layer should reference Domain, Infrastructure, and Orchestrator
+- ✅ Infrastructure should reference Domain only
+- ✅ Domain should have no project references (core layer)
+
+**For NEW test files:**
+- ✅ Test project should reference all projects whose types are used in tests
+- ✅ Check `tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj` has `<ProjectReference>` for all needed projects
+
+#### Step 4: Check for Common Build Errors
+
+Review code for patterns that commonly cause build failures:
+
+**Namespace Issues:**
+```csharp
+// ❌ WRONG: Namespace doesn't match folder structure
+namespace HotSwap.WrongNamespace;  // File is in HotSwap.Distributed.Domain/Models/
+
+// ✅ CORRECT: Namespace matches folder
+namespace HotSwap.Distributed.Domain.Models;
+```
+
+**Missing Using Statements:**
+```csharp
+// ❌ WRONG: Using List<T> without using System.Collections.Generic
+public List<User> Users { get; set; }
+
+// ✅ CORRECT: Add using statement
+using System.Collections.Generic;
+```
+
+**Async/Await Issues:**
+```csharp
+// ❌ WRONG: Async method doesn't return Task
+public async void DoSomethingAsync() { }
+
+// ✅ CORRECT: Async methods return Task
+public async Task DoSomethingAsync() { }
+```
+
+#### Step 5: Validate Test Code
+
+Review test code for common issues:
+
+**Mock Setup Issues:**
+```csharp
+// ❌ WRONG: Mock setup doesn't match actual method signature
+_mockRepo.Setup(x => x.GetUserAsync(It.IsAny<string>()))  // Method has 2 params!
+    .ReturnsAsync(user);
+
+// ✅ CORRECT: Match actual signature
+_mockRepo.Setup(x => x.GetUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+    .ReturnsAsync(user);
+```
+
+**Test Dependency Issues:**
+```csharp
+// ❌ WRONG: Test uses type directly but package not referenced
+var hash = BCrypt.Net.BCrypt.HashPassword("test");  // BCrypt.Net-Next not in test project!
+
+// ✅ CORRECT: Add package to test project .csproj
+```
+
+#### Step 6: Document CI/CD Dependency
+
+Add a note to your commit message:
+
+```bash
+git commit -m "feat: your feature description
+
+Note: Build and tests will run in GitHub Actions CI/CD pipeline.
+Package references verified manually for environments without .NET SDK.
+"
+```
+
+#### Step 7: Monitor CI/CD Build
+
+After pushing:
+
+```bash
+# Push to remote
+git push -u origin claude/your-branch-name
+
+# IMMEDIATELY check GitHub Actions build status
+# Go to: https://github.com/scrawlsbenches/Claude-code-test/actions
+```
+
+**If build fails:**
+1. Check the error message in GitHub Actions logs
+2. Identify the missing package reference or code issue
+3. Fix locally using this checklist
+4. Add missing package references to appropriate .csproj files
+5. Commit fix: `git commit -m "fix: add missing package reference for tests"`
+6. Push fix: `git push -u origin claude/your-branch-name`
+7. Monitor build again
+
+#### Step 8: Pre-Commit Validation Summary
+
+Before committing without .NET SDK, verify ALL of these:
+
+- ✅ All package references are correct in all .csproj files
+- ✅ Test project has packages for types used directly in test code (BCrypt, etc.)
+- ✅ All using statements are present
+- ✅ All namespaces match folder structure
+- ✅ All project references are correct
+- ✅ No obvious syntax errors visible in code review
+- ✅ New interfaces have implementations registered in Program.cs
+- ✅ Test mocks match actual method signatures
+- ✅ Commit message notes CI/CD dependency
+
+**Only commit if you can confidently answer YES to all checks above.**
+
+---
+
 #### ❌ What NOT to Commit
 
 **NEVER commit if:**
-- ❌ Build has errors or warnings
-- ❌ Any tests are failing
-- ❌ You haven't run `dotnet test`
-- ❌ You added new files without testing them
+- ❌ Build has errors or warnings (if SDK available)
+- ❌ Any tests are failing (if SDK available)
+- ❌ You haven't run `dotnet test` (if SDK available)
+- ❌ You added new files without verifying package references (if SDK NOT available)
+- ❌ You used a package type directly in tests without adding package to test project
 - ❌ Code contains `// TODO: Fix this before commit`
 - ❌ Code contains hardcoded secrets or environment-specific values
 - ❌ You made changes to interfaces without updating implementations
 - ❌ You added dependencies without documenting why
+- ❌ You didn't verify all using statements and namespaces
+- ❌ Test project is missing package references for types used in tests
 
 #### 🚨 Emergency Fixes
 
