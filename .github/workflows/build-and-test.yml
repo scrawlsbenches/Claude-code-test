@@ -55,6 +55,64 @@ jobs:
         docker stop test-container
         docker rm test-container
 
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: docker-build
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore DistributedKernel.sln
+
+    - name: Build API
+      run: dotnet build src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj --configuration Release --no-restore
+
+    - name: Start API in background
+      run: |
+        dotnet run --project src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj --configuration Release --no-build &
+        echo $! > api.pid
+        sleep 10
+
+    - name: Wait for API to be healthy
+      run: |
+        for i in {1..30}; do
+          if curl -sf http://localhost:5000/health > /dev/null; then
+            echo "API is healthy!"
+            exit 0
+          fi
+          echo "Waiting for API... (attempt $i/30)"
+          sleep 2
+        done
+        echo "API failed to start"
+        exit 1
+
+    - name: Run smoke tests
+      run: ./run-smoke-tests.sh http://localhost:5000
+
+    - name: Stop API
+      if: always()
+      run: |
+        if [ -f api.pid ]; then
+          kill $(cat api.pid) || true
+        fi
+
   code-quality:
     runs-on: ubuntu-latest
 
