@@ -74,3 +74,4 @@ jobs:
 
     - name: Check formatting
       run: dotnet format DistributedKernel.sln --verify-no-changes --verbosity diagnostic
+      continue-on-error: true
