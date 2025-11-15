@@ -28,7 +28,10 @@ public class JwtTokenService : IJwtTokenService
             throw new ArgumentException("JWT SecretKey must be at least 32 characters long", nameof(config));
         }
 
-        _tokenHandler = new JwtSecurityTokenHandler();
+        _tokenHandler = new JwtSecurityTokenHandler
+        {
+            MapInboundClaims = false // Disable WS-* claim mapping to preserve standard JWT claim names
+        };
         _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config.SecretKey));
     }
 
@@ -46,9 +49,10 @@ public class JwtTokenService : IJwtTokenService
         // For testing expired tokens (ExpirationMinutes < 0), set NotBefore to an earlier time
         // so the token was valid in the past but is now expired.
         // This ensures the JWT spec requirement (expires > notBefore) is satisfied.
+        // For normal tokens, set NotBefore slightly in the past to avoid clock skew issues.
         var notBefore = _config.ExpirationMinutes < 0
-            ? expiresAt.AddMinutes(-1)  // Token was valid for 1 minute in the past
-            : now;                       // Token is valid starting now
+            ? expiresAt.AddMinutes(-1)     // Token was valid for 1 minute in the past
+            : now.AddSeconds(-5);          // Token is valid starting 5 seconds ago
 
         // Create claims
         var claims = new List<Claim>
@@ -69,7 +73,7 @@ public class JwtTokenService : IJwtTokenService
         // Create token descriptor
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(claims),
+            Subject = new ClaimsIdentity(claims, "jwt"),
             NotBefore = notBefore,
             Expires = expiresAt,
             Issuer = _config.Issuer,
@@ -105,7 +109,7 @@ public class JwtTokenService : IJwtTokenService
                 ValidateAudience = true,
                 ValidAudience = _config.Audience,
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero // No tolerance for expired tokens
+                ClockSkew = TimeSpan.FromMinutes(1) // Allow 1 minute clock skew tolerance
             };
 
             var principal = _tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
