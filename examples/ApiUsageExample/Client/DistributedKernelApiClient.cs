@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using HotSwap.Examples.ApiUsage.Models;
 using Microsoft.Extensions.Logging;
