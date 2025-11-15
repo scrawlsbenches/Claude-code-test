@@ -66,8 +66,11 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    - name: Restore dependencies
+      run: dotnet restore DistributedKernel.sln
+
     - name: Run code analysis
-      run: dotnet build DistributedKernel.sln --configuration Release /p:TreatWarningsAsErrors=true
+      run: dotnet build DistributedKernel.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true
 
     - name: Check formatting
       run: dotnet format DistributedKernel.sln --verify-no-changes --verbosity diagnostic
