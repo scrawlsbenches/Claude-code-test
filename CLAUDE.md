@@ -676,11 +676,15 @@ dotnet --version
 - Do NOT commit if ANY step fails
 
 **If .NET SDK is NOT available:**
-- ❌ **STOP - DO NOT PROCEED WITH COMMIT**
-- You CANNOT commit code without building and testing first
-- Ask the user to provide an environment with .NET SDK installed
-- Or ask the user to run the build/test commands themselves before you commit
-- **There is NO alternative path - build and test are mandatory**
+- ⚠️ **CRITICAL: You cannot verify build/test locally**
+- **Inform the user explicitly:** "I cannot build/test this code because .NET SDK is not available in this environment. The changes will be verified by GitHub Actions CI/CD. There is a risk of build/test failures."
+- **Ask the user:** "Would you like me to proceed with extra careful code review, or would you prefer to test this locally on your machine first?"
+- **If user approves proceeding:**
+  - Perform EXTRA thorough code review (see "No SDK Code Review Checklist" below)
+  - Document in commit message: "Note: Built and tested in GitHub Actions CI/CD (no local SDK available)"
+  - Acknowledge the risk of CI/CD failures
+- **If user wants to test locally:**
+  - Stop and wait for user to pull branch, run `dotnet build && dotnet test`, and report results
 
 ---
 
@@ -815,13 +819,77 @@ git commit -m "feat: your message"
 
 ---
 
+#### 🔍 No SDK Code Review Checklist
+
+**Use this when .NET SDK is NOT available and user has approved proceeding.**
+
+⚠️ **IMPORTANT:** This is a risk mitigation checklist, NOT a replacement for build/test. Be extra thorough.
+
+1. **Verify all using statements:**
+   ```bash
+   # Check every file you modified has correct using statements
+   grep -n "^using" src/path/to/file.cs
+   ```
+   - ✅ All namespaces exist in referenced projects/packages
+   - ✅ No typos in namespace names
+   - ✅ No missing using statements
+
+2. **Verify namespaces match folder structure:**
+   - File: `src/HotSwap.Distributed.Api/Middleware/RateLimitingMiddleware.cs`
+   - Expected namespace: `HotSwap.Distributed.Api.Middleware`
+   - ✅ Namespace matches exactly
+
+3. **Verify all types exist:**
+   - For each type you use, find its definition
+   - Check it's in a project/package that's referenced
+   - Verify type name spelling
+
+4. **Check method signatures:**
+   - Verify async methods return `Task` or `Task<T>`
+   - Check all method parameters match expected types
+   - Ensure all required parameters are provided
+
+5. **Validate JSON configuration:**
+   ```bash
+   cat appsettings.json | python3 -m json.tool > /dev/null
+   ```
+   - ✅ Valid JSON syntax
+   - ✅ TimeSpan format correct: `"00:01:00"` not `"1m"`
+   - ✅ All configuration keys match code expectations
+
+6. **Review test code carefully:**
+   - ✅ Test project references all needed projects
+   - ✅ All mock setups match actual method signatures
+   - ✅ FluentAssertions syntax is correct
+   - ✅ Test class/method naming follows conventions
+
+7. **Check for common errors:**
+   - No missing semicolons
+   - All braces matched
+   - No undefined variables
+   - Proper null handling
+
+8. **Verify git changes:**
+   ```bash
+   git diff
+   ```
+   - Review every single line changed
+   - Ensure no accidental deletions
+   - Check for merge conflicts
+
+**Only proceed if you can confidently answer YES to all checks.**
+
+---
+
 #### ❌ What NOT to Commit
 
 **NEVER commit if:**
-- ❌ .NET SDK is not available to build and test
-- ❌ Build has ANY errors or warnings
-- ❌ ANY tests are failing
-- ❌ You haven't run `dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test`
+- ❌ .NET SDK is available but you didn't run build/test
+- ❌ Build has ANY errors or warnings (when SDK available)
+- ❌ ANY tests are failing (when SDK available)
+- ❌ You haven't run `dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test` (when SDK available)
+- ❌ .NET SDK is NOT available and user did NOT approve proceeding
+- ❌ .NET SDK is NOT available and you didn't complete the "No SDK Code Review Checklist"
 - ❌ Code contains `// TODO: Fix this before commit`
 - ❌ Code contains hardcoded secrets or environment-specific values
 - ❌ You made changes to interfaces without updating implementations
@@ -829,8 +897,6 @@ git commit -m "feat: your message"
 - ❌ You didn't verify all using statements and namespaces
 - ❌ Test project is missing package references for types used in tests
 - ❌ You used a package type directly in tests without adding package to test project
-
-**Remember: NO BUILD + TEST = NO COMMIT. Period.**
 
 #### 🚨 Emergency Fixes
 
