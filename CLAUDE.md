@@ -563,6 +563,192 @@ Follow conventional commits:
 - `test:` - Test additions/modifications
 - `chore:` - Maintenance tasks
 
+### ⚠️ CRITICAL: Pre-Commit Checklist
+
+**NEVER commit code without completing ALL steps below.** This prevents CI/CD failures and ensures code quality.
+
+#### Step 1: Clean Build
+
+```bash
+# Clean all build artifacts
+dotnet clean
+
+# Restore all NuGet packages
+dotnet restore
+
+# Build entire solution (NOT incremental)
+dotnet build --no-incremental
+
+# Expected output: "Build succeeded. 0 Warning(s) 0 Error(s)"
+# If you see ANY errors or warnings, FIX THEM before proceeding
+```
+
+**What to check:**
+- ✅ Build completes with **zero errors**
+- ✅ Build completes with **zero warnings** (warnings = future errors)
+- ✅ All projects compile successfully
+- ✅ No missing dependencies or package errors
+
+**Common build errors:**
+```bash
+# Missing using statement
+# Fix: Add required using directives at top of file
+
+# Namespace mismatch
+# Fix: Ensure namespace matches folder structure
+
+# Missing project reference
+# Fix: Add project reference with:
+dotnet add <project> reference <referenced-project>
+
+# Type not found
+# Fix: Ensure the type exists and is public, check namespace
+```
+
+#### Step 2: Run ALL Tests
+
+```bash
+# Run all tests in solution
+dotnet test
+
+# Expected output: "Passed! - Failed: 0, Passed: X, Skipped: 0"
+# If ANY tests fail, FIX THEM before proceeding
+```
+
+**What to check:**
+- ✅ **ALL tests pass** (zero failures)
+- ✅ No tests are skipped unexpectedly
+- ✅ Tests run to completion without hanging
+- ✅ No test warnings or errors in output
+
+**Common test errors:**
+```bash
+# Test fails with NullReferenceException
+# Fix: Check mock setup, ensure all required dependencies are mocked
+
+# Test fails with timeout
+# Fix: Increase timeout or optimize code being tested
+
+# Test can't find dependencies
+# Fix: Ensure test project references all required projects
+```
+
+#### Step 3: Run Specific Test Projects (if available)
+
+```bash
+# Run tests for each project individually to catch issues
+dotnet test tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj
+
+# Check critical path tests
+./test-critical-paths.sh
+
+# Run code validation script
+./validate-code.sh
+```
+
+#### Step 4: Verify New Files Compile
+
+If you created new files, verify they're included:
+
+```bash
+# Check that new files are in git staging
+git status
+
+# Ensure new .cs files are in .csproj (auto-included in SDK-style projects)
+# If NOT SDK-style, manually add to .csproj:
+# <Compile Include="Path/To/NewFile.cs" />
+```
+
+#### Step 5: Check for Common Issues
+
+```bash
+# Check for compilation issues in specific configurations
+dotnet build -c Debug
+dotnet build -c Release
+
+# Check for missing XML documentation (if enabled)
+# Look for warnings like "Missing XML comment for publicly visible type"
+
+# Verify no hardcoded paths or environment-specific code
+grep -r "C:\\" src/  # Windows paths
+grep -r "/Users/" src/  # macOS paths
+grep -r "localhost:5000" src/  # Hardcoded URLs (use configuration instead)
+```
+
+#### Step 6: Final Verification
+
+Before `git commit`:
+
+```bash
+# 1. Ensure clean build
+dotnet clean && dotnet restore && dotnet build --no-incremental
+
+# 2. Ensure all tests pass
+dotnet test
+
+# 3. Check git status
+git status
+
+# 4. Review changes
+git diff --staged
+
+# 5. Only THEN commit
+git commit -m "feat: your message"
+```
+
+#### ❌ What NOT to Commit
+
+**NEVER commit if:**
+- ❌ Build has errors or warnings
+- ❌ Any tests are failing
+- ❌ You haven't run `dotnet test`
+- ❌ You added new files without testing them
+- ❌ Code contains `// TODO: Fix this before commit`
+- ❌ Code contains hardcoded secrets or environment-specific values
+- ❌ You made changes to interfaces without updating implementations
+- ❌ You added dependencies without documenting why
+
+#### 🚨 Emergency Fixes
+
+If CI/CD fails after you push:
+
+```bash
+# 1. Pull the branch
+git pull origin claude/your-branch
+
+# 2. Clean and rebuild
+dotnet clean
+dotnet restore
+dotnet build --no-incremental
+
+# 3. Run all tests
+dotnet test
+
+# 4. Fix any errors
+
+# 5. Commit fix
+git add .
+git commit -m "fix: resolve build/test failures"
+
+# 6. Push
+git push -u origin claude/your-branch
+```
+
+#### Summary: The Golden Rule
+
+**BUILD + TEST = SUCCESS**
+
+```bash
+# ALWAYS run this before committing:
+dotnet clean && \
+dotnet restore && \
+dotnet build --no-incremental && \
+dotnet test
+
+# If ALL steps succeed → Safe to commit
+# If ANY step fails → DO NOT commit until fixed
+```
+
 ### Git Push Requirements
 - **ALWAYS** use `git push -u origin <branch-name>`
 - Branch MUST start with `claude/` and end with session ID
@@ -570,6 +756,20 @@ Follow conventional commits:
 - Never force push to main/master
 
 ## AI Assistant Guidelines
+
+### ⚠️ MOST IMPORTANT RULE
+
+**Before EVERY commit, you MUST:**
+
+```bash
+dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test
+```
+
+**If ANY command fails → DO NOT commit. Fix the errors first.**
+
+This is not optional. CI/CD failures waste time and resources. See the detailed [Pre-Commit Checklist](#️-critical-pre-commit-checklist) below.
+
+---
 
 ### Initial Analysis Checklist
 When starting a new task:
@@ -598,10 +798,12 @@ When starting a new task:
 
 ### Testing Requirements
 - **Write tests for new features** before marking task complete
-- **Ensure tests pass** before committing
+- **⚠️ CRITICAL: Run `dotnet test` before EVERY commit** (see Pre-Commit Checklist)
+- **Ensure ALL tests pass** before committing (zero failures allowed)
 - **Include edge cases** in test coverage
 - **Mock external dependencies** in unit tests
 - **Use integration tests** for critical workflows
+- **Never commit failing tests** - CI/CD will catch this and fail the build
 
 ### File Operations
 - Use **Read** tool for viewing files
@@ -620,9 +822,13 @@ When starting a new task:
 ### Task Management
 - **Use TodoWrite** at the start of complex tasks
 - **Mark todos in_progress** before starting work
-- **Mark completed immediately** after finishing
+- **⚠️ ONLY mark completed after:**
+  1. Code builds successfully (`dotnet build --no-incremental`)
+  2. ALL tests pass (`dotnet test`)
+  3. Changes are committed and pushed
 - **Only one in_progress** task at a time
 - **Break down complex tasks** into smaller steps
+- **Never mark a task complete if build or tests fail**
 
 ### Working with TASK_LIST.md
 
