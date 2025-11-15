@@ -14,13 +14,22 @@ public class RateLimitingMiddlewareTests
     private readonly Mock<ILogger<RateLimitingMiddleware>> _loggerMock;
     private readonly Mock<RequestDelegate> _nextMock;
     private DefaultHttpContext _httpContext;
+    private static int _testCounter = 0;
 
     public RateLimitingMiddlewareTests()
     {
         _loggerMock = new Mock<ILogger<RateLimitingMiddleware>>();
         _nextMock = new Mock<RequestDelegate>();
         _httpContext = new DefaultHttpContext();
-        _httpContext.Connection.RemoteIpAddress = IPAddress.Parse("127.0.0.1");
+        // Use unique IP for each test to avoid shared rate limit state
+        var uniqueIp = Interlocked.Increment(ref _testCounter);
+        _httpContext.Connection.RemoteIpAddress = IPAddress.Parse($"192.168.{uniqueIp / 256}.{uniqueIp % 256}");
+    }
+
+    private static IPAddress GetUniqueTestIp()
+    {
+        var uniqueIp = Interlocked.Increment(ref _testCounter);
+        return IPAddress.Parse($"192.168.{uniqueIp / 256}.{uniqueIp % 256}");
     }
 
     [Fact]
@@ -85,6 +94,7 @@ public class RateLimitingMiddlewareTests
     public async Task InvokeAsync_WhenExceedingRateLimit_ShouldReturn429()
     {
         // Arrange
+        var testIp = GetUniqueTestIp(); // Use unique IP for this test
         var config = new RateLimitConfiguration
         {
             Enabled = true,
@@ -95,6 +105,7 @@ public class RateLimitingMiddlewareTests
             }
         };
         var middleware = new RateLimitingMiddleware(_nextMock.Object, _loggerMock.Object, config);
+        _httpContext.Connection.RemoteIpAddress = testIp; // Override with test-specific IP
         _httpContext.Request.Path = "/api/v1/test";
         _httpContext.Response.Body = new MemoryStream();
 
@@ -105,7 +116,7 @@ public class RateLimitingMiddlewareTests
         // Reset context for second request
         _httpContext = new DefaultHttpContext
         {
-            Connection = { RemoteIpAddress = IPAddress.Parse("127.0.0.1") },
+            Connection = { RemoteIpAddress = testIp },
             Request = { Path = "/api/v1/test" },
             Response = { Body = new MemoryStream() }
         };
@@ -115,7 +126,7 @@ public class RateLimitingMiddlewareTests
         // Reset context for third request (should be rate limited)
         _httpContext = new DefaultHttpContext
         {
-            Connection = { RemoteIpAddress = IPAddress.Parse("127.0.0.1") },
+            Connection = { RemoteIpAddress = testIp },
             Request = { Path = "/api/v1/test" },
             Response = { Body = new MemoryStream() }
         };
@@ -200,6 +211,7 @@ public class RateLimitingMiddlewareTests
     public async Task InvokeAsync_WithDifferentAuthenticatedUsers_ShouldHaveSeparateRateLimits()
     {
         // Arrange
+        var testIp = GetUniqueTestIp(); // Use unique IP for this test
         var config = new RateLimitConfiguration
         {
             Enabled = true,
@@ -218,7 +230,7 @@ public class RateLimitingMiddlewareTests
         {
             User = new ClaimsPrincipal(identity1),
             Request = { Path = "/api/v1/test" },
-            Connection = { RemoteIpAddress = IPAddress.Parse("127.0.0.1") }
+            Connection = { RemoteIpAddress = testIp }
         };
 
         await middleware.InvokeAsync(context1);
@@ -228,7 +240,7 @@ public class RateLimitingMiddlewareTests
         {
             User = new ClaimsPrincipal(identity1),
             Request = { Path = "/api/v1/test" },
-            Connection = { RemoteIpAddress = IPAddress.Parse("127.0.0.1") }
+            Connection = { RemoteIpAddress = testIp }
         };
         await middleware.InvokeAsync(context1);
         context1.Response.StatusCode.Should().Be(200);
@@ -240,7 +252,7 @@ public class RateLimitingMiddlewareTests
         {
             User = new ClaimsPrincipal(identity2),
             Request = { Path = "/api/v1/test" },
-            Connection = { RemoteIpAddress = IPAddress.Parse("127.0.0.1") },
+            Connection = { RemoteIpAddress = testIp },
             Response = { Body = new MemoryStream() }
         };
 
@@ -282,6 +294,7 @@ public class RateLimitingMiddlewareTests
     public async Task InvokeAsync_WhenRateLimitExceeded_ShouldLogWarning()
     {
         // Arrange
+        var testIp = GetUniqueTestIp(); // Use unique IP for this test
         var config = new RateLimitConfiguration
         {
             Enabled = true,
@@ -292,6 +305,7 @@ public class RateLimitingMiddlewareTests
             }
         };
         var middleware = new RateLimitingMiddleware(_nextMock.Object, _loggerMock.Object, config);
+        _httpContext.Connection.RemoteIpAddress = testIp; // Override with test-specific IP
         _httpContext.Request.Path = "/api/v1/test";
         _httpContext.Response.Body = new MemoryStream();
 
@@ -301,7 +315,7 @@ public class RateLimitingMiddlewareTests
         // Reset context for second request
         _httpContext = new DefaultHttpContext
         {
-            Connection = { RemoteIpAddress = IPAddress.Parse("127.0.0.1") },
+            Connection = { RemoteIpAddress = testIp },
             Request = { Path = "/api/v1/test" },
             Response = { Body = new MemoryStream() }
         };
