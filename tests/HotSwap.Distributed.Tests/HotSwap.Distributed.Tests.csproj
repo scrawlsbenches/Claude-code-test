@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\HotSwap.Distributed.Api\HotSwap.Distributed.Api.csproj" />
     <ProjectReference Include="..\..\src\HotSwap.Distributed.Domain\HotSwap.Distributed.Domain.csproj" />
     <ProjectReference Include="..\..\src\HotSwap.Distributed.Infrastructure\HotSwap.Distributed.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\HotSwap.Distributed.Orchestrator\HotSwap.Distributed.Orchestrator.csproj" />
