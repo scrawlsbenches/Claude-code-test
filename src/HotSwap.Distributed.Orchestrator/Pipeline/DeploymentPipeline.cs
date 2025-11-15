@@ -20,6 +20,7 @@ public class DeploymentPipeline : IDisposable
     private readonly TelemetryProvider _telemetry;
     private readonly PipelineConfiguration _config;
     private readonly Dictionary<EnvironmentType, IDeploymentStrategy> _strategies;
+    private readonly IApprovalService? _approvalService;
 
     public DeploymentPipeline(
         ILogger<DeploymentPipeline> logger,
@@ -27,7 +28,8 @@ public class DeploymentPipeline : IDisposable
         IModuleVerifier moduleVerifier,
         TelemetryProvider telemetry,
         PipelineConfiguration config,
-        Dictionary<EnvironmentType, IDeploymentStrategy> strategies)
+        Dictionary<EnvironmentType, IDeploymentStrategy> strategies,
+        IApprovalService? approvalService = null)
     {
         _logger = logger;
         _clusterRegistry = clusterRegistry;
@@ -35,6 +37,7 @@ public class DeploymentPipeline : IDisposable
         _telemetry = telemetry;
         _config = config;
         _strategies = strategies;
+        _approvalService = approvalService;
     }
 
     /// <summary>
@@ -316,6 +319,22 @@ public class DeploymentPipeline : IDisposable
 
         foreach (var environment in environments)
         {
+            // Check if approval is required for this environment
+            if (RequiresApproval(request, environment))
+            {
+                var approvalStage = await ExecuteApprovalStageAsync(
+                    request,
+                    environment,
+                    cancellationToken);
+
+                stages.Add(approvalStage);
+
+                if (approvalStage.Status != PipelineStageStatus.Succeeded)
+                {
+                    break; // Stop pipeline if approval was not granted
+                }
+            }
+
             var deployStage = await ExecuteDeploymentToEnvironmentAsync(
                 request,
                 environment,
@@ -437,6 +456,118 @@ public class DeploymentPipeline : IDisposable
 
             stage.Status = PipelineStageStatus.Failed;
             stage.Message = $"Validation failed: {ex.Message}";
+            stage.Exception = ex;
+            stage.EndTime = DateTime.UtcNow;
+
+            return stage;
+        }
+    }
+
+    /// <summary>
+    /// Determines if approval is required for deploying to the specified environment.
+    /// </summary>
+    private bool RequiresApproval(DeploymentRequest request, EnvironmentType environment)
+    {
+        // Approval required if:
+        // 1. Approval service is available AND
+        // 2. RequireApproval flag is set AND
+        // 3. Environment is Staging or Production
+        return _approvalService != null &&
+               request.RequireApproval &&
+               (environment == EnvironmentType.Staging || environment == EnvironmentType.Production);
+    }
+
+    /// <summary>
+    /// Executes the approval stage for a deployment.
+    /// </summary>
+    private async Task<PipelineStageResult> ExecuteApprovalStageAsync(
+        DeploymentRequest request,
+        EnvironmentType environment,
+        CancellationToken cancellationToken)
+    {
+        var stage = new PipelineStageResult
+        {
+            StageName = $"Approval for {environment}",
+            Status = PipelineStageStatus.WaitingForApproval,
+            StartTime = DateTime.UtcNow
+        };
+
+        using var activity = _telemetry.StartStageActivity($"Approval_{environment}", environment);
+
+        try
+        {
+            if (_approvalService == null)
+            {
+                throw new InvalidOperationException("Approval service is not configured");
+            }
+
+            _logger.LogInformation(
+                "Requesting approval for deployment to {Environment} for {ModuleName} v{Version}",
+                environment, request.Module.Name, request.Module.Version);
+
+            // Create approval request
+            var approvalRequest = new ApprovalRequest
+            {
+                DeploymentExecutionId = request.ExecutionId,
+                ModuleName = request.Module.Name,
+                Version = request.Module.Version,
+                TargetEnvironment = environment,
+                RequesterEmail = request.RequesterEmail,
+                ApproverEmails = new List<string>(), // Would be configured based on environment
+                Metadata = request.Metadata,
+                TimeoutAt = DateTime.UtcNow.AddHours(_config.ApprovalTimeoutHours)
+            };
+
+            // Create the approval request
+            await _approvalService.CreateApprovalRequestAsync(approvalRequest, cancellationToken);
+
+            _logger.LogInformation(
+                "Approval request {ApprovalId} created, waiting for decision (timeout: {Timeout})",
+                approvalRequest.ApprovalId, approvalRequest.TimeoutAt);
+
+            // Wait for approval decision
+            var result = await _approvalService.WaitForApprovalAsync(
+                request.ExecutionId,
+                cancellationToken);
+
+            stage.EndTime = DateTime.UtcNow;
+
+            if (result.Status == ApprovalStatus.Approved)
+            {
+                stage.Status = PipelineStageStatus.Succeeded;
+                stage.Message = $"Approved by {result.RespondedByEmail}. {result.ResponseReason ?? string.Empty}";
+
+                _logger.LogInformation(
+                    "Deployment to {Environment} approved by {Approver}",
+                    environment, result.RespondedByEmail);
+            }
+            else if (result.Status == ApprovalStatus.Rejected)
+            {
+                stage.Status = PipelineStageStatus.Failed;
+                stage.Message = $"Rejected by {result.RespondedByEmail}. {result.ResponseReason ?? string.Empty}";
+
+                _logger.LogWarning(
+                    "Deployment to {Environment} rejected by {Approver}. Reason: {Reason}",
+                    environment, result.RespondedByEmail, result.ResponseReason);
+            }
+            else if (result.Status == ApprovalStatus.Expired)
+            {
+                stage.Status = PipelineStageStatus.Failed;
+                stage.Message = $"Approval request expired after {_config.ApprovalTimeoutHours} hours";
+
+                _logger.LogWarning(
+                    "Deployment to {Environment} failed: approval request expired",
+                    environment);
+            }
+
+            return stage;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Approval stage failed for {Environment}", environment);
+
+            stage.Status = PipelineStageStatus.Failed;
+            stage.Message = $"Approval stage failed: {ex.Message}";
             stage.Exception = ex;
             stage.EndTime = DateTime.UtcNow;
 
