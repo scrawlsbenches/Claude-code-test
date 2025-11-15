@@ -37,7 +37,9 @@ Claude-code-test/
 ├── DistributedKernel.sln                     # Solution file
 ├── test-critical-paths.sh                    # Critical path validation
 ├── validate-code.sh                          # Code validation script
-├── CLAUDE.md                                 # This file
+├── CLAUDE.md                                 # This file (AI assistant guide)
+├── TASK_LIST.md                              # Comprehensive task roadmap (20+ tasks)
+├── ENHANCEMENTS.md                           # Recent enhancements documentation
 ├── README.md                                 # Project overview
 ├── TESTING.md                                # Testing documentation
 ├── PROJECT_STATUS_REPORT.md                  # Production readiness status
@@ -622,6 +624,157 @@ When starting a new task:
 - **Only one in_progress** task at a time
 - **Break down complex tasks** into smaller steps
 
+### Working with TASK_LIST.md
+
+**Overview:**
+TASK_LIST.md is the project's comprehensive task roadmap, containing 20+ prioritized tasks derived from analyzing all project documentation. It serves as the single source of truth for planned enhancements, known gaps, and future work.
+
+**When to Consult TASK_LIST.md:**
+1. **At the start of any session** - Review to understand project priorities
+2. **When asked "what needs to be done"** - Reference the task list
+3. **Before proposing new features** - Check if already documented
+4. **When planning work** - Use priorities and effort estimates
+5. **After completing tasks** - Update status and add new tasks discovered
+
+**Task List Structure:**
+```
+TASK_LIST.md
+├── Major Tasks (High Priority)
+│   ├── Task #1-5: Critical items (Auth, Security, etc.)
+│   └── Detailed requirements, acceptance criteria, effort estimates
+├── Minor Tasks (Medium Priority)
+│   ├── Task #6-10: Enhancements (WebSocket, Prometheus, etc.)
+│   └── Implementation guidance and benefits
+├── Low Priority Tasks
+│   ├── Task #11-14: Nice-to-have features
+│   └── Optional enhancements
+└── Summary Statistics
+    ├── Tasks by priority, status, effort
+    └── Recommended sprint planning
+```
+
+**How to Use TASK_LIST.md:**
+
+1. **Read Before Starting Work:**
+   ```bash
+   # Always review the task list first
+   Read TASK_LIST.md
+   # Look for relevant tasks in your area
+   ```
+
+2. **Reference When Planning:**
+   - Check task priorities (🔴 Critical, 🟡 High, 🟢 Medium, ⚪ Low)
+   - Review effort estimates (1-7 days)
+   - Check dependencies between tasks
+   - Follow recommended sprint order
+
+3. **Update After Implementation:**
+   When you complete a task from the list:
+   - Update the task status from ⏳ to ✅
+   - Add implementation notes if helpful
+   - Document any discovered issues or dependencies
+   - Add any new tasks that emerged during implementation
+
+4. **Add New Tasks:**
+   When you discover new work:
+   - Add to appropriate priority section
+   - Include: Priority, Status, Effort estimate
+   - Add requirements and acceptance criteria
+   - Link to relevant documentation or issues
+
+**Task Status Indicators:**
+- ⏳ **Pending** - Not yet started
+- ✅ **Completed** - Fully implemented and tested
+- 🔄 **In Progress** - Currently being worked on
+- ⚠️ **Blocked** - Waiting on dependency or decision
+
+**Task Priority Levels:**
+- 🔴 **Critical** - Required for production (security, auth, HTTPS)
+- 🟡 **High** - Important for enterprise use (approval workflow, audit logs)
+- 🟢 **Medium** - Valuable enhancements (WebSocket, Prometheus, Helm)
+- ⚪ **Low** - Nice-to-have features (GraphQL, ML, multi-tenancy)
+
+**Best Practices:**
+
+1. **Keep It Current:**
+   - Update task status immediately after completing work
+   - Add discovered tasks as soon as identified
+   - Revise effort estimates if reality differs significantly
+   - Remove tasks that become obsolete
+
+2. **Maintain Quality:**
+   - Each task should have clear requirements
+   - Include acceptance criteria for verification
+   - Document dependencies and prerequisites
+   - Add references to related documentation
+
+3. **Communicate Changes:**
+   - Commit TASK_LIST.md updates separately or with related code
+   - Use descriptive commit messages for task list changes
+   - Example: `docs: update TASK_LIST.md - mark rate limiting as completed`
+
+4. **Reference in Commits:**
+   When implementing a task from the list, reference it in commit messages:
+   ```bash
+   git commit -m "feat: implement JWT authentication (Task #1 from TASK_LIST.md)"
+   ```
+
+**Example Workflow:**
+
+```markdown
+# At start of session
+1. Read TASK_LIST.md to understand priorities
+2. User asks: "Add rate limiting to the API"
+3. Check TASK_LIST.md - find Task #5: API Rate Limiting
+4. Review requirements, effort estimate (1 day), priority (Medium)
+5. Implement the feature following the documented requirements
+6. Update TASK_LIST.md:
+   - Change status from ⏳ to ✅
+   - Add completion notes: "Implemented in src/Middleware/RateLimitingMiddleware.cs"
+7. Commit both code and TASK_LIST.md update
+```
+
+**When to Create a New TASK_LIST.md:**
+- If the current one becomes too large (>50 tasks)
+- Archive old completed tasks to TASK_HISTORY.md
+- Start fresh TASK_LIST.md with only pending/in-progress tasks
+- Keep the summary statistics section updated
+
+**Integration with Other Documents:**
+- **ENHANCEMENTS.md** - Documents completed enhancements in detail
+- **PROJECT_STATUS_REPORT.md** - References task list for next steps
+- **README.md** - May link to high-priority tasks
+- **SPEC_COMPLIANCE_REVIEW.md** - Identifies gaps that become tasks
+
+**Common Mistakes to Avoid:**
+- ❌ Don't skip reading TASK_LIST.md when starting work
+- ❌ Don't implement features without checking if they're documented
+- ❌ Don't forget to update status after completing tasks
+- ❌ Don't add duplicate tasks without checking existing entries
+- ❌ Don't ignore task priorities (Critical tasks should be done first)
+
+**Example Task Entry Format:**
+
+```markdown
+### N. Task Name
+**Priority:** 🔴 Critical
+**Status:** ⏳ Not Implemented
+**Effort:** 2-3 days
+**References:** README.md:238, PROJECT_STATUS_REPORT.md:514
+
+**Requirements:**
+- [ ] Requirement 1
+- [ ] Requirement 2
+- [ ] Requirement 3
+
+**Acceptance Criteria:**
+- Feature works as described
+- Tests pass
+- Documentation updated
+
+**Impact:** High - Critical for production security
+```
+
 ### Error Handling
 - **Read error messages carefully** before attempting fixes
 - **Check build output** for warnings and errors
@@ -757,6 +910,18 @@ public async Task<string?> AuthenticateAsync(string username, string password)
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-15 (TASK_LIST.md Integration)
+- **Added comprehensive "Working with TASK_LIST.md" section** to AI Assistant Guidelines
+  - Overview and purpose of TASK_LIST.md
+  - When to consult and how to use the task list
+  - Task status indicators and priority levels
+  - Best practices for maintenance and updates
+  - Example workflows and task entry formats
+  - Integration with other project documents
+  - Common mistakes to avoid
+- **Updated Project Structure** to include TASK_LIST.md and ENHANCEMENTS.md
+- Total additions: ~160 lines of task management guidance
 
 ### 2025-11-14 (Update)
 - **Updated repository state** to reflect production-ready status
