@@ -43,6 +43,13 @@ public class JwtTokenService : IJwtTokenService
         var now = DateTime.UtcNow;
         var expiresAt = now.AddMinutes(_config.ExpirationMinutes);
 
+        // For testing expired tokens (ExpirationMinutes < 0), set NotBefore to an earlier time
+        // so the token was valid in the past but is now expired.
+        // This ensures the JWT spec requirement (expires > notBefore) is satisfied.
+        var notBefore = _config.ExpirationMinutes < 0
+            ? expiresAt.AddMinutes(-1)  // Token was valid for 1 minute in the past
+            : now;                       // Token is valid starting now
+
         // Create claims
         var claims = new List<Claim>
         {
@@ -63,6 +70,7 @@ public class JwtTokenService : IJwtTokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
+            NotBefore = notBefore,
             Expires = expiresAt,
             Issuer = _config.Issuer,
             Audience = _config.Audience,
