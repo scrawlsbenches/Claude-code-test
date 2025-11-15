@@ -9,6 +9,7 @@ COPY ["src/HotSwap.Distributed.Infrastructure/HotSwap.Distributed.Infrastructure
 COPY ["src/HotSwap.Distributed.Orchestrator/HotSwap.Distributed.Orchestrator.csproj", "src/HotSwap.Distributed.Orchestrator/"]
 COPY ["src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj", "src/HotSwap.Distributed.Api/"]
 COPY ["tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj", "tests/HotSwap.Distributed.Tests/"]
+COPY ["tests/HotSwap.Distributed.SmokeTests/HotSwap.Distributed.SmokeTests.csproj", "tests/HotSwap.Distributed.SmokeTests/"]
 COPY ["examples/ApiUsageExample/ApiUsageExample.csproj", "examples/ApiUsageExample/"]
 
 # Restore dependencies
