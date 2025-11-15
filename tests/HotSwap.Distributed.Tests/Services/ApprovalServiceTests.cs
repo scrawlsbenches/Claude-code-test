@@ -9,7 +9,7 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Services;
 
-public class ApprovalServiceTests
+public class ApprovalServiceTests : IDisposable
 {
     private readonly Mock<ILogger<ApprovalService>> _mockLogger;
     private readonly Mock<INotificationService> _mockNotificationService;
@@ -29,6 +29,15 @@ public class ApprovalServiceTests
             _mockLogger.Object,
             _config,
             _mockNotificationService.Object);
+
+        // Clear any approvals from previous tests
+        _approvalService.ClearAllApprovalsForTesting();
+    }
+
+    public void Dispose()
+    {
+        // Clean up after each test to prevent test pollution
+        _approvalService.ClearAllApprovalsForTesting();
     }
 
     [Fact]
