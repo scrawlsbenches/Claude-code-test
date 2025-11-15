@@ -81,14 +81,40 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore DistributedKernel.sln
 
-    - name: Build API
-      run: dotnet build src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj --configuration Release --no-restore
+    - name: Build solution
+      run: dotnet build DistributedKernel.sln --configuration Release --no-restore
 
     - name: Start API in background
       run: |
-        dotnet run --project src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj --configuration Release --no-build &
+        dotnet run --project src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj --configuration Release --no-build > api.log 2>&1 &
         echo $! > api.pid
         sleep 10
+
+    - name: Check API logs
+      if: always()
+      run: |
+        echo "=== API Logs ==="
+        if [ -f api.log ]; then
+          cat api.log
+        else
+          echo "No API log file found"
+        fi
+
+    - name: Check if API process is running
+      run: |
+        if [ -f api.pid ]; then
+          PID=$(cat api.pid)
+          if ps -p $PID > /dev/null; then
+            echo "API process is running (PID: $PID)"
+          else
+            echo "API process is not running!"
+            cat api.log || echo "No API log available"
+            exit 1
+          fi
+        else
+          echo "No PID file found!"
+          exit 1
+        fi
 
     - name: Wait for API to be healthy
       run: |
@@ -100,11 +126,21 @@ jobs:
           echo "Waiting for API... (attempt $i/30)"
           sleep 2
         done
-        echo "API failed to start"
+        echo "API failed to become healthy"
+        echo "=== Final API Logs ==="
+        cat api.log || echo "No API log available"
         exit 1
 
     - name: Run smoke tests
       run: ./run-smoke-tests.sh http://localhost:5000
+
+    - name: Upload API logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: api-logs
+        path: api.log
+        if-no-files-found: warn
 
     - name: Stop API
       if: always()
