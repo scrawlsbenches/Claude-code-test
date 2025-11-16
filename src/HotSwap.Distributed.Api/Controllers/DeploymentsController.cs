@@ -274,14 +274,46 @@ public class DeploymentsController : ControllerBase
     [Authorize(Roles = "Viewer,Deployer,Admin")]
     [ProducesResponseType(typeof(List<DeploymentSummary>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public IActionResult ListDeployments()
+    public async Task<IActionResult> ListDeployments()
     {
-        // NOTE: List functionality is limited with IMemoryCache-based tracking
-        // In production, this would query a database or extend IDeploymentTracker
-        // with GetAllResultsAsync() and GetAllInProgressAsync() methods
-        _logger.LogWarning("ListDeployments called - limited functionality with cache-based tracking. " +
-                          "Consider using database-backed deployment history for production.");
+        _logger.LogInformation("Listing all deployments");
 
-        return Ok(new List<DeploymentSummary>());
+        var summaries = new List<DeploymentSummary>();
+
+        // Get completed deployments
+        var results = await _deploymentTracker.GetAllResultsAsync();
+        foreach (var result in results)
+        {
+            summaries.Add(new DeploymentSummary
+            {
+                ExecutionId = result.ExecutionId,
+                ModuleName = result.ModuleName,
+                Version = result.Version.ToString(),
+                Status = result.Success ? "Succeeded" : "Failed",
+                StartTime = result.StartTime,
+                Duration = result.Duration.ToString()
+            });
+        }
+
+        // Get in-progress deployments
+        var inProgress = await _deploymentTracker.GetAllInProgressAsync();
+        foreach (var request in inProgress)
+        {
+            summaries.Add(new DeploymentSummary
+            {
+                ExecutionId = request.ExecutionId,
+                ModuleName = request.Module.Name,
+                Version = request.Module.Version.ToString(),
+                Status = "Running",
+                StartTime = request.CreatedAt,
+                Duration = (DateTime.UtcNow - request.CreatedAt).ToString()
+            });
+        }
+
+        // Sort by start time descending (most recent first)
+        summaries = summaries.OrderByDescending(s => s.StartTime).ToList();
+
+        _logger.LogInformation("Retrieved {Count} deployments", summaries.Count);
+        return Ok(summaries);
     }
 }

@@ -31,4 +31,14 @@ public interface IDeploymentTracker
     /// Removes a deployment from in-progress tracking
     /// </summary>
     Task RemoveInProgressAsync(Guid executionId);
+
+    /// <summary>
+    /// Gets all completed deployment results
+    /// </summary>
+    Task<IEnumerable<PipelineExecutionResult>> GetAllResultsAsync();
+
+    /// <summary>
+    /// Gets all in-progress deployment requests
+    /// </summary>
+    Task<IEnumerable<DeploymentRequest>> GetAllInProgressAsync();
 }
