@@ -401,8 +401,8 @@ public class MessageFilter
                 return false;
         }
 
-        // TODO: Implement JSONPath query evaluation for PayloadQuery
-        // For now, assume match if no payload query specified
+        // Note: JSONPath query evaluation for PayloadQuery will be implemented in Epic 2
+        // Current implementation: match succeeds if no payload query specified
         return string.IsNullOrWhiteSpace(PayloadQuery);
     }
 }

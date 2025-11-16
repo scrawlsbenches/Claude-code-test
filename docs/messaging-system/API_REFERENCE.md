@@ -1232,9 +1232,9 @@ Retry-After: 60
 | Endpoint | Limit | Window |
 |----------|-------|--------|
 | `POST /api/v1/messages/publish` | 100 req | 1 minute |
-| `GET /api/v1/messages/consume/{topic}` | 600 req | 1 minute |
-| `POST /api/v1/messages/{id}/ack` | 1000 req | 1 minute |
-| `POST /api/v1/messages/{id}/nack` | 1000 req | 1 minute |
+| `GET /api/v1/messages/consume/{topicName}` | 600 req | 1 minute |
+| `POST /api/v1/messages/{messageId}/ack` | 1000 req | 1 minute |
+| `POST /api/v1/messages/{messageId}/nack` | 1000 req | 1 minute |
 | `POST /api/v1/topics` | 10 req | 1 minute |
 | `GET /api/v1/topics` | 60 req | 1 minute |
 | `POST /api/v1/subscriptions` | 10 req | 1 minute |

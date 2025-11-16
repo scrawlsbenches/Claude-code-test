@@ -55,18 +55,21 @@ This folder contains comprehensive documentation for the messaging system:
 
 ### Core Documentation
 
-1. **[SPECIFICATION.md](SPECIFICATION.md)** - Complete technical specification
-2. **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design
-3. **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API documentation
-4. **[DOMAIN_MODELS.md](DOMAIN_MODELS.md)** - Domain model reference
+1. **[SPECIFICATION.md](SPECIFICATION.md)** - Complete technical specification with requirements
+2. **[API_REFERENCE.md](API_REFERENCE.md)** - Complete REST API documentation with examples
+3. **[DOMAIN_MODELS.md](DOMAIN_MODELS.md)** - Domain model reference with C# code
 
 ### Implementation Guides
 
-5. **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** - Epics, stories, and tasks
-6. **[ROUTING_STRATEGIES.md](ROUTING_STRATEGIES.md)** - Message routing strategies
-7. **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** - Testing approach and requirements
-8. **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Deployment and migration guide
-9. **[PERFORMANCE_TARGETS.md](PERFORMANCE_TARGETS.md)** - Performance characteristics
+4. **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** - Epics, stories, and sprint tasks
+5. **[ROUTING_STRATEGIES.md](ROUTING_STRATEGIES.md)** - Message routing strategies and algorithms
+6. **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** - TDD approach with 400+ test cases
+7. **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Deployment, migration, and operations guide
+
+### Architecture & Performance
+
+- **Architecture Overview** - See [Architecture Overview](#architecture-overview) section below
+- **Performance Targets** - See [Success Criteria](#success-criteria) section below
 
 ## Vision & Goals
 
@@ -122,18 +125,19 @@ This folder contains comprehensive documentation for the messaging system:
 
 ## Estimated Effort
 
-**Total Duration:** 30-40 days (6-8 weeks)
+**Total Duration:** 35-44 days (7-9 weeks)
 
 **By Phase:**
 - Week 1-2: Core infrastructure (domain models, persistence, API)
 - Week 3-4: Routing strategies & consumer management
-- Week 5-6: Reliability features (retry, DLQ, exactly-once)
-- Week 7-8: Observability & production hardening
+- Week 5-6: Schema registry & delivery guarantees
+- Week 7-8: Reliability features (retry, DLQ, exactly-once)
+- Week 9: Observability & production hardening (if needed)
 
 **Deliverables:**
 - +8,000-10,000 lines of C# code
 - +50 new source files
-- +200+ unit/integration tests
+- +400 comprehensive tests (320 unit, 60 integration, 20 E2E)
 - Complete API documentation
 - Grafana dashboards
 - Production deployment guide
