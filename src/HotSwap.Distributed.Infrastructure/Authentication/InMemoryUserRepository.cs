@@ -27,6 +27,14 @@ public class InMemoryUserRepository : IUserRepository
     /// </summary>
     private void InitializeDemoUsers()
     {
+        // SECURITY: Prevent demo users from being initialized in production
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (string.Equals(environment, "Production", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Demo users disabled in production environment. Configure a database-backed user repository.");
+            return;
+        }
+
         var demoUsers = new[]
         {
             new User

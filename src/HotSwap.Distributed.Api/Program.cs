@@ -13,6 +13,8 @@ using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
@@ -21,6 +23,17 @@ using Serilog;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure request size limits (Security: DoS protection)
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10 MB
+});
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -34,6 +47,9 @@ builder.Host.UseSerilog();
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Add memory cache for deployment tracking
+builder.Services.AddMemoryCache();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -104,11 +120,26 @@ builder.Services.AddOpenTelemetry()
     });
 
 // Register JWT configuration
+// SECURITY: Require explicit JWT configuration - no defaults in production
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
+if (string.IsNullOrWhiteSpace(jwtSecretKey))
+{
+    if (builder.Environment.IsProduction())
+    {
+        throw new InvalidOperationException(
+            "JWT SecretKey is required in production. Set via environment variable JWT__SECRETKEY or appsettings.json");
+    }
+
+    // Development/Test fallback with warning
+    jwtSecretKey = "DistributedKernelSecretKey-ChangeInProduction-MinimumLength32Characters";
+    Log.Warning("Using default JWT secret key - THIS IS NOT SECURE FOR PRODUCTION");
+}
+
 var jwtConfig = new JwtConfiguration
 {
-    SecretKey = builder.Configuration["Jwt:SecretKey"] ?? "DistributedKernelSecretKey-ChangeInProduction-MinimumLength32Characters",
+    SecretKey = jwtSecretKey,
     Issuer = builder.Configuration["Jwt:Issuer"] ?? "DistributedKernelOrchestrator",
-    Audience = builder.Configuration["Jwt:Audience"] ?? "DistributedKernelApi",
+    Audience = builder.Configuration["Jwt:Issuer"] ?? "DistributedKernelApi",
     ExpirationMinutes = builder.Configuration.GetValue<int>("Jwt:ExpirationMinutes", 60)
 };
 builder.Services.AddSingleton(jwtConfig);
@@ -185,6 +216,15 @@ builder.Services.AddSingleton<INotificationService, LoggingNotificationService>(
 builder.Services.AddSingleton<IApprovalService, ApprovalService>();
 builder.Services.AddHostedService<ApprovalTimeoutBackgroundService>();
 
+// Register deployment tracking service
+builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
+
+// Register rate limit cleanup service
+builder.Services.AddHostedService<RateLimitCleanupService>();
+
+// Register orchestrator initialization service
+builder.Services.AddHostedService<OrchestratorInitializationService>();
+
 // Register orchestrator as singleton
 builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
 {
@@ -203,8 +243,8 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
         telemetry,
         pipelineConfig);
 
-    // Initialize clusters on startup
-    orchestrator.InitializeClustersAsync().GetAwaiter().GetResult();
+    // Note: Cluster initialization happens asynchronously via OrchestratorInitializationService
+    // to avoid blocking the application startup
 
     return orchestrator;
 });

@@ -1,4 +1,5 @@
 using HotSwap.Distributed.Api.Models;
+using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Api.Validation;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
@@ -20,15 +21,16 @@ public class DeploymentsController : ControllerBase
 {
     private readonly DistributedKernelOrchestrator _orchestrator;
     private readonly ILogger<DeploymentsController> _logger;
-    private static readonly Dictionary<Guid, PipelineExecutionResult> _executionResults = new();
-    private static readonly Dictionary<Guid, DeploymentRequest> _inProgressDeployments = new();
+    private readonly IDeploymentTracker _deploymentTracker;
 
     public DeploymentsController(
         DistributedKernelOrchestrator orchestrator,
-        ILogger<DeploymentsController> logger)
+        ILogger<DeploymentsController> logger,
+        IDeploymentTracker deploymentTracker)
     {
         _orchestrator = orchestrator;
         _logger = logger;
+        _deploymentTracker = deploymentTracker;
     }
 
     /// <summary>
@@ -79,7 +81,7 @@ public class DeploymentsController : ControllerBase
         };
 
         // Track deployment immediately (before it completes)
-        _inProgressDeployments[deploymentRequest.ExecutionId] = deploymentRequest;
+        await _deploymentTracker.TrackInProgressAsync(deploymentRequest.ExecutionId, deploymentRequest);
 
         // Start deployment asynchronously
         _ = Task.Run(async () =>
@@ -91,13 +93,13 @@ public class DeploymentsController : ControllerBase
                     cancellationToken);
 
                 // Move from in-progress to completed
-                _inProgressDeployments.Remove(deploymentRequest.ExecutionId);
-                _executionResults[deploymentRequest.ExecutionId] = result;
+                await _deploymentTracker.RemoveInProgressAsync(deploymentRequest.ExecutionId);
+                await _deploymentTracker.StoreResultAsync(deploymentRequest.ExecutionId, result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Deployment {ExecutionId} failed", deploymentRequest.ExecutionId);
-                _inProgressDeployments.Remove(deploymentRequest.ExecutionId);
+                await _deploymentTracker.RemoveInProgressAsync(deploymentRequest.ExecutionId);
             }
         }, cancellationToken);
 
@@ -136,12 +138,13 @@ public class DeploymentsController : ControllerBase
     [ProducesResponseType(typeof(DeploymentStatusResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
-    public IActionResult GetDeployment(Guid executionId)
+    public async Task<IActionResult> GetDeployment(Guid executionId)
     {
         _logger.LogInformation("Getting deployment status for execution {ExecutionId}", executionId);
 
         // Check if deployment has completed
-        if (_executionResults.TryGetValue(executionId, out var result))
+        var result = await _deploymentTracker.GetResultAsync(executionId);
+        if (result != null)
         {
             var response = new DeploymentStatusResponse
             {
@@ -170,7 +173,8 @@ public class DeploymentsController : ControllerBase
         }
 
         // Check if deployment is in progress
-        if (_inProgressDeployments.TryGetValue(executionId, out var inProgressRequest))
+        var inProgressRequest = await _deploymentTracker.GetInProgressAsync(executionId);
+        if (inProgressRequest != null)
         {
             var inProgressResponse = new DeploymentStatusResponse
             {
@@ -188,7 +192,7 @@ public class DeploymentsController : ControllerBase
             return Ok(inProgressResponse);
         }
 
-        // Not found in either dictionary
+        // Not found in either cache
         throw new KeyNotFoundException($"Deployment execution {executionId} not found");
     }
 
@@ -216,14 +220,16 @@ public class DeploymentsController : ControllerBase
         _logger.LogInformation("Rolling back deployment {ExecutionId}", executionId);
 
         // Check if deployment exists (completed or in-progress)
-        if (!_executionResults.TryGetValue(executionId, out var result) &&
-            !_inProgressDeployments.ContainsKey(executionId))
+        var result = await _deploymentTracker.GetResultAsync(executionId);
+        var inProgress = await _deploymentTracker.GetInProgressAsync(executionId);
+
+        if (result == null && inProgress == null)
         {
             throw new KeyNotFoundException($"Deployment execution {executionId} not found");
         }
 
         // Can't rollback an in-progress deployment
-        if (_inProgressDeployments.ContainsKey(executionId))
+        if (inProgress != null)
         {
             return BadRequest(new ErrorResponse
             {
@@ -268,39 +274,46 @@ public class DeploymentsController : ControllerBase
     [Authorize(Roles = "Viewer,Deployer,Admin")]
     [ProducesResponseType(typeof(List<DeploymentSummary>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public IActionResult ListDeployments()
+    public async Task<IActionResult> ListDeployments()
     {
+        _logger.LogInformation("Listing all deployments");
+
+        var summaries = new List<DeploymentSummary>();
+
         // Get completed deployments
-        var completedDeployments = _executionResults.Values
-            .Select(r => new DeploymentSummary
+        var results = await _deploymentTracker.GetAllResultsAsync();
+        foreach (var result in results)
+        {
+            summaries.Add(new DeploymentSummary
             {
-                ExecutionId = r.ExecutionId,
-                ModuleName = r.ModuleName,
-                Version = r.Version.ToString(),
-                Status = r.Success ? "Succeeded" : "Failed",
-                StartTime = r.StartTime,
-                Duration = r.Duration.ToString()
+                ExecutionId = result.ExecutionId,
+                ModuleName = result.ModuleName,
+                Version = result.Version.ToString(),
+                Status = result.Success ? "Succeeded" : "Failed",
+                StartTime = result.StartTime,
+                Duration = result.Duration.ToString()
             });
+        }
 
         // Get in-progress deployments
-        var inProgressDeploymentsList = _inProgressDeployments.Values
-            .Select(req => new DeploymentSummary
+        var inProgress = await _deploymentTracker.GetAllInProgressAsync();
+        foreach (var request in inProgress)
+        {
+            summaries.Add(new DeploymentSummary
             {
-                ExecutionId = req.ExecutionId,
-                ModuleName = req.Module.Name,
-                Version = req.Module.Version.ToString(),
+                ExecutionId = request.ExecutionId,
+                ModuleName = request.Module.Name,
+                Version = request.Module.Version.ToString(),
                 Status = "Running",
-                StartTime = req.CreatedAt,
-                Duration = (DateTime.UtcNow - req.CreatedAt).ToString()
+                StartTime = request.CreatedAt,
+                Duration = (DateTime.UtcNow - request.CreatedAt).ToString()
             });
+        }
 
-        // Combine and sort by start time
-        var deployments = completedDeployments
-            .Concat(inProgressDeploymentsList)
-            .OrderByDescending(d => d.StartTime)
-            .Take(50)
-            .ToList();
+        // Sort by start time descending (most recent first)
+        summaries = summaries.OrderByDescending(s => s.StartTime).ToList();
 
-        return Ok(deployments);
+        _logger.LogInformation("Retrieved {Count} deployments", summaries.Count);
+        return Ok(summaries);
     }
 }
