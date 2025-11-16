@@ -142,6 +142,48 @@ brew install dotnet@8
 dotnet --version
 ```
 
+**Claude Code Web Environment (Ubuntu 24.04):**
+
+If you're using Claude Code in a web environment, you can install .NET SDK directly. The environment runs Ubuntu 24.04 LTS with root access.
+
+```bash
+# Step 1: Download Microsoft package repository for Ubuntu 24.04
+wget https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+
+# Step 2: Install the repository configuration (as root, no sudo needed)
+dpkg -i packages-microsoft-prod.deb
+
+# Step 3: Clean up the downloaded file
+rm packages-microsoft-prod.deb
+
+# Step 4: Fix /tmp permissions (prevents GPG errors during update)
+chmod 1777 /tmp
+
+# Step 5: Update package lists
+apt-get update
+# Note: You may see 403 Forbidden errors from PPA repositories - these are non-critical
+
+# Step 6: Install .NET SDK 8.0
+apt-get install -y dotnet-sdk-8.0
+
+# Step 7: Verify installation
+dotnet --version
+# Expected output: 8.0.121 or later
+
+dotnet --list-sdks
+# Expected output: 8.0.121 [/usr/lib/dotnet/sdk]
+
+dotnet --list-runtimes
+# Expected output:
+# Microsoft.AspNetCore.App 8.0.21 [/usr/lib/dotnet/shared/Microsoft.AspNetCore.App]
+# Microsoft.NETCore.App 8.0.21 [/usr/lib/dotnet/shared/Microsoft.NETCore.App]
+```
+
+**Installation time**: ~30-60 seconds
+**Disk space required**: ~500 MB
+
+After installation, you can immediately use all dotnet commands for building, testing, and running the project.
+
 **2. Docker (Optional - for containerized deployment)**
 
 **Windows/macOS:**
@@ -301,12 +343,12 @@ dotnet build --no-incremental
 dotnet test
 
 # Expected output:
-#   Passed!  - Failed:     0, Passed:    23, Skipped:     0, Total:    23, Duration: 3 s
+#   Passed!  - Failed:     0, Passed:    80, Skipped:     0, Total:    80, Duration: 10 s
 ```
 
 **Important Notes:**
-- The build may show 1 warning (CS1998) in DeploymentsController.cs - this is expected and non-blocking
-- Test count should be 23 passing tests (may vary as tests are added)
+- The build may show 0 warnings and 0 errors (clean build)
+- Test count should be 80 passing tests (may vary as tests are added)
 - Total setup time: approximately 20-30 seconds after .NET SDK installation
 
 #### Build Specific Projects
@@ -348,7 +390,7 @@ This project includes comprehensive test coverage with xUnit.
 dotnet test
 
 # Expected output:
-#   Passed!  - Failed:     0, Passed:    38, Skipped:     0, Total:    38
+#   Passed!  - Failed:     0, Passed:    80, Skipped:     0, Total:    80
 
 # Run tests with detailed output
 dotnet test --verbosity normal
@@ -386,7 +428,7 @@ The project includes a shell script for critical path validation:
 ./test-critical-paths.sh
 
 # Expected output:
-#   ✓ All 38 critical path tests passed
+#   ✓ All 80 critical path tests passed
 ```
 
 #### Code Validation
@@ -2357,6 +2399,29 @@ Code Change → Check API Changes? → Update XML Docs
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-16 (Claude Code Web Environment Support and Test Count Fixes)
+- **Added Claude Code Web Environment installation instructions**
+  - New section: "Claude Code Web Environment (Ubuntu 24.04)" in Prerequisites
+  - Step-by-step installation guide for Ubuntu 24.04 LTS with root access
+  - Verified installation process in actual web environment
+  - Installation time: ~30-60 seconds, disk space: ~500 MB
+  - Installed .NET SDK 8.0.121 with ASP.NET Core 8.0.21
+- **Fixed test count inconsistencies across documentation**
+  - Updated "First Time Build and Test" expected output: 23 → 80 tests
+  - Updated "Run All Tests" expected output: 38 → 80 tests
+  - Updated "Critical Path Tests" expected output: 38 → 80 tests
+  - Verified actual test count: 80 passing tests (0 failed, 0 skipped)
+- **Verified build status**
+  - Build succeeds with 0 warnings and 0 errors (improved from documented 1 warning)
+  - All 80 tests passing in ~10 seconds
+  - Full clean, restore, build, test cycle confirmed working in web environment
+- **Impact**:
+  - Claude Code web environment now fully documented and tested
+  - Consistent test count references prevent confusion
+  - Documentation matches actual project state (80 tests, clean build)
+  - Web-based development workflow now supported without local .NET SDK
+- Total additions: ~40 lines of web environment installation documentation
 
 ### 2025-11-15 (Avoiding Stale Documentation)
 - **Added comprehensive "Avoiding Stale Documentation" section** (~500 lines)
