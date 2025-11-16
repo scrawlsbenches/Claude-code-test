@@ -1,0 +1,44 @@
+#!/bin/bash
+# Pre-commit hook - validates documentation before commit
+# Only blocks on critical errors (not warnings)
+#
+# Installation:
+#   cp hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+
+echo "🔍 Running pre-commit documentation validation..."
+echo ""
+
+# Run docs validation script (warnings allowed, errors block commit)
+if [ -f "./docs-validation.sh" ]; then
+    OUTPUT=$(./docs-validation.sh 2>&1)
+    VALIDATION_EXIT=$?
+
+    echo "$OUTPUT"
+
+    # Check if there are critical ERRORS (not just warnings)
+    if echo "$OUTPUT" | grep -q "❌ Errors: [1-9]"; then
+        echo ""
+        echo "❌ Critical documentation errors detected - commit blocked!"
+        echo ""
+        echo "Options:"
+        echo "  1. Fix the errors: ./update-docs-metrics.sh --yes"
+        echo "  2. Bypass this check: git commit --no-verify"
+        echo ""
+        exit 1
+    fi
+
+    # Warnings are allowed - just show them
+    if echo "$OUTPUT" | grep -q "⚠️  Warnings:"; then
+        echo ""
+        echo "⚠️  Documentation has warnings (not blocking commit)"
+        echo "   Consider fixing warnings to improve documentation quality"
+    fi
+else
+    echo "⚠️  docs-validation.sh not found, skipping validation"
+fi
+
+echo ""
+echo "✅ Pre-commit validation passed!"
+echo ""
+exit 0
