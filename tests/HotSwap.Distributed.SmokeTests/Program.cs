@@ -41,6 +41,12 @@ class Program
 
         try
         {
+            // Authenticate first to get JWT token
+            Console.WriteLine("Authenticating with demo credentials...");
+            await AuthenticateAsync();
+            Console.WriteLine("✅ Authentication successful");
+            Console.WriteLine();
+
             // Critical Path Tests
             await RunTest("Health Check", Test_HealthCheck);
             await RunTest("List Clusters", Test_ListClusters);
@@ -98,6 +104,32 @@ class Program
             _errors.Add($"{name}: {ex.Message}");
         }
     }
+
+    #region Authentication
+
+    private static async Task AuthenticateAsync()
+    {
+        // Use demo admin credentials for testing
+        var loginRequest = new
+        {
+            username = "admin",
+            password = "Admin123!"
+        };
+
+        var response = await _httpClient!.PostAsJsonAsync("/api/v1/authentication/login", loginRequest);
+        response.EnsureSuccessStatusCode();
+
+        var authResponse = await response.Content.ReadFromJsonAsync<AuthenticationResponse>();
+
+        if (authResponse == null || string.IsNullOrWhiteSpace(authResponse.Token))
+            throw new Exception("Authentication failed: No token received");
+
+        // Add JWT token to all subsequent requests
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+    }
+
+    #endregion
 
     #region Test Cases
 
@@ -225,6 +257,20 @@ class Program
     #endregion
 
     #region DTOs (Minimal definitions for deserialization)
+
+    private record AuthenticationResponse(
+        string Token,
+        DateTime ExpiresAt,
+        UserInfo User
+    );
+
+    private record UserInfo(
+        Guid Id,
+        string Username,
+        string Email,
+        string FullName,
+        List<string> Roles
+    );
 
     private record ClusterSummary(
         string Environment,
