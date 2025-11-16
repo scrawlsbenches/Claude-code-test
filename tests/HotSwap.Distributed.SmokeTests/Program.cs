@@ -258,6 +258,16 @@ class Program
 
     #region DTOs (Minimal definitions for deserialization)
 
+    /// <summary>
+    /// User roles for authorization (must match API enum).
+    /// </summary>
+    private enum UserRole
+    {
+        Viewer = 1,
+        Deployer = 2,
+        Admin = 3
+    }
+
     private record AuthenticationResponse(
         string Token,
         DateTime ExpiresAt,
@@ -269,7 +279,7 @@ class Program
         string Username,
         string Email,
         string FullName,
-        List<string> Roles
+        List<UserRole> Roles
     );
 
     private record ClusterSummary(
