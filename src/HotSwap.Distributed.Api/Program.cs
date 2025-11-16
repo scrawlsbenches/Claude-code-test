@@ -146,7 +146,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddHsts(options =>
 {
     var hstsConfig = builder.Configuration.GetSection("Hsts");
-    options.MaxAge = TimeSpan.FromDays(hstsConfig.GetValue<int>("MaxAge", 365));
+    // MaxAge is configured in seconds (e.g., 31536000 = 1 year)
+    options.MaxAge = TimeSpan.FromSeconds(hstsConfig.GetValue<int>("MaxAge", 31536000));
     options.IncludeSubDomains = hstsConfig.GetValue<bool>("IncludeSubDomains", true);
     options.Preload = hstsConfig.GetValue<bool>("Preload", false);
 });
