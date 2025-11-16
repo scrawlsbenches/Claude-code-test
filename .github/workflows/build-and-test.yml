@@ -89,6 +89,8 @@ jobs:
         dotnet run --project src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj --configuration Release --no-build > api.log 2>&1 &
         echo $! > api.pid
         sleep 10
+      env:
+        ASPNETCORE_ENVIRONMENT: Development
 
     - name: Check API logs
       if: always()
