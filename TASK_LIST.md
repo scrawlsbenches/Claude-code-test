@@ -113,8 +113,8 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 
 ### 3. PostgreSQL Audit Log Persistence
 **Priority:** 🟡 Medium-High
-**Status:** ⏳ In Progress (Core infrastructure complete, integration ongoing)
-**Effort:** 2-3 days (85% complete)
+**Status:** ✅ Complete (Core implementation finished, documentation pending)
+**Effort:** 2-3 days (95% complete)
 **References:** SPEC_COMPLIANCE_REVIEW.md:235, PROJECT_STATUS_REPORT.md:496, docs/AUDIT_LOG_SCHEMA.md
 
 **Requirements:**
@@ -148,6 +148,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - ApprovalService integrated: approval requested/granted/rejected events
 - AuthenticationController integrated: login success/failure, token validation, suspicious activity detection
 - AuditLogRetentionBackgroundService: daily cleanup of logs older than 90 days
+- AuditLogsController: 5 REST API endpoints for querying audit logs (Admin-only)
 - OpenTelemetry trace ID correlation for distributed tracing
 - HTTP context data capture: source IP, user agent
 
@@ -162,6 +163,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - ApprovalService.cs - Integrated audit logging (3 events)
 - AuthenticationController.cs - Integrated audit logging (4 events + suspicious activity detection)
 - AuditLogRetentionBackgroundService.cs - Daily cleanup of old audit logs
+- AuditLogsController.cs - REST API for querying audit logs (5 endpoints)
 - Program.cs - Registered retention background service
 
 **Acceptance Criteria:**
@@ -170,7 +172,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - ✅ Approval events persisted
 - ✅ Authentication events persisted with suspicious activity detection
 - ✅ Retention policy implemented (90-day default, daily execution)
-- ⏳ Query API for audit log retrieval (IAuditLogService methods created, API endpoints pending)
+- ✅ Query API for audit log retrieval (5 Admin-only endpoints)
 
 **Impact:** Medium - Important for compliance and troubleshooting
 
