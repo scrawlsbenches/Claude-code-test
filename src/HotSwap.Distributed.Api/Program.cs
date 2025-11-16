@@ -216,6 +216,9 @@ builder.Services.AddSingleton<INotificationService, LoggingNotificationService>(
 builder.Services.AddSingleton<IApprovalService, ApprovalService>();
 builder.Services.AddHostedService<ApprovalTimeoutBackgroundService>();
 
+// Register audit log retention background service
+builder.Services.AddHostedService<AuditLogRetentionBackgroundService>();
+
 // Register deployment tracking service
 builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
 
