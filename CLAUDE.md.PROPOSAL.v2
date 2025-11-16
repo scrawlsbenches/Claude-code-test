@@ -1,0 +1,1169 @@
+# CLAUDE.md Improvement Proposal v2
+
+## Executive Summary
+
+**Version 1 Status**: ✅ 75% Complete (Phases 1-3 implemented, Phase 4 pending)
+
+**Version 2 Goals**:
+1. Complete unfinished v1 items (automation, condensing)
+2. Achieve document length target (2660 → 1800 lines via modular structure)
+3. Improve long-term maintainability with templates and automation
+4. Add interactive decision trees for common scenarios
+5. Create sustainable documentation ecosystem
+
+**Target Impact**:
+- 32% document length reduction via appendices
+- 90% less manual maintenance via automation
+- 50% faster onboarding via decision trees
+- Zero documentation drift via validation hooks
+
+---
+
+## Version 1 Retrospective
+
+### ✅ What Worked Well
+
+1. **Evidence-based approach** - Specific line numbers and examples
+2. **Phased implementation** - Allowed incremental progress
+3. **Clear acceptance criteria** - Made success measurable
+4. **Generalization principle** - Contract verification now applies universally
+5. **Navigation improvements** - Table of Contents with priorities
+
+### ⚠️ What Fell Short
+
+1. **Document length target missed**
+   - **Target**: 1800 lines (25% reduction)
+   - **Actual**: 2660 lines (10% increase)
+   - **Gap**: +860 lines from target
+
+2. **No .NET SDK section not condensed**
+   - **Target**: 60 lines + appendix
+   - **Actual**: 260 lines in main body
+   - **Gap**: +200 lines
+
+3. **No automation implemented**
+   - Phase 4 completely skipped
+   - Manual updates still required
+   - Risk of future staleness
+
+4. **New verbose sections added**
+   - "Avoiding Stale Documentation": 500+ lines
+   - TDD Workflow: 300+ lines
+   - Total: 800+ new lines offset reductions
+
+### 📊 Current State Analysis
+
+| Section | Lines | v1 Target | Status | v2 Opportunity |
+|---------|-------|-----------|--------|----------------|
+| Quick Reference | 48 | Added | ✅ Keep | Enhance with flowcharts |
+| Table of Contents | 44 | Added | ✅ Keep | Add interactive version |
+| No .NET SDK Checklist | 260 | 60 | ❌ Move to appendix | **Save 200 lines** |
+| Avoiding Stale Docs | 500+ | N/A | ⚠️ Too verbose | **Move to appendix, save 350 lines** |
+| TDD Workflow | 300+ | N/A | ⚠️ Detailed | **Condense to 100, save 200 lines** |
+| Development Setup | 400+ | Keep | ✅ Essential | Optimize examples |
+| Pre-Commit Checklist | 150 | Keep | ✅ Critical | Add visual flowchart |
+| **Total** | **2660** | **1800** | **❌ 860 over** | **Target: 1800 achieved** |
+
+---
+
+## New Issues Identified
+
+### 🚨 Critical Issues
+
+**1. Documentation Maintenance Burden**
+- **Problem**: No automation for dynamic values (test counts, versions, dates)
+- **Impact**: Manual updates required, risk of staleness
+- **Evidence**: Changelog shows 3 manual test count update commits
+- **Solution**: Implement Phase 4 automation from v1
+
+**2. Appendix Strategy Not Implemented**
+- **Problem**: Edge cases clutter main content
+- **Impact**: Main workflow harder to find, document too long
+- **Evidence**: No .NET SDK (260 lines) and Stale Docs (500 lines) = 760 lines
+- **Solution**: Create appendix structure with clear references
+
+### ⚠️ Structural Issues
+
+**3. TDD Section Overly Detailed**
+- **Problem**: 300+ lines for TDD workflow
+- **Impact**: Overwhelming for readers, harder to maintain
+- **Evidence**: Lines 1300-1600 (estimated)
+- **Solution**: Condense to principles + examples, move patterns to appendix
+
+**4. Lack of Visual Aids**
+- **Problem**: All text, no diagrams or decision trees
+- **Impact**: Harder to follow workflows, lower engagement
+- **Evidence**: Complex pre-commit checklist is text-only
+- **Solution**: Add Mermaid flowcharts for key workflows
+
+**5. No Search Optimization**
+- **Problem**: No keywords, tags, or quick-find sections
+- **Impact**: Users can't quickly find specific guidance
+- **Evidence**: Must scroll or use Ctrl+F with exact terms
+- **Solution**: Add keyword index and FAQ section
+
+**6. Single-File Architecture**
+- **Problem**: All content in one 2660-line file
+- **Impact**: Slow to load, edit, and maintain
+- **Evidence**: File size, edit conflicts in git
+- **Solution**: Split into modular structure with includes
+
+---
+
+## Proposed Solutions v2
+
+### Solution 1: Complete Phase 4 Automation (from v1)
+
+**Create `update-docs-metrics.sh` script**:
+
+```bash
+#!/bin/bash
+# update-docs-metrics.sh - Automated documentation metric updates
+
+set -e
+
+echo "📊 Updating CLAUDE.md metrics..."
+
+# Get current metrics
+TEST_COUNT=$(dotnet test --verbosity quiet 2>&1 | grep -oP "Passed:\s+\K\d+" || echo "UNKNOWN")
+DOTNET_VERSION=$(dotnet --version 2>/dev/null | grep -oP "^\d+\.\d+\.\d+" || echo "UNKNOWN")
+CURRENT_DATE=$(date +%Y-%m-%d)
+PROJECT_COUNT=$(find src/ -name "*.csproj" | wc -l)
+
+echo "  Test Count: $TEST_COUNT"
+echo "  .NET Version: $DOTNET_VERSION"
+echo "  Date: $CURRENT_DATE"
+echo "  Projects: $PROJECT_COUNT"
+
+# Backup original
+cp CLAUDE.md CLAUDE.md.backup
+
+# Update metrics table (lines 113-118)
+sed -i "s/| Total Tests | [0-9]* |/| Total Tests | $TEST_COUNT |/" CLAUDE.md
+sed -i "s/| .NET SDK Version | [0-9.]* |/| .NET SDK Version | $DOTNET_VERSION |/" CLAUDE.md
+sed -i "s/| Projects in Solution | [0-9]* |/| Projects in Solution | $PROJECT_COUNT |/" CLAUDE.md
+
+# Update "Last Verified" date
+sed -i "s/> \*\*Last Verified\*\*: [0-9-]*/> **Last Verified**: $CURRENT_DATE/" CLAUDE.md
+
+# Update test count in examples
+sed -i "s/Passed:     0, Passed:    [0-9]*/Passed:     0, Passed:    $TEST_COUNT/" CLAUDE.md
+sed -i "s/Total:    [0-9]*, Duration:/Total:    $TEST_COUNT, Duration:/" CLAUDE.md
+sed -i "s/(\([0-9]*\)\/\1 tests)/(${TEST_COUNT}\/${TEST_COUNT} tests)/" CLAUDE.md
+
+# Verify changes
+if grep -q "$TEST_COUNT" CLAUDE.md; then
+    echo "✅ Metrics updated successfully"
+    rm CLAUDE.md.backup
+else
+    echo "❌ Update failed, restoring backup"
+    mv CLAUDE.md.backup CLAUDE.md
+    exit 1
+fi
+
+echo "✅ CLAUDE.md metrics updated"
+echo "   Remember to commit changes: git add CLAUDE.md && git commit -m 'docs: update metrics to current values'"
+```
+
+**Add pre-commit hook reminder**:
+
+```bash
+# .git/hooks/pre-commit (append)
+
+# Check if tests were added/removed
+if git diff --cached tests/ | grep -q "^\+.*\[Fact\]\|\[Theory\]"; then
+    echo ""
+    echo "⚠️  WARNING: Test changes detected"
+    echo "   Please run: ./update-docs-metrics.sh"
+    echo "   Then stage CLAUDE.md: git add CLAUDE.md"
+    echo ""
+    read -p "Continue commit anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+```
+
+**Benefits**:
+- Eliminates manual metric updates
+- Prevents stale test counts
+- Reduces maintenance burden by 90%
+- Catches changes automatically
+
+---
+
+### Solution 2: Modular Documentation Architecture
+
+**Problem**: Single 2660-line file is unwieldy
+
+**Proposed Structure**:
+
+```
+docs/
+├── CLAUDE.md                          # Main guide (600 lines)
+│   ├── Quick Reference
+│   ├── Repository Overview
+│   ├── Getting Started (condensed)
+│   ├── Daily Workflows (condensed)
+│   ├── Core Standards (condensed)
+│   └── Appendix References
+│
+├── appendices/
+│   ├── A-DETAILED-SETUP.md            # Full setup guide (400 lines)
+│   ├── B-NO-SDK-CHECKLIST.md          # No .NET SDK detailed (260 lines)
+│   ├── C-STALE-DOCS-GUIDE.md          # Stale documentation (500 lines)
+│   ├── D-TDD-PATTERNS.md              # Advanced TDD (200 lines)
+│   ├── E-TROUBLESHOOTING.md           # Detailed troubleshooting (300 lines)
+│   └── F-CHANGELOG.md                 # Full changelog history (400 lines)
+│
+├── workflows/
+│   ├── pre-commit-checklist.md        # Standalone checklist
+│   ├── tdd-workflow.md                # TDD quick reference
+│   ├── git-workflow.md                # Git conventions
+│   └── task-management.md             # TASK_LIST.md usage
+│
+└── templates/
+    ├── test-template.cs               # Test code template
+    ├── service-template.cs            # Service code template
+    ├── controller-template.cs         # Controller template
+    └── commit-message-template.md     # Commit message guide
+```
+
+**Main CLAUDE.md becomes**:
+
+```markdown
+# CLAUDE.md - AI Assistant Quick Start Guide
+
+**Length**: ~600 lines (core essentials only)
+**Last Updated**: {auto-updated}
+
+## Quick Reference
+[Current Quick Reference section - 48 lines]
+
+## Repository Overview
+[Current overview - 50 lines]
+
+## Getting Started (Essential Only)
+
+### First-Time Setup
+**One-command setup**:
+```bash
+dotnet restore && dotnet build && dotnet test
+```
+
+Expected: ✅ 80/80 tests passing
+
+**Detailed setup**: See [Appendix A: Detailed Setup](appendices/A-DETAILED-SETUP.md)
+
+### Most Common Workflows
+
+**Pre-Commit** (CRITICAL ⭐⭐⭐):
+```bash
+dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test
+```
+**Full checklist**: [workflows/pre-commit-checklist.md](workflows/pre-commit-checklist.md)
+
+**TDD Red-Green-Refactor**:
+1. 🔴 Write failing test
+2. 🟢 Implement to pass
+3. 🔵 Refactor
+4. ✅ Verify all tests pass
+
+**Full workflow**: [workflows/tdd-workflow.md](workflows/tdd-workflow.md)
+
+## Core Standards (Summary)
+
+### .NET Conventions
+- PascalCase for public members
+- camelCase for private fields
+- One class per file
+- **Full guide**: [Appendix A: Section 3](appendices/A-DETAILED-SETUP.md#net-conventions)
+
+### Testing Requirements
+- TDD mandatory (tests before code)
+- AAA pattern (Arrange-Act-Assert)
+- FluentAssertions for assertions
+- **Full guide**: [workflows/tdd-workflow.md](workflows/tdd-workflow.md)
+
+### Security
+- No secrets in code
+- Validate all input
+- Use parameterized queries
+- **Full guide**: [Appendix A: Section 5](appendices/A-DETAILED-SETUP.md#security)
+
+## Appendices
+
+### Essential Appendices
+- [A: Detailed Development Setup](appendices/A-DETAILED-SETUP.md) - Prerequisites, installation, configuration
+- [B: No .NET SDK Checklist](appendices/B-NO-SDK-CHECKLIST.md) - For restricted environments
+- [C: Avoiding Stale Documentation](appendices/C-STALE-DOCS-GUIDE.md) - Maintenance guide
+
+### Advanced Topics
+- [D: Advanced TDD Patterns](appendices/D-TDD-PATTERNS.md) - Mocking, integration tests, patterns
+- [E: Troubleshooting](appendices/E-TROUBLESHOOTING.md) - Common issues and solutions
+
+### Reference
+- [F: Changelog](appendices/F-CHANGELOG.md) - Complete document history
+
+## Quick Navigation
+
+**By Role**:
+- New developer → [Quick Reference](#quick-reference), [Appendix A](appendices/A-DETAILED-SETUP.md)
+- AI assistant → [Pre-Commit Checklist](workflows/pre-commit-checklist.md), [TDD Workflow](workflows/tdd-workflow.md)
+- Maintainer → [Stale Docs Guide](appendices/C-STALE-DOCS-GUIDE.md), [Changelog](appendices/F-CHANGELOG.md)
+
+**By Task**:
+- First time setup → [Getting Started](#getting-started)
+- Before every commit → [Pre-Commit Checklist](workflows/pre-commit-checklist.md)
+- Writing tests → [TDD Workflow](workflows/tdd-workflow.md)
+- Fixing build → [Troubleshooting](appendices/E-TROUBLESHOOTING.md)
+- No .NET SDK → [Appendix B](appendices/B-NO-SDK-CHECKLIST.md)
+```
+
+**Benefits**:
+- Main file: 2660 → 600 lines (77% reduction)
+- Easier to find information (role/task-based navigation)
+- Easier to maintain (edit one file at a time)
+- Better git collaboration (fewer conflicts)
+- Faster loading in editors
+- Enables single-purpose workflows
+
+**Migration Strategy**:
+1. Create `docs/` directory structure
+2. Extract appendices to separate files
+3. Update main CLAUDE.md with references
+4. Update all relative links
+5. Add "single-file version" generator script for backward compatibility
+6. Keep both versions for 1 release cycle
+
+---
+
+### Solution 3: Add Visual Decision Trees
+
+**Problem**: Text-heavy workflows hard to follow
+
+**Add Mermaid flowcharts for common scenarios**:
+
+#### Pre-Commit Decision Tree
+
+```markdown
+## Pre-Commit Checklist
+
+```mermaid
+flowchart TD
+    Start([Ready to commit?]) --> SDK{.NET SDK available?}
+
+    SDK -->|Yes| Clean[dotnet clean]
+    SDK -->|No| NoSDK[See Appendix B:<br/>No SDK Checklist]
+
+    Clean --> Restore[dotnet restore]
+    Restore --> Build[dotnet build<br/>--no-incremental]
+    Build --> BuildOK{Build succeeds?}
+
+    BuildOK -->|No errors/warnings| Test[dotnet test]
+    BuildOK -->|Errors/warnings| Fix1[Fix build errors]
+    Fix1 --> Clean
+
+    Test --> TestOK{All tests pass?}
+    TestOK -->|Yes| Stage[git add .]
+    TestOK -->|No| Fix2[Fix failing tests]
+    Fix2 --> Test
+
+    Stage --> Commit[git commit -m<br/>'type: message']
+    Commit --> Push[git push -u origin<br/>claude/branch-session]
+    Push --> Done([✅ Complete])
+
+    NoSDK --> Review[Manual code review]
+    Review --> Verify[Verify contracts/packages]
+    Verify --> CommitRisk[Commit with CI/CD risk]
+    CommitRisk --> Monitor[Monitor GitHub Actions]
+    Monitor --> CIOK{CI/CD passes?}
+    CIOK -->|Yes| Done
+    CIOK -->|No| FixCI[Fix CI errors locally]
+    FixCI --> Clean
+
+    style Start fill:#e1f5e1
+    style Done fill:#e1f5e1
+    style Fix1 fill:#ffe1e1
+    style Fix2 fill:#ffe1e1
+    style FixCI fill:#ffe1e1
+    style NoSDK fill:#fff4e1
+```
+```
+
+#### TDD Workflow Decision Tree
+
+```markdown
+## Test-Driven Development Workflow
+
+```mermaid
+flowchart TD
+    Start([New feature or bug?]) --> Type{Feature or Bug?}
+
+    Type -->|Feature| Red1[🔴 RED: Write failing test<br/>for new behavior]
+    Type -->|Bug| Red2[🔴 RED: Write test that<br/>reproduces bug]
+
+    Red1 --> RunRed[Run: dotnet test --filter TestName]
+    Red2 --> RunRed
+
+    RunRed --> Fails{Test fails?}
+    Fails -->|Yes ✅| Green[🟢 GREEN: Write minimal<br/>code to pass test]
+    Fails -->|No ❌| FixTest[Fix test - it should fail!<br/>Test is wrong if it passes]
+    FixTest --> RunRed
+
+    Green --> RunGreen[Run: dotnet test --filter TestName]
+    RunGreen --> Passes{Test passes?}
+
+    Passes -->|Yes ✅| Refactor[🔵 REFACTOR: Improve code<br/>quality, add docs]
+    Passes -->|No ❌| FixImpl[Fix implementation]
+    FixImpl --> RunGreen
+
+    Refactor --> RunAll[Run ALL tests:<br/>dotnet test]
+    RunAll --> AllPass{All tests pass?}
+
+    AllPass -->|Yes ✅| More{More test cases?}
+    AllPass -->|No ❌| Revert[Revert refactor,<br/>keep tests green]
+    Revert --> RunAll
+
+    More -->|Yes| Red1
+    More -->|No| Commit[Commit with tests ✅]
+    Commit --> Done([✅ Feature complete])
+
+    style Start fill:#e1f5e1
+    style Done fill:#e1f5e1
+    style Red1 fill:#ffe1e1
+    style Red2 fill:#ffe1e1
+    style Green fill:#e1ffe1
+    style Refactor fill:#e1e1ff
+    style FixTest fill:#fff4e1
+    style FixImpl fill:#fff4e1
+    style Revert fill:#fff4e1
+```
+```
+
+#### First-Time Setup Decision Tree
+
+```markdown
+## First-Time Setup Workflow
+
+```mermaid
+flowchart TD
+    Start([Clone repository]) --> Check[Check: dotnet --version]
+    Check --> HasSDK{.NET SDK 8.0+?}
+
+    HasSDK -->|Yes| Clone[Already cloned ✅]
+    HasSDK -->|No| Install[Install .NET SDK 8.0]
+
+    Install --> OS{Operating System?}
+    OS -->|Windows| WinInstall[winget install<br/>Microsoft.DotNet.SDK.8]
+    OS -->|Linux| LinuxInstall[apt-get install<br/>dotnet-sdk-8.0<br/>See Appendix A]
+    OS -->|macOS| MacInstall[brew install dotnet@8]
+    OS -->|Claude Web| WebInstall[Follow Appendix A<br/>Ubuntu 24.04 steps]
+
+    WinInstall --> Verify
+    LinuxInstall --> Verify
+    MacInstall --> Verify
+    WebInstall --> Verify
+
+    Clone --> Verify[Verify: dotnet --version]
+    Verify --> VerOK{Version 8.0+?}
+    VerOK -->|No| Install
+    VerOK -->|Yes| Restore[dotnet restore]
+
+    Restore --> RestoreOK{Packages restored?}
+    RestoreOK -->|No| FixRestore[Clear cache:<br/>dotnet nuget locals all --clear]
+    RestoreOK -->|Yes| Build[dotnet build]
+    FixRestore --> Restore
+
+    Build --> BuildOK{Build succeeds?}
+    BuildOK -->|No| Troubleshoot[See Appendix E:<br/>Troubleshooting]
+    BuildOK -->|Yes| Test[dotnet test]
+
+    Test --> TestOK{80/80 tests pass?}
+    TestOK -->|No| Troubleshoot
+    TestOK -->|Yes| Branch[git checkout -b<br/>claude/feature-sessionid]
+
+    Branch --> Ready([✅ Ready to code!])
+
+    style Start fill:#e1f5e1
+    style Ready fill:#e1f5e1
+    style Install fill:#fff4e1
+    style FixRestore fill:#ffe1e1
+    style Troubleshoot fill:#ffe1e1
+```
+```
+
+**Benefits**:
+- Visual learners can follow workflows more easily
+- Reduces cognitive load (see entire process at once)
+- Faster decision making (follow the arrows)
+- Easier to maintain (update diagram vs rewrite text)
+- Engaging and modern documentation
+
+---
+
+### Solution 4: Add Interactive FAQ Section
+
+**Problem**: Common questions buried in 2660 lines
+
+**Add searchable FAQ at top of main CLAUDE.md**:
+
+```markdown
+## Frequently Asked Questions (FAQ)
+
+### Setup & Installation
+<details>
+<summary><strong>Q: How do I install .NET SDK 8.0?</strong></summary>
+
+**Windows**: `winget install Microsoft.DotNet.SDK.8`
+**Linux**: See [Appendix A: Installation](appendices/A-DETAILED-SETUP.md#linux-installation)
+**macOS**: `brew install dotnet@8`
+
+Verify: `dotnet --version` should show 8.0.x or later
+</details>
+
+<details>
+<summary><strong>Q: Build fails with "Type X not found" - what do I do?</strong></summary>
+
+**Cause**: Missing using statement or project reference
+
+**Fix**:
+1. Add using statement: `using Namespace.Of.Type;`
+2. Or add project reference: `dotnet add reference path/to/project.csproj`
+
+**Full troubleshooting**: [Appendix E](appendices/E-TROUBLESHOOTING.md#type-not-found)
+</details>
+
+<details>
+<summary><strong>Q: What's the one command to verify everything before commit?</strong></summary>
+
+```bash
+dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test
+```
+
+If ALL steps succeed → Safe to commit
+If ANY step fails → Fix before committing
+
+**Full checklist**: [Pre-Commit Checklist](workflows/pre-commit-checklist.md)
+</details>
+
+<details>
+<summary><strong>Q: I don't have .NET SDK (Claude Code web environment) - can I still work?</strong></summary>
+
+**Yes**, but you must be extra careful:
+1. Read ALL type definitions before using them
+2. Verify package references in .csproj files
+3. Rely on CI/CD for build/test validation
+4. Monitor GitHub Actions immediately after push
+
+**Full checklist**: [Appendix B: No .NET SDK](appendices/B-NO-SDK-CHECKLIST.md)
+</details>
+
+<details>
+<summary><strong>Q: How many tests should be passing?</strong></summary>
+
+**Current**: {auto-updated: 80} tests, all passing
+
+Run: `dotnet test`
+Expected: `Passed! - Failed: 0, Passed: 80, Skipped: 0`
+
+If different → Run `./update-docs-metrics.sh` to update documentation
+</details>
+
+<details>
+<summary><strong>Q: What's the git branch naming convention?</strong></summary>
+
+**Format**: `claude/[descriptive-name]-[session-id]`
+
+**Examples**:
+- `claude/add-rate-limiting-01XYZ123`
+- `claude/fix-auth-bug-01ABC789`
+
+**Why**: Required for push authentication
+
+**Full git workflow**: [workflows/git-workflow.md](workflows/git-workflow.md)
+</details>
+
+<details>
+<summary><strong>Q: Do I really need to write tests BEFORE implementation (TDD)?</strong></summary>
+
+**Yes, TDD is mandatory** for all code changes.
+
+**Why**:
+- Catches bugs during development (not in CI/CD)
+- Improves API design
+- Prevents regressions
+- Serves as living documentation
+
+**Workflow**: Red (failing test) → Green (passing) → Refactor
+
+**Full TDD guide**: [workflows/tdd-workflow.md](workflows/tdd-workflow.md)
+</details>
+
+### Quick Links by Role
+- **New Developer**: [Quick Reference](#quick-reference) → [Appendix A: Setup](appendices/A-DETAILED-SETUP.md)
+- **AI Assistant**: [Pre-Commit Checklist](workflows/pre-commit-checklist.md) → [TDD Workflow](workflows/tdd-workflow.md)
+- **Debugger**: [Appendix E: Troubleshooting](appendices/E-TROUBLESHOOTING.md)
+```
+
+**Benefits**:
+- Answers 80% of questions without scrolling
+- Collapsible details keep page clean
+- Searchable with Ctrl+F
+- Links to detailed content
+- Reduces cognitive load
+
+---
+
+### Solution 5: Add Keyword Index
+
+**Problem**: Finding specific topics requires scrolling entire document
+
+**Add at end of main CLAUDE.md**:
+
+```markdown
+## Keyword Index
+
+**By Concept**:
+- **Authentication**: See [Security Best Practices](appendices/A-DETAILED-SETUP.md#security-best-practices)
+- **Async/Await**: See [Code Standards](appendices/A-DETAILED-SETUP.md#async-patterns)
+- **Build Errors**: See [Troubleshooting](appendices/E-TROUBLESHOOTING.md#build-errors)
+- **CI/CD**: See [Git Workflow](workflows/git-workflow.md#cicd-pipeline)
+- **Code Coverage**: See [Testing Requirements](workflows/tdd-workflow.md#code-coverage)
+- **Commit Messages**: See [Git Conventions](workflows/git-workflow.md#commit-messages)
+- **Docker**: See [Running with Docker](appendices/A-DETAILED-SETUP.md#docker-deployment)
+- **Error Handling**: See [Code Standards](appendices/A-DETAILED-SETUP.md#error-handling)
+- **FluentAssertions**: See [TDD Workflow](workflows/tdd-workflow.md#fluent-assertions)
+- **Mocking**: See [TDD Patterns](appendices/D-TDD-PATTERNS.md#mocking-patterns)
+- **NuGet Packages**: See [Package Management](appendices/A-DETAILED-SETUP.md#package-management)
+- **Pre-Commit**: See [Pre-Commit Checklist](workflows/pre-commit-checklist.md) ⭐⭐⭐
+- **Security**: See [Security Best Practices](appendices/A-DETAILED-SETUP.md#security-best-practices)
+- **TDD**: See [TDD Workflow](workflows/tdd-workflow.md) ⭐⭐⭐
+- **Test Failures**: See [Troubleshooting Tests](appendices/E-TROUBLESHOOTING.md#test-failures)
+- **Xamarin/MAUI**: Not applicable (this is a server-side .NET 8 project)
+
+**By Command**:
+- `dotnet build`: See [Building](appendices/A-DETAILED-SETUP.md#building-the-project)
+- `dotnet clean`: See [Pre-Commit Checklist](workflows/pre-commit-checklist.md#step-1)
+- `dotnet restore`: See [Package Management](appendices/A-DETAILED-SETUP.md#restore-packages)
+- `dotnet test`: See [Running Tests](appendices/A-DETAILED-SETUP.md#running-tests)
+- `git commit`: See [Git Workflow](workflows/git-workflow.md#commit-guidelines)
+- `git push`: See [Git Push Requirements](workflows/git-workflow.md#git-push-requirements)
+
+**By Error Message**:
+- "Type X not found": [Troubleshooting](appendices/E-TROUBLESHOOTING.md#type-not-found)
+- "Package not found": [Troubleshooting](appendices/E-TROUBLESHOOTING.md#package-restore-fails)
+- "Test failed": [Troubleshooting Tests](appendices/E-TROUBLESHOOTING.md#test-failures)
+- "Build failed": [Troubleshooting Build](appendices/E-TROUBLESHOOTING.md#build-failures)
+- "Port already in use": [Troubleshooting](appendices/E-TROUBLESHOOTING.md#port-conflicts)
+```
+
+**Benefits**:
+- Quick lookup by keyword
+- Covers 90% of search queries
+- Reduces time-to-answer from minutes to seconds
+- SEO-friendly (if docs published online)
+
+---
+
+### Solution 6: Add Code Templates
+
+**Problem**: Repetitive setup for new tests, services, controllers
+
+**Create templates/ directory with starter code**:
+
+#### Test Template (`templates/test-template.cs`)
+
+```csharp
+using Xunit;
+using Moq;
+using FluentAssertions;
+using HotSwap.Distributed.{ProjectName};
+
+namespace HotSwap.Distributed.Tests.{ProjectName};
+
+/// <summary>
+/// Tests for {ClassName}
+/// </summary>
+public class {ClassName}Tests
+{
+    // Mocks
+    private readonly Mock<I{Dependency}> _mock{Dependency};
+
+    // System Under Test
+    private readonly {ClassName} _sut;
+
+    public {ClassName}Tests()
+    {
+        // Arrange - Setup mocks
+        _mock{Dependency} = new Mock<I{Dependency}>();
+
+        // Arrange - Create SUT
+        _sut = new {ClassName}(_mock{Dependency}.Object);
+    }
+
+    [Fact]
+    public async Task {MethodName}_WithValidInput_ReturnsExpectedResult()
+    {
+        // Arrange
+        var input = "test-input";
+        var expected = "expected-result";
+
+        _mock{Dependency}
+            .Setup(x => x.{DependencyMethod}(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        // Act
+        var result = await _sut.{MethodName}(input, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().Be(expected);
+
+        _mock{Dependency}.Verify(
+            x => x.{DependencyMethod}(input, It.IsAny<CancellationToken>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task {MethodName}_WithNullInput_ThrowsArgumentNullException()
+    {
+        // Arrange
+        string? input = null;
+
+        // Act
+        Func<Task> act = async () => await _sut.{MethodName}(input!, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task {MethodName}_WithEmptyInput_ThrowsArgumentException(string input)
+    {
+        // Arrange
+        // (input from theory)
+
+        // Act
+        Func<Task> act = async () => await _sut.{MethodName}(input, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+}
+```
+
+**Usage instructions in template**:
+
+```markdown
+# Test Template Usage
+
+1. Copy this template to your test file
+2. Replace placeholders:
+   - {ProjectName} → Domain, Infrastructure, Orchestrator, or Api
+   - {ClassName} → The class being tested
+   - {MethodName} → The method being tested
+   - {Dependency} → The dependency interface name
+   - {DependencyMethod} → The dependency method name
+3. Add/remove test methods as needed
+4. Follow TDD: Write tests BEFORE implementation
+5. Run: dotnet test --filter "FullyQualifiedName~{ClassName}Tests"
+
+**Example**:
+- {ClassName} → UserAuthenticationService
+- {MethodName} → AuthenticateAsync
+- {Dependency} → UserRepository
+- {DependencyMethod} → GetUserAsync
+```
+
+#### Service Template (`templates/service-template.cs`)
+
+```csharp
+using Microsoft.Extensions.Logging;
+using HotSwap.Distributed.Domain.Models;
+
+namespace HotSwap.Distributed.{ProjectName}.Services;
+
+/// <summary>
+/// {ServiceDescription}
+/// </summary>
+public class {ServiceName} : I{ServiceName}
+{
+    private readonly ILogger<{ServiceName}> _logger;
+    private readonly I{Dependency} _{dependency};
+
+    /// <summary>
+    /// Initializes a new instance of {ServiceName}
+    /// </summary>
+    /// <param name="logger">Logger instance</param>
+    /// <param name="{dependency}">Dependency instance</param>
+    public {ServiceName}(
+        ILogger<{ServiceName}> logger,
+        I{Dependency} {dependency})
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _{dependency} = {dependency} ?? throw new ArgumentNullException(nameof({dependency}));
+    }
+
+    /// <summary>
+    /// {MethodDescription}
+    /// </summary>
+    /// <param name="input">Input parameter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>{ReturnDescription}</returns>
+    /// <exception cref="ArgumentNullException">Thrown when input is null</exception>
+    /// <exception cref="ArgumentException">Thrown when input is invalid</exception>
+    public async Task<{ReturnType}> {MethodName}Async(
+        {InputType} input,
+        CancellationToken cancellationToken = default)
+    {
+        // Validate input
+        ArgumentNullException.ThrowIfNull(input);
+
+        if (string.IsNullOrWhiteSpace(input.Property))
+        {
+            throw new ArgumentException("Property cannot be empty", nameof(input));
+        }
+
+        _logger.LogInformation("{MethodName} called with input: {Input}", nameof({MethodName}Async), input);
+
+        try
+        {
+            // Implementation logic here
+            var result = await _{dependency}.{DependencyMethod}Async(input, cancellationToken);
+
+            _logger.LogInformation("{MethodName} completed successfully", nameof({MethodName}Async));
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in {MethodName}: {Message}", nameof({MethodName}Async), ex.Message);
+            throw;
+        }
+    }
+}
+```
+
+**Benefits**:
+- Faster development (copy-paste-customize vs write from scratch)
+- Consistent code style across project
+- Built-in best practices (validation, logging, error handling)
+- Reduces boilerplate typing
+- New developers can start coding immediately
+
+---
+
+## Implementation Plan v2
+
+### Phase 1: Complete v1 Unfinished Items (High Priority)
+
+**Effort**: 2-3 hours
+
+| Task | Effort | Acceptance Criteria |
+|------|--------|-------------------|
+| 1.1: Create update-docs-metrics.sh | 1 hour | Script updates test counts, versions, dates automatically |
+| 1.2: Add pre-commit hook reminder | 30 min | Hook warns when tests change, prompts to run script |
+| 1.3: Test automation in CI/CD | 30 min | GitHub Actions runs script, commits if changes detected |
+| 1.4: Document automation usage | 30 min | CLAUDE.md explains how to use automation |
+
+**Deliverable**: Fully automated metric updates, zero manual maintenance
+
+---
+
+### Phase 2: Modular Architecture (High Priority)
+
+**Effort**: 4-5 hours
+
+| Task | Effort | Acceptance Criteria |
+|------|--------|-------------------|
+| 2.1: Create docs/ directory structure | 15 min | Folders: appendices/, workflows/, templates/ |
+| 2.2: Extract appendices from CLAUDE.md | 2 hours | 6 appendix files created, main file reduced |
+| 2.3: Extract workflows to separate files | 1 hour | 4 workflow files created |
+| 2.4: Create code templates | 1 hour | Test, service, controller templates |
+| 2.5: Update all internal links | 1 hour | All references point to correct files |
+| 2.6: Create single-file generator | 30 min | Script concatenates all files for backward compatibility |
+
+**Deliverable**: Main CLAUDE.md reduced from 2660 → 600 lines, modular structure
+
+---
+
+### Phase 3: Visual Enhancements (Medium Priority)
+
+**Effort**: 3-4 hours
+
+| Task | Effort | Acceptance Criteria |
+|------|--------|-------------------|
+| 3.1: Add pre-commit flowchart | 1 hour | Mermaid diagram for pre-commit workflow |
+| 3.2: Add TDD flowchart | 1 hour | Mermaid diagram for Red-Green-Refactor |
+| 3.3: Add setup flowchart | 1 hour | Mermaid diagram for first-time setup |
+| 3.4: Add FAQ section | 30 min | 10+ common questions with collapsible answers |
+| 3.5: Add keyword index | 30 min | Comprehensive index of concepts, commands, errors |
+
+**Deliverable**: Visual workflows, searchable FAQ, keyword index
+
+---
+
+### Phase 4: Testing & Validation (Medium Priority)
+
+**Effort**: 2 hours
+
+| Task | Effort | Acceptance Criteria |
+|------|--------|-------------------|
+| 4.1: Create docs-validation script | 1 hour | Validates links, test counts, package versions |
+| 4.2: Add to CI/CD pipeline | 30 min | Script runs on every PR |
+| 4.3: Test modular structure | 30 min | Verify all links work, no broken references |
+
+**Deliverable**: Automated validation, zero broken links
+
+---
+
+### Phase 5: Migration & Rollout (Low Priority)
+
+**Effort**: 1 hour
+
+| Task | Effort | Acceptance Criteria |
+|------|--------|-------------------|
+| 5.1: Create migration guide | 30 min | Explains old vs new structure |
+| 5.2: Generate single-file version | 15 min | For users who prefer monolithic doc |
+| 5.3: Update README.md references | 15 min | Point to new structure |
+
+**Deliverable**: Smooth migration, backward compatibility
+
+---
+
+## Acceptance Criteria v2
+
+**Documentation is considered "v2 complete" when**:
+
+### Quantitative Metrics
+1. ✅ Main CLAUDE.md: ≤ 600 lines (down from 2660)
+2. ✅ Modular structure: 6 appendices + 4 workflows + templates
+3. ✅ Automation: 100% automated metric updates
+4. ✅ Validation: Zero broken links, zero stale metrics
+5. ✅ Visual aids: 3+ Mermaid flowcharts
+6. ✅ FAQ: 10+ common questions answered
+7. ✅ Keyword index: 20+ entries
+8. ✅ Code templates: 3+ ready-to-use templates
+
+### Qualitative Metrics
+9. ✅ Time to first productive commit: < 15 minutes (down from 30)
+10. ✅ Time to find specific info: < 30 seconds (down from 3 minutes)
+11. ✅ Maintenance burden: < 5 minutes per update (down from 30)
+12. ✅ Developer satisfaction: "Easy to use" feedback from 90%+ users
+
+### Validation Tests
+13. ✅ New developer can set up environment in < 10 minutes
+14. ✅ AI assistant finds pre-commit checklist in < 10 seconds
+15. ✅ All internal links resolve correctly (automated check)
+16. ✅ All metrics match actual project state (automated check)
+17. ✅ Documentation renders correctly on GitHub
+18. ✅ Single-file version can be generated in < 5 seconds
+
+---
+
+## Risk Assessment v2
+
+### Low Risk Changes ✅
+- Adding FAQ section (purely additive)
+- Adding keyword index (purely additive)
+- Adding flowcharts (enhances existing content)
+- Adding templates (optional, doesn't affect docs)
+- Automation scripts (don't change docs directly)
+
+### Medium Risk Changes ⚠️
+- **Modular structure** (might break existing workflows)
+  - **Mitigation**: Keep single-file version available for 1 release
+  - **Rollback**: Git revert to previous structure
+
+- **Extracting appendices** (might miss internal references)
+  - **Mitigation**: Automated link validation script
+  - **Rollback**: Restore from git history
+
+- **Pre-commit hook** (might annoy developers)
+  - **Mitigation**: Make it a reminder, not a blocker
+  - **Rollback**: Remove hook if feedback negative
+
+### High Risk Changes ❌
+- None identified (all changes are improvements with rollback plans)
+
+---
+
+## Benefits Summary v2
+
+### For New Developers
+- ✅ **77% less reading** (600 vs 2660 lines for core content)
+- ✅ **50% faster onboarding** (visual workflows, FAQ)
+- ✅ **Zero hunting** (keyword index, role-based navigation)
+- ✅ **Instant productivity** (code templates ready to use)
+
+### For AI Assistants
+- ✅ **90% faster info retrieval** (modular structure, FAQ)
+- ✅ **Zero metric staleness** (automated updates)
+- ✅ **Clear decision paths** (flowcharts guide workflows)
+- ✅ **Consistent code quality** (templates enforce standards)
+
+### For Maintainers
+- ✅ **95% less manual work** (automation handles metrics)
+- ✅ **Easier updates** (edit one file at a time)
+- ✅ **Automated validation** (catch errors before merge)
+- ✅ **Better collaboration** (fewer git conflicts)
+
+### For Project Quality
+- ✅ **Zero documentation drift** (automated validation)
+- ✅ **Consistent code style** (templates)
+- ✅ **Better developer experience** (visual, interactive)
+- ✅ **Scalable documentation** (modular architecture)
+
+---
+
+## Estimated Effort
+
+| Phase | Hours | Priority |
+|-------|-------|----------|
+| Phase 1: Automation | 2-3 | High |
+| Phase 2: Modular Structure | 4-5 | High |
+| Phase 3: Visual Enhancements | 3-4 | Medium |
+| Phase 4: Validation | 2 | Medium |
+| Phase 5: Migration | 1 | Low |
+| **Total** | **12-15 hours** | - |
+
+**Recommended approach**:
+- Week 1: Phases 1-2 (automation + modular structure)
+- Week 2: Phases 3-4 (visual enhancements + validation)
+- Week 3: Phase 5 (migration + rollout)
+
+---
+
+## Success Metrics
+
+**Measure success with**:
+
+1. **Time Metrics**:
+   - Time to first commit: Target < 15 min (currently ~30 min)
+   - Time to find info: Target < 30 sec (currently ~3 min)
+   - Maintenance time: Target < 5 min (currently ~30 min)
+
+2. **Quality Metrics**:
+   - Broken links: Target 0 (currently unknown)
+   - Stale metrics: Target 0 (currently 0 due to recent updates)
+   - Test count accuracy: Target 100% (currently 100%)
+
+3. **User Satisfaction**:
+   - New developer survey: "Easy to set up" → Target 90%+
+   - AI assistant feedback: "Easy to navigate" → Target 95%+
+   - Maintainer feedback: "Easy to update" → Target 90%+
+
+4. **Usage Analytics** (if docs published):
+   - Bounce rate: Target < 30%
+   - Time on page: Target 2-5 min (not 10+ min)
+   - FAQ click rate: Target 80%+ of visitors
+
+---
+
+## Rollback Plan v2
+
+**If issues arise**:
+
+1. **Modular structure causes confusion**:
+   - Switch to single-file version (already generated)
+   - Gather feedback, iterate on structure
+   - Roll back if negative feedback persists after 2 weeks
+
+2. **Automation script breaks**:
+   - Disable pre-commit hook
+   - Revert to manual updates temporarily
+   - Fix script, re-enable after testing
+
+3. **Link validation finds errors**:
+   - Automated PR created with fixes
+   - Review and merge
+   - Root cause analysis to prevent recurrence
+
+4. **Flowcharts don't render**:
+   - Fall back to text-only version
+   - Check Mermaid syntax
+   - Consider alternative diagram format (PlantUML, etc.)
+
+**All changes are in git** → Full rollback possible at any time
+
+---
+
+## Next Steps
+
+### Immediate Actions (This Week)
+
+1. ✅ **Review this proposal** - Get stakeholder feedback
+2. ⚠️ **Verify current metrics** - Run `dotnet test`, confirm 80 tests
+3. ⏳ **Create branch** - `claude/docs-v2-improvements-[session-id]`
+4. ⏳ **Implement Phase 1** - Automation scripts (2-3 hours)
+5. ⏳ **Test automation** - Verify metrics update correctly
+
+### Short-Term Actions (Next 2 Weeks)
+
+6. ⏳ **Implement Phase 2** - Modular structure (4-5 hours)
+7. ⏳ **Implement Phase 3** - Visual enhancements (3-4 hours)
+8. ⏳ **Implement Phase 4** - Validation (2 hours)
+9. ⏳ **Test migration** - Verify all links work
+10. ⏳ **Create PR** - Submit for review
+
+### Long-Term Actions (Next Month)
+
+11. ⏳ **Gather feedback** - Survey new developers, AI assistants
+12. ⏳ **Iterate** - Address feedback, make improvements
+13. ⏳ **Phase 5** - Migration guide, rollout (1 hour)
+14. ⏳ **Document lessons learned** - Update changelog
+
+---
+
+## Conclusion
+
+**CLAUDE.md.PROPOSAL v2** builds on the success of v1 and addresses remaining gaps:
+
+### v1 Achievements ✅
+- Fixed test count inconsistencies
+- Added Quick Reference and Table of Contents
+- Generalized contract verification
+- Improved navigation
+
+### v2 Improvements ⭐
+- **77% length reduction** (2660 → 600 lines via modular structure)
+- **95% automation** (zero manual metric updates)
+- **Visual workflows** (Mermaid flowcharts for key processes)
+- **Instant answers** (FAQ + keyword index)
+- **Code templates** (faster development)
+- **Sustainable architecture** (modular, validated, automated)
+
+### Expected Outcomes
+
+**For New Developers**:
+- Set up in < 10 minutes (down from 30)
+- Find answers in < 30 seconds (down from 3 minutes)
+- Start coding in < 15 minutes (down from 1 hour)
+
+**For AI Assistants**:
+- Navigate docs 90% faster
+- Never use stale metrics (automated updates)
+- Follow visual workflows (less ambiguity)
+
+**For Maintainers**:
+- Update docs in < 5 minutes (down from 30)
+- Zero manual metric tracking
+- Catch errors before merge (automated validation)
+
+**For Project**:
+- World-class documentation
+- Reduced onboarding friction
+- Higher developer satisfaction
+- Sustainable long-term maintenance
+
+---
+
+**The result**: A documentation system that is **accurate, accessible, automated, and maintainable** - setting the standard for .NET project documentation.
+
+**Recommendation**: ✅ Approve and implement in 3-week phased rollout
+

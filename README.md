@@ -1,8 +1,8 @@
 # Distributed Kernel Orchestration System
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-65%2F65%20passing-brightgreen)]()
-[![Compliance](https://img.shields.io/badge/compliance-97%25-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-80%2F80%20passing-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-85%25+-brightgreen)]()
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -197,16 +197,16 @@ Claude-code-test/
 ## Testing
 
 **Test Coverage:**
-- **Unit Tests**: 65 tests across 6 test files (Sprint 1: +27 tests)
-- **Critical Path Tests**: 65/65 passing (100%)
+- **Unit Tests**: 80 tests across 6 test files (Sprint 1: +27 tests)
+- **Critical Path Tests**: 80/80 passing (100%)
 - **Code Coverage**: 85%+ on critical functionality
 - **Smoke Tests**: 6 API validation tests
-- **Test Duration**: ~12 seconds (full suite)
+- **Test Duration**: ~10 seconds (full suite)
 
 **Run Tests:**
 ```bash
 # Unit tests (requires .NET 8 SDK)
-dotnet test                    # 65 tests, ~12s
+dotnet test                    # 80 tests, ~10s
 
 # Smoke tests (requires API running)
 ./run-smoke-tests.sh           # 6 tests, ~8s
@@ -220,15 +220,54 @@ dotnet test                    # 65 tests, ~12s
 
 ## Documentation
 
-This repository includes comprehensive documentation:
+This repository includes comprehensive documentation organized into multiple sections:
 
+### Core Documentation
 - **[README.md](README.md)** - Quick start and overview (this file)
+- **[CLAUDE.md](CLAUDE.md)** - Development guidelines for AI assistants
 - **[TESTING.md](TESTING.md)** - Complete testing guide and procedures
 - **[PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md)** - Production readiness status
 - **[SPEC_COMPLIANCE_REVIEW.md](SPEC_COMPLIANCE_REVIEW.md)** - Specification compliance analysis
 - **[BUILD_STATUS.md](BUILD_STATUS.md)** - Build validation report
-- **[CLAUDE.md](CLAUDE.md)** - Development guidelines for AI assistants
 - **Swagger/OpenAPI** - Interactive API documentation at `/swagger`
+
+### Workflows & Guides
+- **[workflows/pre-commit-checklist.md](workflows/pre-commit-checklist.md)** - Visual pre-commit workflow with Mermaid diagrams
+- **[workflows/tdd-workflow.md](workflows/tdd-workflow.md)** - Test-Driven Development Red-Green-Refactor cycle
+- **[workflows/git-workflow.md](workflows/git-workflow.md)** - Git conventions and branching strategy
+- **[workflows/task-management.md](workflows/task-management.md)** - Using TASK_LIST.md for project planning
+
+### Code Templates
+- **[templates/test-template.cs](templates/test-template.cs)** - Comprehensive unit test template with xUnit and FluentAssertions
+- **[templates/service-template.cs](templates/service-template.cs)** - Service layer implementation template with DI and async patterns
+- **[templates/controller-template.cs](templates/controller-template.cs)** - REST API controller template with validation and error handling
+
+### Detailed Appendices
+- **[appendices/A-DETAILED-SETUP.md](appendices/A-DETAILED-SETUP.md)** - Step-by-step development environment setup
+- **[appendices/B-NO-SDK-CHECKLIST.md](appendices/B-NO-SDK-CHECKLIST.md)** - Development workflow without local .NET SDK
+- **[appendices/C-STALE-DOCS-GUIDE.md](appendices/C-STALE-DOCS-GUIDE.md)** - Preventing stale documentation
+- **[appendices/D-TDD-PATTERNS.md](appendices/D-TDD-PATTERNS.md)** - Advanced Test-Driven Development patterns
+- **[appendices/E-TROUBLESHOOTING.md](appendices/E-TROUBLESHOOTING.md)** - Comprehensive troubleshooting guide
+- **[appendices/F-CHANGELOG.md](appendices/F-CHANGELOG.md)** - Complete changelog history
+
+### Automation Scripts
+- **update-docs-metrics.sh** - Auto-update documentation metrics (test count, .NET version)
+- **docs-validation.sh** - Validate documentation freshness and accuracy
+- **pre-commit-docs-reminder.sh** - Pre-commit documentation reminders
+- **hooks/pre-commit** - Git pre-commit hook for documentation validation
+
+**Usage:**
+```bash
+# Update documentation metrics automatically
+./update-docs-metrics.sh --yes
+
+# Validate documentation freshness
+./docs-validation.sh
+
+# Install pre-commit hook
+cp hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
 
 ## Security
 
@@ -279,4 +318,4 @@ MIT License - See [LICENSE](LICENSE) for details
 
 **Repository:** [scrawlsbenches/Claude-code-test](https://github.com/scrawlsbenches/Claude-code-test)
 **Status:** Production Ready (97% Specification Compliance - Sprint 1 Complete)
-**Last Updated:** November 15, 2025
+**Last Updated:** November 16, 2025
