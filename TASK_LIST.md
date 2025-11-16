@@ -114,7 +114,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 ### 3. PostgreSQL Audit Log Persistence
 **Priority:** 🟡 Medium-High
 **Status:** ⏳ In Progress (Core infrastructure complete, integration ongoing)
-**Effort:** 2-3 days (60% complete)
+**Effort:** 2-3 days (80% complete)
 **References:** SPEC_COMPLIANCE_REVIEW.md:235, PROJECT_STATUS_REPORT.md:496, docs/AUDIT_LOG_SCHEMA.md
 
 **Requirements:**
@@ -122,10 +122,10 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - [x] Implement Entity Framework Core models
 - [x] Create AuditLogService with repository pattern
 - [x] Persist all deployment events (pipeline-level)
-- [ ] Persist approval events
+- [x] Persist approval events
 - [ ] Persist rollback events
 - [ ] Persist configuration changes
-- [ ] Persist security events (authentication/authorization)
+- [x] Persist security events (authentication/authorization)
 - [ ] Implement retention policy (configurable)
 - [x] Add database migration scripts
 
@@ -144,22 +144,29 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - AuditLogService implementation with comprehensive error handling
 - 13 comprehensive unit tests using in-memory database (all passing)
 - EF Core migration generated (InitialAuditLogSchema)
-- DeploymentPipeline integrated with audit logging (pipeline start/completion/failure events)
+- DeploymentPipeline integrated: pipeline start/completion/failure events
+- ApprovalService integrated: approval requested/granted/rejected events
+- AuthenticationController integrated: login success/failure, token validation, suspicious activity detection
 - OpenTelemetry trace ID correlation for distributed tracing
+- HTTP context data capture: source IP, user agent
 
-**Files Created:**
+**Files Created/Modified:**
 - docs/AUDIT_LOG_SCHEMA.md - Comprehensive schema documentation
 - 5 entity models in Infrastructure/Data/Entities/
 - AuditLogDbContext.cs and AuditLogDbContextFactory.cs
 - IAuditLogService.cs and AuditLogService.cs
 - AuditLogServiceTests.cs (13 tests)
 - Migration: 20251116202007_InitialAuditLogSchema.cs
+- DeploymentPipeline.cs - Integrated audit logging (3 events)
+- ApprovalService.cs - Integrated audit logging (3 events)
+- AuthenticationController.cs - Integrated audit logging (4 events + suspicious activity detection)
 
 **Acceptance Criteria:**
 - ✅ Database schema designed and indexed for performance
 - ✅ All deployment pipeline events persisted to PostgreSQL
+- ✅ Approval events persisted
+- ✅ Authentication events persisted with suspicious activity detection
 - ⏳ Query API for audit log retrieval (IAuditLogService methods created, API endpoints pending)
-- ⏳ Approval events persisted (next task)
 - ⏳ Retention policy implemented (background service pending)
 
 **Impact:** Medium - Important for compliance and troubleshooting
