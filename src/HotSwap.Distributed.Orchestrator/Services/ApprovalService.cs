@@ -1,9 +1,11 @@
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace HotSwap.Distributed.Orchestrator.Services;
 
@@ -15,6 +17,7 @@ public class ApprovalService : IApprovalService
     private readonly ILogger<ApprovalService> _logger;
     private readonly PipelineConfiguration _config;
     private readonly INotificationService? _notificationService;
+    private readonly IAuditLogService? _auditLogService;
 
     // In-memory storage for approval requests
     // In production, this would be backed by a database
@@ -26,11 +29,13 @@ public class ApprovalService : IApprovalService
     public ApprovalService(
         ILogger<ApprovalService> logger,
         PipelineConfiguration config,
-        INotificationService? notificationService = null)
+        INotificationService? notificationService = null,
+        IAuditLogService? auditLogService = null)
     {
         _logger = logger;
         _config = config;
         _notificationService = notificationService;
+        _auditLogService = auditLogService;
     }
 
     /// <inheritdoc />
@@ -67,6 +72,14 @@ public class ApprovalService : IApprovalService
         {
             await _notificationService.SendApprovalRequestNotificationAsync(request, cancellationToken);
         }
+
+        // Audit log: Approval request created
+        await LogApprovalEventAsync(
+            "ApprovalRequested",
+            "Pending",
+            request,
+            "Approval request created and awaiting decision",
+            cancellationToken);
 
         return request;
     }
@@ -130,6 +143,14 @@ public class ApprovalService : IApprovalService
             tcs.TrySetResult(request);
         }
 
+        // Audit log: Approval granted
+        await LogApprovalEventAsync(
+            "ApprovalGranted",
+            "Approved",
+            request,
+            $"Approved by {decision.ApproverEmail}. Reason: {decision.Reason ?? "None"}",
+            cancellationToken);
+
         return request;
     }
 
@@ -183,6 +204,14 @@ public class ApprovalService : IApprovalService
         {
             tcs.TrySetResult(request);
         }
+
+        // Audit log: Approval rejected
+        await LogApprovalEventAsync(
+            "ApprovalRejected",
+            "Rejected",
+            request,
+            $"Rejected by {decision.ApproverEmail}. Reason: {decision.Reason ?? "None"}",
+            cancellationToken);
 
         return request;
     }
@@ -321,5 +350,72 @@ public class ApprovalService : IApprovalService
         _approvalRequests.Clear();
         _approvalWaiters.Clear();
         _logger.LogDebug("Cleared all approval requests and waiters (testing only)");
+    }
+
+    /// <summary>
+    /// Helper method to log approval events to the audit log.
+    /// </summary>
+    private async Task LogApprovalEventAsync(
+        string eventType,
+        string approvalStatus,
+        ApprovalRequest request,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        if (_auditLogService == null)
+        {
+            return; // Audit logging is optional
+        }
+
+        try
+        {
+            var auditLog = new AuditLog
+            {
+                EventId = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow,
+                EventType = eventType,
+                EventCategory = "Approval",
+                Severity = approvalStatus == "Approved" ? "Information" : (approvalStatus == "Rejected" ? "Warning" : "Information"),
+                UserId = null,
+                Username = request.RespondedByEmail ?? "System",
+                UserEmail = request.RespondedByEmail ?? request.RequesterEmail,
+                ResourceType = "ApprovalRequest",
+                ResourceId = request.ApprovalId.ToString(),
+                Action = approvalStatus,
+                Result = approvalStatus,
+                Message = message,
+                TraceId = Activity.Current?.TraceId.ToString(),
+                SpanId = Activity.Current?.SpanId.ToString(),
+                SourceIp = null,
+                UserAgent = null,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var approvalEvent = new ApprovalAuditEvent
+            {
+                ApprovalId = request.ApprovalId,
+                DeploymentExecutionId = request.DeploymentExecutionId,
+                ModuleName = request.ModuleName,
+                ModuleVersion = request.Version.ToString(),
+                TargetEnvironment = request.TargetEnvironment.ToString(),
+                RequesterEmail = request.RequesterEmail,
+                ApproverEmails = request.ApproverEmails.ToArray(),
+                ApprovalStatus = approvalStatus,
+                DecisionByEmail = request.RespondedByEmail,
+                DecisionAt = request.RespondedAt,
+                DecisionReason = request.ResponseReason,
+                TimeoutAt = request.TimeoutAt,
+                // IsExpired is a computed column, cannot be set
+                Metadata = null,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _auditLogService.LogApprovalEventAsync(auditLog, approvalEvent, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't fail the approval due to audit logging issues
+            _logger.LogError(ex, "Failed to write audit log for approval event {EventType}", eventType);
+        }
     }
 }

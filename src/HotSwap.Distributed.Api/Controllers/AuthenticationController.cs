@@ -1,8 +1,10 @@
 using HotSwap.Distributed.Api.Models;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 
 namespace HotSwap.Distributed.Api.Controllers;
 
@@ -17,15 +19,18 @@ public class AuthenticationController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly ILogger<AuthenticationController> _logger;
+    private readonly IAuditLogService? _auditLogService;
 
     public AuthenticationController(
         IUserRepository userRepository,
         IJwtTokenService jwtTokenService,
-        ILogger<AuthenticationController> logger)
+        ILogger<AuthenticationController> logger,
+        IAuditLogService? auditLogService = null)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _jwtTokenService = jwtTokenService ?? throw new ArgumentNullException(nameof(jwtTokenService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogService = auditLogService;
     }
 
     /// <summary>
@@ -76,6 +81,19 @@ public class AuthenticationController : ControllerBase
         if (user == null)
         {
             _logger.LogWarning("Failed login attempt for user: {Username}", request.Username);
+
+            // Audit log: Failed login
+            await LogAuthenticationEventAsync(
+                "LoginFailed",
+                "Failure",
+                request.Username,
+                userId: null,
+                authenticationResult: "Failure",
+                failureReason: "Invalid username or password",
+                tokenIssued: false,
+                tokenExpiresAt: null,
+                cancellationToken: default);
+
             return Unauthorized(new ErrorResponse
             {
                 Error = "Invalid username or password"
@@ -102,6 +120,18 @@ public class AuthenticationController : ControllerBase
         _logger.LogInformation("User {Username} authenticated successfully, token expires at {ExpiresAt}",
             user.Username, expiresAt);
 
+        // Audit log: Successful login
+        await LogAuthenticationEventAsync(
+            "LoginSuccess",
+            "Success",
+            user.Username,
+            userId: user.Id,
+            authenticationResult: "Success",
+            failureReason: null,
+            tokenIssued: true,
+            tokenExpiresAt: expiresAt,
+            cancellationToken: default);
+
         return Ok(response);
     }
 
@@ -124,6 +154,19 @@ public class AuthenticationController : ControllerBase
         if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
             _logger.LogWarning("Failed to extract user ID from JWT claims");
+
+            // Audit log: Invalid token
+            await LogAuthenticationEventAsync(
+                "TokenValidationFailed",
+                "Failure",
+                username: "Unknown",
+                userId: null,
+                authenticationResult: "InvalidToken",
+                failureReason: "Failed to extract user ID from JWT claims",
+                tokenIssued: false,
+                tokenExpiresAt: null,
+                cancellationToken: default);
+
             return Unauthorized(new ErrorResponse
             {
                 Error = "Invalid authentication token"
@@ -135,6 +178,19 @@ public class AuthenticationController : ControllerBase
         if (user == null)
         {
             _logger.LogWarning("User {UserId} not found in repository", userId);
+
+            // Audit log: User not found
+            await LogAuthenticationEventAsync(
+                "UserNotFound",
+                "Failure",
+                username: userId.ToString(),
+                userId: userId,
+                authenticationResult: "UserNotFound",
+                failureReason: "User ID from token not found in repository",
+                tokenIssued: false,
+                tokenExpiresAt: null,
+                cancellationToken: default);
+
             return Unauthorized(new ErrorResponse
             {
                 Error = "User not found"
@@ -205,5 +261,102 @@ public class AuthenticationController : ControllerBase
         };
 
         return Ok(demoCredentials);
+    }
+
+    /// <summary>
+    /// Helper method to log authentication events to the audit log.
+    /// </summary>
+    private async Task LogAuthenticationEventAsync(
+        string eventType,
+        string result,
+        string username,
+        Guid? userId,
+        string authenticationResult,
+        string? failureReason,
+        bool tokenIssued,
+        DateTime? tokenExpiresAt,
+        CancellationToken cancellationToken)
+    {
+        if (_auditLogService == null)
+        {
+            return; // Audit logging is optional
+        }
+
+        try
+        {
+            // Extract IP address and user agent from HTTP context
+            var sourceIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+
+            var auditLog = new AuditLog
+            {
+                EventId = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow,
+                EventType = eventType,
+                EventCategory = "Authentication",
+                Severity = result == "Success" ? "Information" : "Warning",
+                UserId = userId,
+                Username = username,
+                UserEmail = null, // We don't have email at this point
+                ResourceType = "Authentication",
+                ResourceId = userId?.ToString() ?? username,
+                Action = "Authenticate",
+                Result = result,
+                Message = failureReason ?? $"{eventType} for user {username}",
+                TraceId = Activity.Current?.TraceId.ToString(),
+                SpanId = Activity.Current?.SpanId.ToString(),
+                SourceIp = sourceIp,
+                UserAgent = userAgent,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var authEvent = new AuthenticationAuditEvent
+            {
+                UserId = userId,
+                Username = username,
+                AuthenticationMethod = "JWT",
+                AuthenticationResult = authenticationResult,
+                FailureReason = failureReason,
+                TokenIssued = tokenIssued,
+                TokenExpiresAt = tokenExpiresAt,
+                SourceIp = sourceIp,
+                UserAgent = userAgent,
+                GeoLocation = null, // Could be enhanced with IP geolocation service
+                IsSuspicious = DetectSuspiciousActivity(authenticationResult, sourceIp, userAgent),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _auditLogService.LogAuthenticationEventAsync(auditLog, authEvent, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't fail the authentication due to audit logging issues
+            _logger.LogError(ex, "Failed to write audit log for authentication event {EventType}", eventType);
+        }
+    }
+
+    /// <summary>
+    /// Detects suspicious authentication activity based on patterns.
+    /// </summary>
+    private bool DetectSuspiciousActivity(string authenticationResult, string? sourceIp, string? userAgent)
+    {
+        // Basic suspicious activity detection
+        // In production, this would be more sophisticated with:
+        // - Rate limiting checks
+        // - Geolocation anomalies
+        // - Known malicious IP databases
+        // - User agent fingerprinting
+        // - Behavioral analysis
+
+        // Flag as suspicious if:
+        // 1. Multiple failures (would need to track this in a cache/database)
+        // 2. Missing user agent (automated tools)
+        // 3. Localhost connections in production (potential testing/probing)
+
+        var isMissingUserAgent = string.IsNullOrWhiteSpace(userAgent);
+        var isLocalhost = sourceIp?.Contains("127.0.0.1") == true || sourceIp?.Contains("::1") == true;
+        var isProduction = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true;
+
+        return (isMissingUserAgent || (isLocalhost && isProduction));
     }
 }
