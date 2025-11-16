@@ -114,7 +114,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 ### 3. PostgreSQL Audit Log Persistence
 **Priority:** 🟡 Medium-High
 **Status:** ⏳ In Progress (Core infrastructure complete, integration ongoing)
-**Effort:** 2-3 days (80% complete)
+**Effort:** 2-3 days (85% complete)
 **References:** SPEC_COMPLIANCE_REVIEW.md:235, PROJECT_STATUS_REPORT.md:496, docs/AUDIT_LOG_SCHEMA.md
 
 **Requirements:**
@@ -126,7 +126,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - [ ] Persist rollback events
 - [ ] Persist configuration changes
 - [x] Persist security events (authentication/authorization)
-- [ ] Implement retention policy (configurable)
+- [x] Implement retention policy (configurable)
 - [x] Add database migration scripts
 
 **Schema Tables:**
@@ -147,6 +147,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - DeploymentPipeline integrated: pipeline start/completion/failure events
 - ApprovalService integrated: approval requested/granted/rejected events
 - AuthenticationController integrated: login success/failure, token validation, suspicious activity detection
+- AuditLogRetentionBackgroundService: daily cleanup of logs older than 90 days
 - OpenTelemetry trace ID correlation for distributed tracing
 - HTTP context data capture: source IP, user agent
 
@@ -160,14 +161,16 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - DeploymentPipeline.cs - Integrated audit logging (3 events)
 - ApprovalService.cs - Integrated audit logging (3 events)
 - AuthenticationController.cs - Integrated audit logging (4 events + suspicious activity detection)
+- AuditLogRetentionBackgroundService.cs - Daily cleanup of old audit logs
+- Program.cs - Registered retention background service
 
 **Acceptance Criteria:**
 - ✅ Database schema designed and indexed for performance
 - ✅ All deployment pipeline events persisted to PostgreSQL
 - ✅ Approval events persisted
 - ✅ Authentication events persisted with suspicious activity detection
+- ✅ Retention policy implemented (90-day default, daily execution)
 - ⏳ Query API for audit log retrieval (IAuditLogService methods created, API endpoints pending)
-- ⏳ Retention policy implemented (background service pending)
 
 **Impact:** Medium - Important for compliance and troubleshooting
 
