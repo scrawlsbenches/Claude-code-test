@@ -29,6 +29,52 @@ NC='\033[0m' # No Color
 ERRORS=0
 WARNINGS=0
 
+# Function to install .NET SDK if not present
+install_dotnet_if_needed() {
+    if command -v dotnet &> /dev/null; then
+        echo "✅ .NET SDK already installed (version $(dotnet --version))"
+        return 0
+    fi
+
+    echo "📦 .NET SDK not found, attempting to install..."
+
+    # Check if running as root or with sudo
+    if [ "$EUID" -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  This script needs root privileges to install .NET SDK${NC}"
+        echo "Please run: sudo $0"
+        exit 1
+    fi
+
+    # Install for Ubuntu 24.04
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "24.04" ]; then
+            echo "Installing .NET SDK 8.0 for Ubuntu 24.04..."
+            wget -q https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+            dpkg -i packages-microsoft-prod.deb
+            rm packages-microsoft-prod.deb
+            chmod 1777 /tmp
+            apt-get update -qq
+            apt-get install -y dotnet-sdk-8.0
+
+            if command -v dotnet &> /dev/null; then
+                echo -e "${GREEN}✅ .NET SDK 8.0 installed successfully (version $(dotnet --version))${NC}"
+                return 0
+            else
+                echo -e "${RED}❌ Failed to install .NET SDK${NC}"
+                exit 1
+            fi
+        fi
+    fi
+
+    echo -e "${YELLOW}⚠️  .NET SDK installation not supported for this OS${NC}"
+    echo "Please install .NET SDK 8.0 manually: https://dotnet.microsoft.com/download"
+    exit 1
+}
+
+# Install .NET SDK if needed
+install_dotnet_if_needed
+
 # Check if CLAUDE.md exists
 if [ ! -f "CLAUDE.md" ]; then
     echo -e "${RED}❌ Error: CLAUDE.md not found${NC}"
@@ -48,7 +94,7 @@ if command -v dotnet &> /dev/null; then
 
     if [ "$ACTUAL_TESTS" != "UNKNOWN" ]; then
         # Extract documented test count from metrics table
-        DOCUMENTED_TESTS=$(grep -A 2 "Project Metrics" CLAUDE.md | grep "Total Tests" | grep -oP "\| \K\d+" | head -1 || echo "UNKNOWN")
+        DOCUMENTED_TESTS=$(grep "Total Tests" CLAUDE.md | grep -oP "\| \K\d+" | head -1 || echo "UNKNOWN")
 
         if [ "$DOCUMENTED_TESTS" != "UNKNOWN" ]; then
             if [ "$ACTUAL_TESTS" = "$DOCUMENTED_TESTS" ]; then

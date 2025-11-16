@@ -116,7 +116,7 @@ Claude-code-test/
 | Test Coverage | 85%+ | Measured via code coverage tools |
 | .NET SDK Version | 8.0.121 | Minimum: 8.0+ |
 | Build Warnings | 0 | Clean build |
-| Projects in Solution | 7 | 4 source + 2 test + 1 example |
+| Projects in Solution | 4 | 4 source + 2 test + 1 example |
 
 ### AI Assistant Critical Rules
 
