@@ -15,15 +15,6 @@ public class RateLimitingMiddleware
     // In-memory storage for request counters
     private static readonly ConcurrentDictionary<string, ClientRateLimitInfo> _clients = new();
 
-    // Background task to clean up expired entries
-    private static readonly Timer _cleanupTimer;
-
-    static RateLimitingMiddleware()
-    {
-        // Clean up expired entries every minute
-        _cleanupTimer = new Timer(CleanupExpiredEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-    }
-
     public RateLimitingMiddleware(
         RequestDelegate next,
         ILogger<RateLimitingMiddleware> logger,
@@ -143,7 +134,11 @@ public class RateLimitingMiddleware
         return _config.GlobalLimit;
     }
 
-    private static void CleanupExpiredEntries(object? state)
+    /// <summary>
+    /// Cleans up expired rate limit entries from the cache.
+    /// Called periodically by RateLimitCleanupService.
+    /// </summary>
+    public static void CleanupExpiredEntries()
     {
         var now = DateTimeOffset.UtcNow;
         var keysToRemove = new List<string>();

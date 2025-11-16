@@ -13,9 +13,9 @@ This document provides comprehensive guidance for AI assistants working with thi
 ## Current Repository State
 
 **Status**: Production Ready (95% Specification Compliance)
-**Build Status**: ✅ Passing (38/38 tests)
+**Build Status**: ✅ Passing (80/80 tests)
 **Test Coverage**: 85%+
-**Last Updated**: November 14, 2025
+**Last Updated**: November 16, 2025
 
 ### Project Structure
 
@@ -2233,7 +2233,7 @@ dotnet test               # Should succeed
 
 1. **Mismatch between code and docs**
    ```bash
-   # Example: Docs say "23 tests" but actual count is 38
+   # Example: Docs say "65 tests" but actual count is 80
    grep "tests" CLAUDE.md | grep -oP "\d+"
    dotnet test | grep -oP "Passed:\s+\K\d+"
    ```
@@ -2380,6 +2380,30 @@ Code Change → Check API Changes? → Update XML Docs
   - Prevents bugs caused by following outdated documentation
   - Establishes clear ownership and review processes
 - Total additions: ~500 lines of documentation maintenance best practices
+
+### 2025-11-16 (Deployment Listing and Test Coverage)
+- **Fixed ListDeployments endpoint** returning empty list
+  - Extended IDeploymentTracker interface with GetAllResultsAsync() and GetAllInProgressAsync()
+  - Added ConcurrentDictionary ID tracking in InMemoryDeploymentTracker
+  - Implemented full deployment listing with completed and in-progress aggregation
+  - Automatic cleanup of stale IDs when cache entries expire
+  - Sorted results by start time descending (most recent first)
+- **Added comprehensive unit tests for InMemoryDeploymentTracker** (15 new tests)
+  - Tests for GetResultAsync, StoreResultAsync, GetInProgressAsync, TrackInProgressAsync
+  - Tests for RemoveInProgressAsync, GetAllResultsAsync, GetAllInProgressAsync
+  - Cache expiration and cleanup behavior tests
+  - Full deployment workflow integration test
+  - Constructor validation tests
+  - Maintains 85%+ test coverage requirement
+- **Updated test count documentation**
+  - Build Status: 80/80 tests passing (previously 65)
+  - Updated documentation staleness example
+  - Last Updated date refreshed
+- **Impact**:
+  - Fixes smoke test failures for deployment listing
+  - Enables deployment history viewing via API
+  - Maintains horizontal scaling capability
+  - Comprehensive test coverage for deployment tracking
 
 ### 2025-11-15 (TDD and .NET SDK Installation Requirements)
 - **Added mandatory .NET SDK installation verification** to Initial Analysis Checklist
