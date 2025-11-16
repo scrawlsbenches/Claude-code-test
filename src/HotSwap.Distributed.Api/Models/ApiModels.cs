@@ -53,7 +53,7 @@ public class DeploymentStatusResponse
     public required string Version { get; set; }
     public required string Status { get; set; }
     public DateTime StartTime { get; set; }
-    public DateTime EndTime { get; set; }
+    public DateTime? EndTime { get; set; }
     public required string Duration { get; set; }
     public required List<StageResult> Stages { get; set; }
     public string? TraceId { get; set; }
