@@ -1,10 +1,12 @@
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Strategies;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace HotSwap.Distributed.Orchestrator.Pipeline;
 
@@ -21,6 +23,7 @@ public class DeploymentPipeline : IDisposable
     private readonly PipelineConfiguration _config;
     private readonly Dictionary<EnvironmentType, IDeploymentStrategy> _strategies;
     private readonly IApprovalService? _approvalService;
+    private readonly IAuditLogService? _auditLogService;
 
     public DeploymentPipeline(
         ILogger<DeploymentPipeline> logger,
@@ -29,7 +32,8 @@ public class DeploymentPipeline : IDisposable
         TelemetryProvider telemetry,
         PipelineConfiguration config,
         Dictionary<EnvironmentType, IDeploymentStrategy> strategies,
-        IApprovalService? approvalService = null)
+        IApprovalService? approvalService = null,
+        IAuditLogService? auditLogService = null)
     {
         _logger = logger;
         _clusterRegistry = clusterRegistry;
@@ -38,6 +42,7 @@ public class DeploymentPipeline : IDisposable
         _config = config;
         _strategies = strategies;
         _approvalService = approvalService;
+        _auditLogService = auditLogService;
     }
 
     /// <summary>
@@ -62,6 +67,16 @@ public class DeploymentPipeline : IDisposable
             "Pipeline");
 
         result.TraceId = activity?.TraceId.ToString();
+
+        // Audit log: Pipeline started
+        await LogDeploymentEventAsync(
+            "PipelineStarted",
+            "Running",
+            request,
+            "Pipeline",
+            "Running",
+            result.TraceId,
+            cancellationToken);
 
         try
         {
@@ -140,6 +155,17 @@ public class DeploymentPipeline : IDisposable
             _logger.LogInformation("Deployment pipeline completed for {ModuleName} v{Version}: {Success}",
                 request.Module.Name, request.Module.Version, result.Success ? "SUCCESS" : "FAILED");
 
+            // Audit log: Pipeline completed
+            await LogDeploymentEventAsync(
+                "PipelineCompleted",
+                result.Success ? "Success" : "Failure",
+                request,
+                "Pipeline",
+                result.Success ? "Succeeded" : "Failed",
+                result.TraceId,
+                cancellationToken,
+                durationMs: (int)(result.EndTime - result.StartTime).TotalMilliseconds);
+
             return result;
         }
         catch (Exception ex)
@@ -158,6 +184,18 @@ public class DeploymentPipeline : IDisposable
                 Strategy = "Pipeline",
                 Exception = ex
             }, ex);
+
+            // Audit log: Pipeline failed with exception
+            await LogDeploymentEventAsync(
+                "PipelineFailed",
+                "Failure",
+                request,
+                "Pipeline",
+                "Failed",
+                result.TraceId,
+                cancellationToken,
+                errorMessage: ex.Message,
+                exceptionDetails: ex.ToString());
 
             return result;
         }
@@ -572,6 +610,83 @@ public class DeploymentPipeline : IDisposable
             stage.EndTime = DateTime.UtcNow;
 
             return stage;
+        }
+    }
+
+    /// <summary>
+    /// Helper method to log deployment events to the audit log.
+    /// </summary>
+    private async Task LogDeploymentEventAsync(
+        string eventType,
+        string result,
+        DeploymentRequest request,
+        string pipelineStage,
+        string stageStatus,
+        string? traceId,
+        CancellationToken cancellationToken,
+        int? durationMs = null,
+        int? nodesDeployed = null,
+        int? nodesFailed = null,
+        int? nodesTargeted = null,
+        string? errorMessage = null,
+        string? exceptionDetails = null)
+    {
+        if (_auditLogService == null)
+        {
+            return; // Audit logging is optional
+        }
+
+        try
+        {
+            var auditLog = new AuditLog
+            {
+                EventId = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow,
+                EventType = eventType,
+                EventCategory = "Deployment",
+                Severity = result == "Success" ? "Information" : (result == "Failure" ? "Error" : "Warning"),
+                UserId = null, // Pipeline is system-initiated
+                Username = "System",
+                UserEmail = request.RequesterEmail,
+                ResourceType = "DeploymentPipeline",
+                ResourceId = request.ExecutionId.ToString(),
+                Action = "ExecutePipeline",
+                Result = result,
+                Message = $"{eventType} for {request.Module.Name} v{request.Module.Version}",
+                TraceId = traceId,
+                SpanId = Activity.Current?.SpanId.ToString(),
+                SourceIp = null, // Not applicable for pipeline execution
+                UserAgent = null,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var deploymentEvent = new DeploymentAuditEvent
+            {
+                DeploymentExecutionId = request.ExecutionId,
+                ModuleName = request.Module.Name,
+                ModuleVersion = request.Module.Version.ToString(),
+                TargetEnvironment = request.TargetEnvironment.ToString(),
+                DeploymentStrategy = null, // Set at stage level
+                PipelineStage = pipelineStage,
+                StageStatus = stageStatus,
+                NodesTargeted = nodesTargeted,
+                NodesDeployed = nodesDeployed,
+                NodesFailed = nodesFailed,
+                StartTime = null, // Set at stage level
+                EndTime = null,
+                DurationMs = durationMs,
+                ErrorMessage = errorMessage,
+                ExceptionDetails = exceptionDetails,
+                RequesterEmail = request.RequesterEmail,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _auditLogService.LogDeploymentEventAsync(auditLog, deploymentEvent, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't fail the pipeline due to audit logging issues
+            _logger.LogError(ex, "Failed to write audit log for deployment event {EventType}", eventType);
         }
     }
 
