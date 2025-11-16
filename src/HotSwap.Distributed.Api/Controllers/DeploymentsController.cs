@@ -21,6 +21,7 @@ public class DeploymentsController : ControllerBase
     private readonly DistributedKernelOrchestrator _orchestrator;
     private readonly ILogger<DeploymentsController> _logger;
     private static readonly Dictionary<Guid, PipelineExecutionResult> _executionResults = new();
+    private static readonly Dictionary<Guid, DeploymentRequest> _inProgressDeployments = new();
 
     public DeploymentsController(
         DistributedKernelOrchestrator orchestrator,
@@ -77,14 +78,27 @@ public class DeploymentsController : ControllerBase
             CreatedAt = DateTime.UtcNow
         };
 
+        // Track deployment immediately (before it completes)
+        _inProgressDeployments[deploymentRequest.ExecutionId] = deploymentRequest;
+
         // Start deployment asynchronously
         _ = Task.Run(async () =>
         {
-            var result = await _orchestrator.ExecuteDeploymentPipelineAsync(
-                deploymentRequest,
-                cancellationToken);
+            try
+            {
+                var result = await _orchestrator.ExecuteDeploymentPipelineAsync(
+                    deploymentRequest,
+                    cancellationToken);
 
-            _executionResults[deploymentRequest.ExecutionId] = result;
+                // Move from in-progress to completed
+                _inProgressDeployments.Remove(deploymentRequest.ExecutionId);
+                _executionResults[deploymentRequest.ExecutionId] = result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Deployment {ExecutionId} failed", deploymentRequest.ExecutionId);
+                _inProgressDeployments.Remove(deploymentRequest.ExecutionId);
+            }
         }, cancellationToken);
 
         // Return 202 Accepted with execution details
@@ -126,35 +140,56 @@ public class DeploymentsController : ControllerBase
     {
         _logger.LogInformation("Getting deployment status for execution {ExecutionId}", executionId);
 
-        if (!_executionResults.TryGetValue(executionId, out var result))
+        // Check if deployment has completed
+        if (_executionResults.TryGetValue(executionId, out var result))
         {
-            throw new KeyNotFoundException($"Deployment execution {executionId} not found");
+            var response = new DeploymentStatusResponse
+            {
+                ExecutionId = result.ExecutionId,
+                ModuleName = result.ModuleName,
+                Version = result.Version.ToString(),
+                Status = result.Success ? "Succeeded" : "Failed",
+                StartTime = result.StartTime,
+                EndTime = result.EndTime,
+                Duration = result.Duration.ToString(),
+                Stages = result.StageResults.Select(s => new StageResult
+                {
+                    Name = s.StageName,
+                    Status = s.Status.ToString(),
+                    StartTime = s.StartTime,
+                    Duration = s.Duration.ToString(),
+                    Strategy = s.Strategy,
+                    NodesDeployed = s.NodesDeployed,
+                    NodesFailed = s.NodesFailed,
+                    Message = s.Message
+                }).ToList(),
+                TraceId = result.TraceId
+            };
+
+            return Ok(response);
         }
 
-        var response = new DeploymentStatusResponse
+        // Check if deployment is in progress
+        if (_inProgressDeployments.TryGetValue(executionId, out var inProgressRequest))
         {
-            ExecutionId = result.ExecutionId,
-            ModuleName = result.ModuleName,
-            Version = result.Version.ToString(),
-            Status = result.Success ? "Succeeded" : "Failed",
-            StartTime = result.StartTime,
-            EndTime = result.EndTime,
-            Duration = result.Duration.ToString(),
-            Stages = result.StageResults.Select(s => new StageResult
+            var inProgressResponse = new DeploymentStatusResponse
             {
-                Name = s.StageName,
-                Status = s.Status.ToString(),
-                StartTime = s.StartTime,
-                Duration = s.Duration.ToString(),
-                Strategy = s.Strategy,
-                NodesDeployed = s.NodesDeployed,
-                NodesFailed = s.NodesFailed,
-                Message = s.Message
-            }).ToList(),
-            TraceId = result.TraceId
-        };
+                ExecutionId = inProgressRequest.ExecutionId,
+                ModuleName = inProgressRequest.Module.Name,
+                Version = inProgressRequest.Module.Version.ToString(),
+                Status = "Running",
+                StartTime = inProgressRequest.CreatedAt,
+                EndTime = null,
+                Duration = (DateTime.UtcNow - inProgressRequest.CreatedAt).ToString(),
+                Stages = new List<StageResult>(),
+                TraceId = inProgressRequest.ExecutionId.ToString()
+            };
 
-        return Ok(response);
+            return Ok(inProgressResponse);
+        }
+
+        // Not found in either dictionary
+        throw new KeyNotFoundException($"Deployment execution {executionId} not found");
     }
 
     /// <summary>
@@ -180,9 +215,20 @@ public class DeploymentsController : ControllerBase
     {
         _logger.LogInformation("Rolling back deployment {ExecutionId}", executionId);
 
-        if (!_executionResults.TryGetValue(executionId, out var result))
+        // Check if deployment exists (completed or in-progress)
+        if (!_executionResults.TryGetValue(executionId, out var result) &&
+            !_inProgressDeployments.ContainsKey(executionId))
         {
             throw new KeyNotFoundException($"Deployment execution {executionId} not found");
+        }
+
+        // Can't rollback an in-progress deployment
+        if (_inProgressDeployments.ContainsKey(executionId))
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Error = "Cannot rollback a deployment that is still in progress"
+            });
         }
 
         // Create rollback request (simplified - would need original request in production)
@@ -190,7 +236,7 @@ public class DeploymentsController : ControllerBase
         {
             Module = new ModuleDescriptor
             {
-                Name = result.ModuleName,
+                Name = result!.ModuleName,
                 Version = result.Version
             },
             TargetEnvironment = EnvironmentType.Production, // Would be stored from original request
@@ -224,9 +270,8 @@ public class DeploymentsController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     public IActionResult ListDeployments()
     {
-        var deployments = _executionResults.Values
-            .OrderByDescending(r => r.StartTime)
-            .Take(50)
+        // Get completed deployments
+        var completedDeployments = _executionResults.Values
             .Select(r => new DeploymentSummary
             {
                 ExecutionId = r.ExecutionId,
@@ -235,7 +280,25 @@ public class DeploymentsController : ControllerBase
                 Status = r.Success ? "Succeeded" : "Failed",
                 StartTime = r.StartTime,
                 Duration = r.Duration.ToString()
-            })
+            });
+
+        // Get in-progress deployments
+        var inProgressDeploymentsList = _inProgressDeployments.Values
+            .Select(req => new DeploymentSummary
+            {
+                ExecutionId = req.ExecutionId,
+                ModuleName = req.Module.Name,
+                Version = req.Module.Version.ToString(),
+                Status = "Running",
+                StartTime = req.CreatedAt,
+                Duration = (DateTime.UtcNow - req.CreatedAt).ToString()
+            });
+
+        // Combine and sort by start time
+        var deployments = completedDeployments
+            .Concat(inProgressDeploymentsList)
+            .OrderByDescending(d => d.StartTime)
+            .Take(50)
             .ToList();
 
         return Ok(deployments);
