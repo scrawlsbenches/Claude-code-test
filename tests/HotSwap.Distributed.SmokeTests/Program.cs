@@ -125,7 +125,7 @@ class Program
             throw new Exception("Authentication failed: No token received");
 
         // Add JWT token to all subsequent requests
-        _httpClient.DefaultRequestHeaders.Authorization =
+        _httpClient!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
     }
 
