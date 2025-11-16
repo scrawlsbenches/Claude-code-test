@@ -286,8 +286,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// 6. HTTPS redirection
-app.UseHttpsRedirection();
+// 6. HTTPS redirection - only in production (allows HTTP for testing/CI/CD)
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 // 7. CORS
 app.UseCors();
