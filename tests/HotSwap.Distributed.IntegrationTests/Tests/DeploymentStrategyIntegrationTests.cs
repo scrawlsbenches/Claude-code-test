@@ -12,45 +12,41 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 /// based on the target environment.
 /// </summary>
 [Collection("IntegrationTests")]
-public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IAsyncLifetime
+public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IClassFixture<ApiServerFixture>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
-    private IntegrationTestFactory? _factory;
+    private readonly ApiServerFixture _apiServerFixture;
     private HttpClient? _client;
     private AuthHelper? _authHelper;
     private ApiClientHelper? _apiHelper;
 
     public DeploymentStrategyIntegrationTests(
         PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+        RedisContainerFixture redisFixture,
+        ApiServerFixture apiServerFixture)
     {
-        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
-        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
+        // ApiServerFixture needs PostgreSql and Redis fixtures as dependencies
+        _apiServerFixture = apiServerFixture ?? throw new ArgumentNullException(nameof(apiServerFixture));
     }
 
     public async Task InitializeAsync()
     {
-        // Create factory and client for each test
-        _factory = new IntegrationTestFactory(_postgreSqlFixture, _redisFixture);
-        await _factory.InitializeAsync();
-
-        _client = _factory.CreateClient();
+        // Use shared factory - creates new client but same server/cache
+        _client = _apiServerFixture.CreateClient();
         _authHelper = new AuthHelper(_client);
         _apiHelper = new ApiClientHelper(_client);
 
         // Authenticate with deployer role (required for creating deployments)
         var token = await _authHelper.GetDeployerTokenAsync();
         _authHelper.AddAuthorizationHeader(_client, token);
+
+        await Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
     {
+        // Only dispose client - don't dispose factory (it's shared across all tests in class)
         _client?.Dispose();
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        await Task.CompletedTask;
     }
 
     #region Direct Deployment Strategy Tests (Development Environment)

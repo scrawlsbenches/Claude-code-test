@@ -12,11 +12,9 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 /// including approval, rejection, and timeout scenarios.
 /// </summary>
 [Collection("IntegrationTests")]
-public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IAsyncLifetime
+public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IClassFixture<ApiServerFixture>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
-    private IntegrationTestFactory? _factory;
+    private readonly ApiServerFixture _apiServerFixture;
     private HttpClient? _client;
     private HttpClient? _adminClient;
     private AuthHelper? _authHelper;
@@ -25,41 +23,39 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
 
     public ApprovalWorkflowIntegrationTests(
         PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+        RedisContainerFixture redisFixture,
+        ApiServerFixture apiServerFixture)
     {
-        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
-        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
+        // ApiServerFixture needs PostgreSql and Redis fixtures as dependencies
+        _apiServerFixture = apiServerFixture ?? throw new ArgumentNullException(nameof(apiServerFixture));
     }
 
     public async Task InitializeAsync()
     {
-        // Create factory and clients for each test
-        _factory = new IntegrationTestFactory(_postgreSqlFixture, _redisFixture);
-        await _factory.InitializeAsync();
-
+        // Use shared factory - creates new client but same server/cache
         // Create deployer client (for creating deployments)
-        _client = _factory.CreateClient();
+        _client = _apiServerFixture.CreateClient();
         _authHelper = new AuthHelper(_client);
         var deployerToken = await _authHelper.GetDeployerTokenAsync();
         _authHelper.AddAuthorizationHeader(_client, deployerToken);
         _apiHelper = new ApiClientHelper(_client);
 
         // Create admin client (for approving/rejecting deployments)
-        _adminClient = _factory.CreateClient();
+        _adminClient = _apiServerFixture.CreateClient();
         var adminAuthHelper = new AuthHelper(_adminClient);
         var adminToken = await adminAuthHelper.GetAdminTokenAsync();
         adminAuthHelper.AddAuthorizationHeader(_adminClient, adminToken);
         _adminApiHelper = new ApiClientHelper(_adminClient);
+
+        await Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
     {
+        // Only dispose clients - don't dispose factory (it's shared across all tests in class)
         _client?.Dispose();
         _adminClient?.Dispose();
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        await Task.CompletedTask;
     }
 
     #region Approval Creation Tests

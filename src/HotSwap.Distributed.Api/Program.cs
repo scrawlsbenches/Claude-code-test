@@ -37,10 +37,10 @@ builder.Services.Configure<FormOptions>(options =>
 });
 
 // Configure Serilog
+// Note: Console sink is configured in appsettings.json - don't add it again here
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
