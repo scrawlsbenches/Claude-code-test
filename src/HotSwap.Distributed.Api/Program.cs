@@ -148,6 +148,14 @@ builder.Services.AddSingleton(jwtConfig);
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 
+// Register messaging services
+builder.Services.AddSingleton<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessageQueue>();
+builder.Services.AddSingleton<IMessagePersistence>(sp =>
+{
+    var redis = sp.GetRequiredService<IConnectionMultiplexer>();
+    return new HotSwap.Distributed.Infrastructure.Messaging.RedisMessagePersistence(redis);
+});
+
 // Configure JWT authentication
 builder.Services.AddAuthentication(options =>
 {
@@ -368,5 +376,5 @@ Log.Information("Swagger UI available at: http://localhost:5000");
 
 app.Run();
 
-// Make Program class accessible to WebApplicationFactory for integration tests
+// Make Program class accessible for integration testing
 public partial class Program { }
