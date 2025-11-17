@@ -1,13 +1,14 @@
 using System.Diagnostics;
 using HotSwap.KnowledgeGraph.Domain.Models;
 using HotSwap.KnowledgeGraph.Infrastructure.Repositories;
+using HotSwap.KnowledgeGraph.QueryEngine.Optimization;
 using HotSwap.KnowledgeGraph.QueryEngine.Services;
 
 namespace HotSwap.KnowledgeGraph.QueryEngine;
 
 /// <summary>
 /// PostgreSQL-based implementation of the query engine.
-/// Executes graph queries using the repository pattern.
+/// Executes graph queries using the repository pattern with query optimization.
 /// </summary>
 public class GraphQueryEngine : IQueryEngine
 {
@@ -15,6 +16,7 @@ public class GraphQueryEngine : IQueryEngine
     private readonly GraphTraversalService _traversalService;
     private readonly DijkstraPathFinder _dijkstraPathFinder;
     private readonly QueryCacheService _cacheService;
+    private readonly IQueryOptimizer _queryOptimizer;
 
     /// <summary>
     /// Initializes a new instance of the GraphQueryEngine.
@@ -28,6 +30,7 @@ public class GraphQueryEngine : IQueryEngine
         _traversalService = new GraphTraversalService(repository);
         _dijkstraPathFinder = new DijkstraPathFinder(repository);
         _cacheService = new QueryCacheService(cacheDurationSeconds);
+        _queryOptimizer = new CostBasedOptimizer();
     }
 
     /// <inheritdoc/>
@@ -44,6 +47,10 @@ public class GraphQueryEngine : IQueryEngine
             return cachedResult!;
         }
 
+        // Generate optimized execution plan
+        var executionPlan = _queryOptimizer.OptimizeQuery(query);
+        var planString = executionPlan.ToReadableString();
+
         var stopwatch = Stopwatch.StartNew();
 
         try
@@ -53,8 +60,8 @@ public class GraphQueryEngine : IQueryEngine
 
             stopwatch.Stop();
 
-            // Update execution time if not set by repository
-            if (result.ExecutionTime == TimeSpan.Zero)
+            // Update execution time and query plan if not set by repository
+            if (result.ExecutionTime == TimeSpan.Zero || string.IsNullOrEmpty(result.QueryPlan))
             {
                 result = new GraphQueryResult
                 {
@@ -62,7 +69,7 @@ public class GraphQueryEngine : IQueryEngine
                     Relationships = result.Relationships,
                     TotalCount = result.TotalCount,
                     ExecutionTime = stopwatch.Elapsed,
-                    QueryPlan = result.QueryPlan,
+                    QueryPlan = planString,
                     TraceId = result.TraceId,
                     FromCache = false,
                     Warnings = result.Warnings
