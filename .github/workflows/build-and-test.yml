@@ -43,8 +43,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Note: Tests are already run in build-and-test job above.
-    # Skip --target test to avoid redundant 582 test runs in Docker.
+    - name: Build Docker image with tests
+      run: timeout 600 docker build --target test -t distributed-kernel:test .
+      timeout-minutes: 12
+
     - name: Build final Docker image
       run: timeout 300 docker build -t distributed-kernel:latest .
       timeout-minutes: 8
