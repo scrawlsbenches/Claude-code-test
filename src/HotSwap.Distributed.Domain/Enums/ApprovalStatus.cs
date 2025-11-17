@@ -11,6 +11,11 @@ public enum ApprovalStatus
     Pending,
 
     /// <summary>
+    /// Automatically approved (no breaking changes detected).
+    /// </summary>
+    AutoApproved,
+
+    /// <summary>
     /// Approval request has been approved.
     /// </summary>
     Approved,
