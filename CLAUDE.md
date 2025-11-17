@@ -148,30 +148,31 @@ Claude-code-test/
 9. [Building the Project](#building-the-project)
 10. [Running Tests](#running-tests) ⭐
 11. [Running the Application](#running-the-application)
+12. [Docker Development and Maintenance](#docker-development-and-maintenance) ⭐ - Maintain Dockerfile and docker-compose.yml
 
 ### Standards and Best Practices
-12. [.NET Development Conventions](#net-development-conventions)
-13. [Code Generation Standards](#code-generation-standards)
-14. [Testing Requirements](#testing-requirements) ⭐
-15. [Security Best Practices](#security-best-practices)
-16. [Documentation Standards](#documentation-standards)
-17. [Task Management with TASK_LIST.md](#working-with-task_listmd)
+13. [.NET Development Conventions](#net-development-conventions)
+14. [Code Generation Standards](#code-generation-standards)
+15. [Testing Requirements](#testing-requirements) ⭐
+16. [Security Best Practices](#security-best-practices)
+17. [Documentation Standards](#documentation-standards)
+18. [Task Management with TASK_LIST.md](#working-with-task_listmd)
 
 ### AI Assistant Guidelines
-18. [AI Assistant Critical Rules](#ai-assistant-guidelines) ⭐⭐⭐
-19. [Initial Analysis Checklist](#initial-analysis-checklist)
-20. [Error Handling](#error-handling)
+19. [AI Assistant Critical Rules](#ai-assistant-guidelines) ⭐⭐⭐
+20. [Initial Analysis Checklist](#initial-analysis-checklist)
+21. [Error Handling](#error-handling)
 
 ### Reference Materials
-21. [Common .NET Commands](#common-net-commands-reference)
-22. [Troubleshooting](#troubleshooting-common-issues)
-23. [Resources](#resources)
-24. [Quality Standards](#quality-standards)
+22. [Common .NET Commands](#common-net-commands-reference)
+23. [Troubleshooting](#troubleshooting-common-issues)
+24. [Resources](#resources)
+25. [Quality Standards](#quality-standards)
 
 ### Edge Cases and Advanced Topics
-25. [No .NET SDK Checklist](#-alternative-no-net-sdk-checklist) - For restricted environments
-26. [Avoiding Stale Documentation](#avoiding-stale-documentation) - Maintenance guide
-27. [Changelog](#changelog) - Document history
+26. [No .NET SDK Checklist](#-alternative-no-net-sdk-checklist) - For restricted environments
+27. [Avoiding Stale Documentation](#avoiding-stale-documentation) - Maintenance guide
+28. [Changelog](#changelog) - Document history
 
 **Priority Legend:**
 - ⭐⭐⭐ **CRITICAL** - Must read before making any changes
@@ -584,6 +585,341 @@ dotnet run -- http://your-api:5000
 ./run-example.sh http://your-api:5000
 ```
 
+### Docker Development and Maintenance
+
+This section provides comprehensive guidance for maintaining Docker configuration files (Dockerfile and docker-compose.yml) to ensure containerized deployments remain secure, optimized, and up-to-date.
+
+#### When to Update Docker Configuration
+
+**Update Dockerfile when:**
+- Base image updates are available (e.g., `mcr.microsoft.com/dotnet/sdk:8.0` → `9.0`)
+- .NET SDK or runtime version changes
+- New system dependencies are required (packages, libraries)
+- Security patches are released for base images
+- Build performance can be optimized
+- Multi-stage build improvements are identified
+
+**Update docker-compose.yml when:**
+- New service dependencies are added (Redis, PostgreSQL, RabbitMQ, etc.)
+- Port mappings change
+- Environment variables are added or modified
+- Volume mounts change (data persistence, configuration)
+- Network configuration needs updating
+- Service health checks are added or modified
+- Resource limits (CPU, memory) need adjustment
+
+#### Docker Maintenance Best Practices
+
+**1. Base Image Management:**
+```dockerfile
+# ❌ AVOID: Using 'latest' tag (unpredictable)
+FROM mcr.microsoft.com/dotnet/sdk:latest
+
+# ✅ PREFER: Pinning specific versions
+FROM mcr.microsoft.com/dotnet/sdk:8.0.121-alpine
+
+# ✅ BEST: Use specific digest for reproducibility
+FROM mcr.microsoft.com/dotnet/sdk:8.0@sha256:abc123...
+```
+
+**2. Multi-Stage Build Optimization:**
+```dockerfile
+# Keep build and runtime stages separate
+# Build stage includes SDK (large)
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet restore && dotnet build -c Release
+
+# Runtime stage uses smaller runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+COPY --from=build /src/bin/Release/net8.0/publish .
+ENTRYPOINT ["dotnet", "HotSwap.Distributed.Api.dll"]
+```
+
+**3. Layer Caching Strategies:**
+```dockerfile
+# ✅ CORRECT: Copy files in order of change frequency
+# 1. Copy project files first (change rarely)
+COPY *.csproj .
+RUN dotnet restore
+
+# 2. Copy source code last (changes frequently)
+COPY . .
+RUN dotnet build
+
+# ❌ WRONG: Copying everything at once invalidates cache
+COPY . .
+RUN dotnet restore && dotnet build
+```
+
+**4. Security Scanning:**
+```bash
+# Scan Docker images for vulnerabilities before deployment
+
+# Using Docker Scout (built-in)
+docker scout cves hotswap-orchestrator:latest
+
+# Using Trivy (recommended)
+trivy image hotswap-orchestrator:latest
+
+# Using Snyk (requires authentication)
+snyk container test hotswap-orchestrator:latest
+```
+
+**5. Image Size Optimization:**
+```dockerfile
+# Use Alpine-based images (smaller footprint)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+
+# Remove unnecessary files
+RUN rm -rf /tmp/* /var/cache/apk/*
+
+# Use .dockerignore to exclude files
+# Create .dockerignore with: bin/, obj/, .git/, *.md
+```
+
+**6. .dockerignore Maintenance:**
+```
+# .dockerignore - Exclude from build context
+bin/
+obj/
+.git/
+.github/
+.vs/
+.vscode/
+*.md
+*.log
+**/node_modules
+**/TestResults
+Dockerfile*
+docker-compose*
+.gitignore
+```
+
+#### Testing Docker Builds
+
+**Before committing Docker changes, run these tests:**
+
+```bash
+# 1. Build Docker image locally
+docker build -t hotswap-test:local .
+
+# Expected: Build succeeds without errors
+# Check output for warnings or cache misses
+
+# 2. Verify image size (should be <500MB for runtime image)
+docker images hotswap-test:local
+# Expected: SIZE column shows reasonable size
+
+# 3. Run container locally
+docker run -d -p 5001:5000 --name hotswap-test-container hotswap-test:local
+
+# 4. Health check
+curl http://localhost:5001/health
+# Expected: HTTP 200 OK
+
+# 5. Check container logs
+docker logs hotswap-test-container
+# Expected: No errors, application started successfully
+
+# 6. Stop and remove test container
+docker stop hotswap-test-container
+docker rm hotswap-test-container
+docker rmi hotswap-test:local
+```
+
+#### Testing docker-compose Stack
+
+**Before committing docker-compose.yml changes:**
+
+```bash
+# 1. Start services in detached mode
+docker-compose up -d
+
+# Expected: All services start without errors
+
+# 2. Check service status
+docker-compose ps
+
+# Expected output:
+#   NAME                    STATUS
+#   orchestrator-api        Up (healthy)
+#   redis                   Up
+#   jaeger                  Up
+
+# 3. Verify service connectivity
+docker-compose logs orchestrator-api | grep "Now listening on"
+# Expected: API is listening on configured port
+
+# 4. Test API endpoints
+curl http://localhost:5000/health
+curl http://localhost:5000/swagger/index.html
+
+# Expected: Both respond successfully
+
+# 5. Run tests in containerized environment
+docker-compose run --rm orchestrator-api dotnet test
+
+# Expected: All tests pass
+
+# 6. Check for resource issues
+docker stats --no-stream
+
+# Expected: Memory and CPU usage within reasonable limits
+
+# 7. Clean up
+docker-compose down -v
+# -v removes volumes to ensure clean state
+```
+
+#### Docker Security Best Practices
+
+**1. Run as Non-Root User:**
+```dockerfile
+# Create non-root user
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
+
+# Switch to non-root user
+USER appuser
+
+# Set working directory with proper permissions
+WORKDIR /app
+```
+
+**2. Read-Only Filesystems:**
+```yaml
+# docker-compose.yml
+services:
+  orchestrator-api:
+    image: hotswap-orchestrator
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/logs
+```
+
+**3. Resource Limits:**
+```yaml
+# docker-compose.yml
+services:
+  orchestrator-api:
+    image: hotswap-orchestrator
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+```
+
+**4. Network Isolation:**
+```yaml
+# docker-compose.yml
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true  # No external access
+
+services:
+  orchestrator-api:
+    networks:
+      - frontend
+      - backend
+  redis:
+    networks:
+      - backend  # Only accessible internally
+```
+
+#### Monthly Docker Maintenance Tasks
+
+**Perform these tasks monthly:**
+
+```bash
+# 1. Check for base image updates
+docker pull mcr.microsoft.com/dotnet/sdk:8.0
+docker pull mcr.microsoft.com/dotnet/aspnet:8.0
+
+# Compare digest with current Dockerfile
+# If different, test and update Dockerfile
+
+# 2. Scan images for vulnerabilities
+trivy image hotswap-orchestrator:latest --severity HIGH,CRITICAL
+
+# Address any HIGH or CRITICAL vulnerabilities
+
+# 3. Review Docker logs
+docker-compose logs --tail=100 orchestrator-api | grep -i error
+
+# Investigate any recurring errors
+
+# 4. Clean up unused resources
+docker system prune -a --volumes
+# WARNING: This removes all unused images, containers, and volumes
+
+# 5. Verify .dockerignore is current
+# Ensure no large/unnecessary files are in build context
+du -sh .  # Check directory size before build
+
+# 6. Test build performance
+time docker build --no-cache -t hotswap-test .
+# Compare with previous build times
+```
+
+#### Integration with Pre-Commit Checklist
+
+**If you modified Dockerfile or docker-compose.yml, add this step:**
+
+See the [Pre-Commit Checklist Docker Verification Step](#step-7-verify-docker-changes-if-applicable) for detailed validation process before committing.
+
+#### Common Docker Issues and Solutions
+
+See the [Troubleshooting Docker Issues](#docker-related-issues) section for comprehensive troubleshooting guidance.
+
+#### Docker Documentation Update Checklist
+
+**When you modify Docker files, update these docs:**
+
+1. **CLAUDE.md** (this file)
+   - Update "Running with Docker Compose" section if ports/services change
+   - Update "Docker Development and Maintenance" if best practices change
+   - Update Changelog with Docker-related changes
+
+2. **README.md**
+   - Update Docker Quickstart section
+   - Update environment variable documentation
+   - Update service URLs and ports
+
+3. **docker-compose.yml comments**
+   - Add inline comments explaining configuration choices
+   - Document environment variables and their purposes
+
+4. **.env.example** (if exists)
+   - Update with new environment variables
+   - Document default values and valid ranges
+
+#### Docker Version Pinning Strategy
+
+**Current approach (as of 2025-11-17):**
+
+- **Base images**: Pin to specific .NET SDK version (e.g., `8.0.121`)
+- **Service images**: Pin to major.minor version (e.g., `redis:7.0`, `jaegertracing/all-in-one:1.52`)
+- **Review schedule**: Monthly check for updates
+- **Update process**: Test in development → staging → production
+
+**Recommended digest pinning for production:**
+```dockerfile
+# After testing, pin to specific digest
+FROM mcr.microsoft.com/dotnet/aspnet:8.0@sha256:[digest-here]
+# Document digest and date in commit message
+```
+
 ### Development Workflow
 
 #### Typical Development Session
@@ -939,6 +1275,81 @@ git diff --staged
 # 5. Only THEN commit
 git commit -m "feat: your message"
 ```
+
+#### Step 7: Verify Docker Changes (if applicable)
+
+**Only if you modified Dockerfile or docker-compose.yml:**
+
+```bash
+# 1. Check what Docker files changed
+git diff --staged | grep -E "Dockerfile|docker-compose"
+
+# If Docker files were modified, proceed with Docker validation:
+
+# 2. Build Docker image
+docker build -t hotswap-test:local .
+
+# Expected: Build succeeds without errors
+# Check for warnings or unusual cache behavior
+
+# 3. Verify image size
+docker images hotswap-test:local
+# Expected: Reasonable size (<500MB for runtime image)
+
+# 4. Test docker-compose stack
+docker-compose up -d
+
+# 5. Verify all services are running
+docker-compose ps
+# Expected: All services show "Up" status
+
+# 6. Health check API
+curl http://localhost:5000/health
+# Expected: HTTP 200 OK
+
+# 7. Check logs for errors
+docker-compose logs orchestrator-api | grep -i error
+# Expected: No critical errors
+
+# 8. Run tests in Docker (optional but recommended)
+docker-compose run --rm orchestrator-api dotnet test
+# Expected: All tests pass
+
+# 9. Clean up
+docker-compose down -v
+
+# 10. Remove test image
+docker rmi hotswap-test:local
+```
+
+**What to check:**
+- ✅ Docker build completes without errors
+- ✅ Image size is reasonable (not excessively large)
+- ✅ All services start successfully
+- ✅ Health endpoints respond correctly
+- ✅ No errors in container logs
+- ✅ Tests pass in containerized environment (if applicable)
+- ✅ Updated documentation reflects Docker changes
+
+**Common Docker validation errors:**
+```bash
+# Build fails with "COPY failed"
+# Fix: Check .dockerignore isn't excluding required files
+
+# Service fails to start
+# Fix: Check docker-compose.yml for correct image names, ports
+
+# Health check fails
+# Fix: Verify ports are correctly mapped, service is actually running
+
+# Tests fail in Docker but pass locally
+# Fix: Check for environment-specific dependencies, file paths
+```
+
+**Skip Docker validation if:**
+- You only changed application code (no Docker config changes)
+- You're working in an environment without Docker installed
+- You already tested Docker changes in a previous commit
 
 ---
 
@@ -1977,6 +2388,19 @@ public async Task<string?> AuthenticateAsync(string username, string password)
    # 4. Update troubleshooting section if new issues may arise
    ```
 
+8. **Change Docker configuration** - Update CLAUDE.md, README.md, and docker-compose.yml
+   ```bash
+   # If Dockerfile or docker-compose.yml changes:
+   # 1. Update "Docker Development and Maintenance" in CLAUDE.md
+   # 2. Update "Running with Docker Compose" section in CLAUDE.md if applicable
+   # 3. Update README.md Docker Quickstart section
+   # 4. Update environment variable documentation
+   # 5. Update port numbers and service URLs if changed
+   # 6. Test full docker-compose stack before committing (see Pre-Commit Checklist Step 7)
+   # 7. Update .dockerignore if build context changes
+   # 8. Add inline comments to docker-compose.yml explaining configuration
+   ```
+
 #### Documentation Synchronization Checklist
 
 **Before EVERY commit that includes code changes, verify:**
@@ -2428,6 +2852,321 @@ Code Change → Check API Changes? → Update XML Docs
 3. Use retry logic for transient failures
 4. Never force push without explicit permission
 
+### Docker-Related Issues
+
+#### Docker Build Failures
+
+**Error: "COPY failed: stat ... no such file or directory"**
+```bash
+# Problem: File referenced in Dockerfile doesn't exist or is excluded by .dockerignore
+# Solution 1: Check if file exists
+ls -la path/to/file
+
+# Solution 2: Check .dockerignore
+cat .dockerignore | grep filename
+
+# Solution 3: Update .dockerignore if file was incorrectly excluded
+# Remove the exclusion pattern from .dockerignore
+```
+
+**Error: "failed to solve with frontend dockerfile.v0"**
+```bash
+# Problem: Syntax error in Dockerfile
+# Solution: Validate Dockerfile syntax
+docker build --check .
+
+# Check for common issues:
+# - Missing quotes in COPY/ADD commands
+# - Incorrect line continuations (\)
+# - Invalid instruction order
+```
+
+**Error: "image not found" or "manifest unknown"**
+```bash
+# Problem: Base image not available or wrong name/tag
+# Solution: Verify base image exists
+docker pull mcr.microsoft.com/dotnet/sdk:8.0
+
+# If pull fails, check image name and tag at:
+# https://mcr.microsoft.com/
+```
+
+#### Docker Compose Issues
+
+**Error: "port is already allocated"**
+```bash
+# Problem: Port already in use by another container or process
+# Solution 1: Find what's using the port
+lsof -i :5000          # Linux/macOS
+netstat -ano | find "5000"  # Windows
+
+# Solution 2: Change port in docker-compose.yml
+# Edit docker-compose.yml:
+services:
+  orchestrator-api:
+    ports:
+      - "5001:5000"  # Changed from 5000:5000
+
+# Solution 3: Stop conflicting container
+docker ps | grep 5000
+docker stop <container_id>
+```
+
+**Error: "service 'X' failed to build"**
+```bash
+# Problem: Build context or Dockerfile issue
+# Solution: Build service individually to see full error
+docker-compose build orchestrator-api --no-cache
+
+# Check logs for specific error
+docker-compose logs orchestrator-api
+```
+
+**Error: "network not found"**
+```bash
+# Problem: Network referenced in docker-compose.yml doesn't exist
+# Solution 1: Create network if it should exist
+docker network create my-network
+
+# Solution 2: Remove network reference if not needed
+# Edit docker-compose.yml to remove networks: section
+
+# Solution 3: Clean up and recreate
+docker-compose down
+docker-compose up -d
+```
+
+#### Container Runtime Issues
+
+**Container exits immediately after starting**
+```bash
+# Problem: Application crashes or exits on startup
+# Solution: Check logs for error
+docker logs <container_id>
+docker-compose logs orchestrator-api
+
+# Common causes:
+# - Missing environment variables
+# - Configuration file not found
+# - Port binding issue
+# - Insufficient permissions
+```
+
+**Container is slow or unresponsive**
+```bash
+# Problem: Resource constraints or performance issue
+# Solution: Check resource usage
+docker stats
+
+# If CPU/Memory at 100%:
+# 1. Increase limits in docker-compose.yml
+# 2. Optimize application code
+# 3. Scale horizontally with multiple containers
+```
+
+**Health check failing**
+```bash
+# Problem: Container health check endpoint not responding
+# Solution: Debug health check
+docker inspect <container_id> | grep -A 10 Health
+
+# Test health check manually
+docker exec <container_id> curl http://localhost:5000/health
+
+# Common issues:
+# - Wrong port in health check
+# - Application not fully started
+# - Health endpoint not implemented
+```
+
+#### Docker Permissions Issues
+
+**Error: "permission denied while trying to connect to Docker daemon"**
+```bash
+# Problem: User not in docker group (Linux)
+# Solution: Add user to docker group
+sudo usermod -aG docker $USER
+
+# Log out and log back in for changes to take effect
+# Or use: newgrp docker
+
+# Verify:
+docker ps  # Should work without sudo
+```
+
+**Error: "permission denied" when copying files in Dockerfile**
+```bash
+# Problem: File permissions issue in build context
+# Solution: Fix file permissions before build
+chmod +r file-to-copy
+
+# Or run container as root temporarily:
+USER root
+COPY file /destination
+RUN chown appuser:appuser /destination/file
+USER appuser
+```
+
+#### Docker Networking Issues
+
+**Containers can't communicate with each other**
+```bash
+# Problem: Containers on different networks or wrong network configuration
+# Solution 1: Check networks
+docker network ls
+docker network inspect <network_name>
+
+# Solution 2: Ensure containers are on same network
+# In docker-compose.yml:
+services:
+  api:
+    networks:
+      - backend
+  redis:
+    networks:
+      - backend  # Same network
+
+# Solution 3: Use service names for DNS
+# Replace: http://localhost:6379
+# With: http://redis:6379  # Use service name
+```
+
+**Can't access container from host**
+```bash
+# Problem: Port not exposed or wrong port mapping
+# Solution: Verify port mapping
+docker ps  # Check PORTS column
+
+# Update docker-compose.yml if needed:
+ports:
+  - "5000:5000"  # host:container
+
+# Or expose port in Dockerfile:
+EXPOSE 5000
+```
+
+#### Docker Volume Issues
+
+**Error: "volume mount failed"**
+```bash
+# Problem: Volume path doesn't exist or permission issue
+# Solution: Create volume directory
+mkdir -p /path/to/volume
+
+# Fix permissions:
+chmod 755 /path/to/volume
+
+# Or use named volumes instead of bind mounts:
+volumes:
+  data:  # Named volume (Docker manages)
+
+services:
+  api:
+    volumes:
+      - data:/app/data
+```
+
+**Data not persisting after container restart**
+```bash
+# Problem: Volume not configured for data persistence
+# Solution: Add volume to docker-compose.yml
+services:
+  api:
+    volumes:
+      - ./data:/app/data  # Bind mount
+      # Or
+      - api-data:/app/data  # Named volume
+
+volumes:
+  api-data:  # Define named volume
+```
+
+#### Docker Image Issues
+
+**Image size too large (>1GB)**
+```bash
+# Problem: Inefficient Dockerfile or unnecessary files included
+# Solution 1: Use multi-stage builds
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# ... build steps ...
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+COPY --from=build /app/publish .
+
+# Solution 2: Update .dockerignore
+# Add: bin/, obj/, .git/, *.md, tests/
+
+# Solution 3: Use Alpine images
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+
+# Verify size improvement:
+docker images | grep hotswap
+```
+
+**Old image layers not being removed**
+```bash
+# Problem: Dangling images accumulating
+# Solution: Prune old images
+docker image prune -a
+
+# Remove specific old images:
+docker rmi <image_id>
+
+# Clean up everything (careful!):
+docker system prune -a --volumes
+```
+
+#### Docker Security Issues
+
+**Security scan finds vulnerabilities**
+```bash
+# Problem: Base image or dependencies have known vulnerabilities
+# Solution 1: Update base image
+docker pull mcr.microsoft.com/dotnet/aspnet:8.0
+# Check if newer tag available
+
+# Solution 2: Run security scan
+trivy image hotswap-orchestrator:latest --severity HIGH,CRITICAL
+
+# Solution 3: Update vulnerable packages
+# In .csproj: Update package versions
+# Rebuild image: docker build -t hotswap-orchestrator:latest .
+```
+
+#### Quick Docker Troubleshooting Checklist
+
+When Docker issues occur, run through this checklist:
+
+```bash
+# 1. Check Docker daemon is running
+docker ps
+# If error: Start Docker Desktop (Windows/Mac) or sudo systemctl start docker (Linux)
+
+# 2. Check disk space
+df -h
+# Docker needs sufficient disk space for images/containers
+
+# 3. Check logs
+docker-compose logs
+docker logs <container_id>
+
+# 4. Check container status
+docker-compose ps
+docker ps -a
+
+# 5. Restart containers
+docker-compose restart
+
+# 6. Full cleanup and rebuild (if other steps fail)
+docker-compose down -v
+docker-compose build --no-cache
+docker-compose up -d
+
+# 7. Check Docker version
+docker --version
+docker-compose --version
+# Ensure versions are recent and compatible
+```
+
 ## Resources
 
 ### .NET Documentation
@@ -2441,6 +3180,59 @@ Code Change → Check API Changes? → Update XML Docs
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-17 (Docker Documentation and Maintenance Guidelines)
+- **Added comprehensive Docker Development and Maintenance section** (~335 lines)
+  - When to update Docker configuration (Dockerfile and docker-compose.yml triggers)
+  - Docker maintenance best practices (6 key practices)
+    1. Base image management (version pinning, digest pinning)
+    2. Multi-stage build optimization
+    3. Layer caching strategies
+    4. Security scanning (Docker Scout, Trivy, Snyk)
+    5. Image size optimization (Alpine images, .dockerignore)
+    6. .dockerignore maintenance
+  - Testing Docker builds (6-step validation process)
+  - Testing docker-compose stack (7-step validation process)
+  - Docker security best practices (non-root user, read-only filesystems, resource limits, network isolation)
+  - Monthly Docker maintenance tasks checklist
+  - Integration with Pre-Commit Checklist
+  - Docker documentation update checklist
+  - Docker version pinning strategy
+- **Added Docker trigger to Mandatory Documentation Update Triggers** (trigger #8)
+  - When to update Docker documentation
+  - What files to update (CLAUDE.md, README.md, docker-compose.yml)
+  - Test requirements before committing Docker changes
+- **Added Step 7 to Pre-Commit Checklist: Verify Docker Changes** (~75 lines)
+  - 10-step Docker validation process
+  - What to check before committing Docker changes
+  - Common Docker validation errors and fixes
+  - When to skip Docker validation
+- **Added comprehensive Docker troubleshooting section** (~314 lines)
+  - Docker Build Failures (3 common errors)
+  - Docker Compose Issues (3 common errors)
+  - Container Runtime Issues (3 common scenarios)
+  - Docker Permissions Issues (2 common errors)
+  - Docker Networking Issues (2 common problems)
+  - Docker Volume Issues (2 common errors)
+  - Docker Image Issues (2 optimization topics)
+  - Docker Security Issues (vulnerability management)
+  - Quick Docker Troubleshooting Checklist (7-step process)
+- **Updated Table of Contents**
+  - Added item 12: Docker Development and Maintenance (Daily Development Workflows)
+  - Renumbered subsequent sections (13-28)
+  - Total sections increased from 27 to 28
+- **Documentation improvements**
+  - Total additions: ~724 lines of Docker-specific guidance
+  - Comprehensive coverage of Docker development workflow
+  - Integration with existing pre-commit and documentation update processes
+  - Practical troubleshooting for common Docker issues
+- **Impact**:
+  - Developers now have clear guidance on maintaining Docker files
+  - Reduces Docker-related build failures and configuration drift
+  - Establishes security scanning and update schedule
+  - Comprehensive troubleshooting reduces debugging time
+  - Documentation stays synchronized with Docker changes
+- Based on: User request to document Docker maintenance requirements
 
 ### 2025-11-17 (Documentation Test Count Update - Messaging & Multi-Tenant Features)
 - **Updated test count references across all documentation**
