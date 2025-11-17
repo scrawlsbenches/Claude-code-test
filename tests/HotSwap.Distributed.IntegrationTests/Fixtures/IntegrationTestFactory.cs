@@ -63,12 +63,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // Security configuration for tests
                 ["Security:StrictMode"] = "false", // Relax signature verification in tests
 
-                // Rate limiting - higher limits for tests
-                ["RateLimiting:GlobalRateLimit"] = "10000",
-                ["RateLimiting:DeploymentRateLimit"] = "100",
-                ["RateLimiting:ClusterRateLimit"] = "600",
-                ["RateLimiting:ApprovalRateLimit"] = "300",
-                ["RateLimiting:AuthenticationRateLimit"] = "50",
+                // Disable rate limiting for integration tests
+                // Tests should not be blocked by rate limits - they test functionality, not rate limiting
+                ["RateLimiting:Enabled"] = "false",
 
                 // CORS - allow test origins
                 ["Cors:AllowedOrigins:0"] = "http://localhost",
