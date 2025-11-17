@@ -76,6 +76,17 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // Pipeline configuration
                 ["Pipeline:MaxConcurrentDeployments"] = "10",
                 ["Pipeline:DefaultTimeoutMinutes"] = "5",
+
+                // Reduce logging verbosity for integration tests
+                // Only log warnings and errors to avoid 27k+ log lines
+                ["Serilog:MinimumLevel:Default"] = "Warning",
+                ["Serilog:MinimumLevel:Override:Microsoft"] = "Warning",
+                ["Serilog:MinimumLevel:Override:Microsoft.AspNetCore"] = "Warning",
+                ["Serilog:MinimumLevel:Override:System"] = "Warning",
+                ["Serilog:MinimumLevel:Override:HotSwap.Distributed"] = "Warning",
+                ["Logging:LogLevel:Default"] = "Warning",
+                ["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning",
+                ["Logging:LogLevel:HotSwap.Distributed"] = "Warning",
             });
         });
 
