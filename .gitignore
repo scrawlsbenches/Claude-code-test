@@ -75,3 +75,6 @@ appsettings.Production.json
 # Let's Encrypt certificates (if using certbot)
 # Symlink to /etc/letsencrypt if needed
 letsencrypt/
+
+# Redis database dumps
+dump.rdb
