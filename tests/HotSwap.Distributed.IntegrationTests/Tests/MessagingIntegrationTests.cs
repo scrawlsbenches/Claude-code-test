@@ -15,39 +15,43 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 /// Tests message publishing, retrieval, acknowledgment, and deletion workflows.
 /// </summary>
 [Collection("IntegrationTests")]
-public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IClassFixture<ApiServerFixture>, IAsyncLifetime
+public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IAsyncLifetime
 {
-    private readonly ApiServerFixture _apiServerFixture;
+    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
+    private readonly RedisContainerFixture _redisFixture;
+    private IntegrationTestFactory? _factory;
     private HttpClient? _client;
     private AuthHelper? _authHelper;
 
     public MessagingIntegrationTests(
         PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture,
-        ApiServerFixture apiServerFixture)
+        RedisContainerFixture redisFixture)
     {
-        // ApiServerFixture needs PostgreSql and Redis fixtures as dependencies
-        _apiServerFixture = apiServerFixture ?? throw new ArgumentNullException(nameof(apiServerFixture));
+        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
+        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
     }
 
     public async Task InitializeAsync()
     {
-        // Use shared factory - creates new client but same server/cache
-        _client = _apiServerFixture.CreateClient();
+        // Create factory and client for each test
+        _factory = new IntegrationTestFactory(_postgreSqlFixture, _redisFixture);
+        await _factory.InitializeAsync();
+
+        _client = _factory.CreateClient();
         _authHelper = new AuthHelper(_client);
 
         // Authenticate with deployer role (has access to messaging)
         var token = await _authHelper.GetDeployerTokenAsync();
         _authHelper.AddAuthorizationHeader(_client, token);
-
-        await Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
     {
-        // Only dispose client - don't dispose factory (it's shared across all tests in class)
         _client?.Dispose();
-        await Task.CompletedTask;
+        if (_factory != null)
+        {
+            await _factory.DisposeAsync();
+        }
     }
 
     #region Message Publishing Tests
@@ -366,7 +370,7 @@ public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixtur
     public async Task PublishMessage_WithoutAuthentication_Returns401Unauthorized()
     {
         // Arrange - Create unauthenticated client
-        var unauthClient = _apiServerFixture.CreateClient();
+        var unauthClient = _factory!.CreateClient();
 
         var message = new Message
         {
@@ -392,7 +396,7 @@ public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixtur
     public async Task GetMessage_WithoutAuthentication_Returns401Unauthorized()
     {
         // Arrange
-        var unauthClient = _apiServerFixture.CreateClient();
+        var unauthClient = _factory!.CreateClient();
         var messageId = Guid.NewGuid().ToString();
 
         // Act
@@ -411,7 +415,7 @@ public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixtur
     public async Task DeleteMessage_WithoutAuthentication_Returns401Unauthorized()
     {
         // Arrange
-        var unauthClient = _apiServerFixture.CreateClient();
+        var unauthClient = _factory!.CreateClient();
         var messageId = Guid.NewGuid().ToString();
 
         // Act
