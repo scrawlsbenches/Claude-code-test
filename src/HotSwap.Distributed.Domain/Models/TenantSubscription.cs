@@ -3,9 +3,9 @@ using HotSwap.Distributed.Domain.Enums;
 namespace HotSwap.Distributed.Domain.Models;
 
 /// <summary>
-/// Represents a subscription for a tenant.
+/// Represents a billing subscription for a tenant (Stripe integration).
 /// </summary>
-public class Subscription
+public class TenantSubscription
 {
     /// <summary>
     /// Unique identifier for the subscription.
