@@ -3,6 +3,7 @@ using HotSwap.Distributed.Api.Middleware;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Authentication;
+using HotSwap.Distributed.Infrastructure.Deployments;
 using HotSwap.Distributed.Infrastructure.Coordination;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Metrics;
@@ -245,6 +246,7 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
     var moduleVerifier = sp.GetRequiredService<IModuleVerifier>();
     var telemetry = sp.GetRequiredService<TelemetryProvider>();
     var pipelineConfig = sp.GetRequiredService<PipelineConfiguration>();
+    var deploymentTracker = sp.GetRequiredService<IDeploymentTracker>();
 
     var orchestrator = new DistributedKernelOrchestrator(
         logger,
@@ -252,7 +254,8 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
         metricsProvider,
         moduleVerifier,
         telemetry,
-        pipelineConfig);
+        pipelineConfig,
+        deploymentTracker);
 
     // Note: Cluster initialization happens asynchronously via OrchestratorInitializationService
     // to avoid blocking the application startup

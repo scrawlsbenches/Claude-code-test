@@ -1,6 +1,6 @@
 using HotSwap.Distributed.Domain.Models;
 
-namespace HotSwap.Distributed.Api.Services;
+namespace HotSwap.Distributed.Infrastructure.Deployments;
 
 /// <summary>
 /// Service for tracking deployment execution state
@@ -41,4 +41,14 @@ public interface IDeploymentTracker
     /// Gets all in-progress deployment requests
     /// </summary>
     Task<IEnumerable<DeploymentRequest>> GetAllInProgressAsync();
+
+    /// <summary>
+    /// Updates the current state of an in-progress pipeline execution
+    /// </summary>
+    Task UpdatePipelineStateAsync(Guid executionId, PipelineExecutionState state);
+
+    /// <summary>
+    /// Gets the current state of an in-progress pipeline execution
+    /// </summary>
+    Task<PipelineExecutionState?> GetPipelineStateAsync(Guid executionId);
 }

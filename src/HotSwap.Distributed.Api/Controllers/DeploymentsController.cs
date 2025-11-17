@@ -1,8 +1,8 @@
 using HotSwap.Distributed.Api.Models;
-using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Api.Validation;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Deployments;
 using HotSwap.Distributed.Orchestrator.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -172,7 +172,37 @@ public class DeploymentsController : ControllerBase
             return Ok(response);
         }
 
-        // Check if deployment is in progress
+        // Check if deployment is in progress - prefer pipeline state if available
+        var pipelineState = await _deploymentTracker.GetPipelineStateAsync(executionId);
+        if (pipelineState != null)
+        {
+            var inProgressResponse = new DeploymentStatusResponse
+            {
+                ExecutionId = pipelineState.ExecutionId,
+                ModuleName = pipelineState.Request.Module.Name,
+                Version = pipelineState.Request.Module.Version.ToString(),
+                Status = pipelineState.Status, // Use actual status from pipeline (Running, PendingApproval, etc.)
+                StartTime = pipelineState.StartTime,
+                EndTime = null,
+                Duration = (DateTime.UtcNow - pipelineState.StartTime).ToString(),
+                Stages = pipelineState.Stages.Select(s => new StageResult
+                {
+                    Name = s.StageName,
+                    Status = s.Status.ToString(),
+                    StartTime = s.StartTime,
+                    Duration = s.Duration.ToString(),
+                    Strategy = s.Strategy,
+                    NodesDeployed = s.NodesDeployed,
+                    NodesFailed = s.NodesFailed,
+                    Message = s.Message
+                }).ToList(),
+                TraceId = pipelineState.Request.ExecutionId.ToString()
+            };
+
+            return Ok(inProgressResponse);
+        }
+
+        // Fallback to basic in-progress tracking if pipeline state not available yet
         var inProgressRequest = await _deploymentTracker.GetInProgressAsync(executionId);
         if (inProgressRequest != null)
         {
