@@ -167,7 +167,7 @@ public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixt
         var createdTenant = await createResponse.Content.ReadFromJsonAsync<TenantResponse>();
 
         // Act - Retrieve the tenant
-        var getResponse = await _client.GetAsync($"/api/tenants/{createdTenant!.TenantId}");
+        var getResponse = await _client!.GetAsync($"/api/tenants/{createdTenant!.TenantId}");
 
         // Assert
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -260,7 +260,7 @@ public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixt
         };
 
         // Act - Update the tenant
-        var updateResponse = await _client.PutAsJsonAsync($"/api/tenants/{tenant!.TenantId}", updateRequest);
+        var updateResponse = await _client!.PutAsJsonAsync($"/api/tenants/{tenant!.TenantId}", updateRequest);
 
         // Assert
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -303,7 +303,7 @@ public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixt
         };
 
         // Act - Upgrade subscription
-        var upgradeResponse = await _client.PutAsJsonAsync(
+        var upgradeResponse = await _client!.PutAsJsonAsync(
             $"/api/tenants/{tenant.TenantId}/subscription",
             upgradeRequest);
 
@@ -376,7 +376,7 @@ public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixt
         tenant!.Status.Should().Be("Active");
 
         // Act - Suspend tenant
-        var suspendResponse = await _client.PostAsync($"/api/tenants/{tenant.TenantId}/suspend", null);
+        var suspendResponse = await _client!.PostAsync($"/api/tenants/{tenant.TenantId}/suspend", null);
 
         // Assert
         suspendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -405,10 +405,10 @@ public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixt
         var createResponse = await _client!.PostAsJsonAsync("/api/tenants", createRequest);
         var tenant = await createResponse.Content.ReadFromJsonAsync<TenantResponse>();
 
-        await _client.PostAsync($"/api/tenants/{tenant!.TenantId}/suspend", null);
+        await _client!.PostAsync($"/api/tenants/{tenant!.TenantId}/suspend", null);
 
         // Act - Reactivate tenant
-        var reactivateResponse = await _client.PostAsync($"/api/tenants/{tenant.TenantId}/activate", null);
+        var reactivateResponse = await _client!.PostAsync($"/api/tenants/{tenant.TenantId}/activate", null);
 
         // Assert
         reactivateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -495,7 +495,7 @@ public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixt
         };
 
         var response1 = await _client!.PostAsJsonAsync("/api/tenants", tenant1Request);
-        var response2 = await _client.PostAsJsonAsync("/api/tenants", tenant2Request);
+        var response2 = await _client!.PostAsJsonAsync("/api/tenants", tenant2Request);
 
         var tenant1 = await response1.Content.ReadFromJsonAsync<TenantResponse>();
         var tenant2 = await response2.Content.ReadFromJsonAsync<TenantResponse>();

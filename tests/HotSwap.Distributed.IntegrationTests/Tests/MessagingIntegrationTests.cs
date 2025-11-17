@@ -193,7 +193,7 @@ public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixtur
         await _client!.PostAsJsonAsync("/api/messages/publish", originalMessage);
 
         // Act - Retrieve the message
-        var response = await _client.GetAsync($"/api/messages/{originalMessage.MessageId}");
+        var response = await _client!.GetAsync($"/api/messages/{originalMessage.MessageId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -282,7 +282,7 @@ public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixtur
         await _client!.PostAsJsonAsync("/api/messages/publish", message);
 
         // Act - Acknowledge the message
-        var response = await _client.PostAsync($"/api/messages/{message.MessageId}/acknowledge", null);
+        var response = await _client!.PostAsync($"/api/messages/{message.MessageId}/acknowledge", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -332,7 +332,7 @@ public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixtur
         await _client!.PostAsJsonAsync("/api/messages/publish", message);
 
         // Act - Delete the message
-        var deleteResponse = await _client.DeleteAsync($"/api/messages/{message.MessageId}");
+        var deleteResponse = await _client!.DeleteAsync($"/api/messages/{message.MessageId}");
 
         // Assert - Deletion succeeds
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -452,7 +452,7 @@ public class MessagingIntegrationTests : IClassFixture<PostgreSqlContainerFixtur
         publishResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Act & Assert - Retrieve
-        var getResponse = await _client.GetAsync($"/api/messages/{message.MessageId}");
+        var getResponse = await _client!.GetAsync($"/api/messages/{message.MessageId}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var retrievedMessage = await getResponse.Content.ReadFromJsonAsync<Message>();
         retrievedMessage!.Status.Should().Be(MessageStatus.Pending);
