@@ -148,19 +148,19 @@ public class TenantDeploymentService : ITenantDeploymentService
         return Task.FromResult(deployments);
     }
 
-    public async Task<bool> RollbackDeploymentAsync(
+    public Task<bool> RollbackDeploymentAsync(
         Guid deploymentId,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Rolling back deployment: {DeploymentId}", deploymentId);
 
         if (!_deployments.TryGetValue(deploymentId, out var deployment))
-            return false;
+            return Task.FromResult(false);
 
         // TODO: Implement rollback logic based on module type
         _logger.LogWarning("Rollback not yet fully implemented");
 
-        return true;
+        return Task.FromResult(true);
     }
 
     private async Task<List<Website>> GetAffectedWebsitesAsync(

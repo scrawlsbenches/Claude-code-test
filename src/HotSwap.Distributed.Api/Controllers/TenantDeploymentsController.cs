@@ -51,8 +51,7 @@ public class TenantDeploymentsController : ControllerBase
             Module = new ModuleDescriptor
             {
                 Name = "Theme",
-                Version = new Version("1.0.0"),
-                ModuleData = Array.Empty<byte>()
+                Version = new Version("1.0.0")
             },
             TargetEnvironment = Domain.Enums.EnvironmentType.Production,
             RequesterEmail = User.Identity?.Name ?? "unknown",
@@ -89,8 +88,7 @@ public class TenantDeploymentsController : ControllerBase
             Module = new ModuleDescriptor
             {
                 Name = "Plugin",
-                Version = new Version("1.0.0"),
-                ModuleData = Array.Empty<byte>()
+                Version = new Version("1.0.0")
             },
             TargetEnvironment = Domain.Enums.EnvironmentType.Production,
             RequesterEmail = User.Identity?.Name ?? "unknown",
