@@ -367,3 +367,6 @@ Log.Information("Starting Distributed Kernel Orchestration API");
 Log.Information("Swagger UI available at: http://localhost:5000");
 
 app.Run();
+
+// Make Program class accessible to WebApplicationFactory for integration tests
+public partial class Program { }
