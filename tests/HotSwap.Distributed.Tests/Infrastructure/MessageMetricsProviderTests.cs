@@ -6,6 +6,7 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Infrastructure;
 
+[Collection("Metrics Tests")]
 public class MessageMetricsProviderTests : IDisposable
 {
     private readonly MessageMetricsProvider _provider;

@@ -9,6 +9,7 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Services;
 
+[Collection("Metrics Tests")]
 public class BrokerHealthMonitorTests : IDisposable
 {
     private readonly Mock<IMessageQueue> _mockMessageQueue;
