@@ -19,6 +19,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{005DAF90
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.SmokeTests", "tests\HotSwap.Distributed.SmokeTests\HotSwap.Distributed.SmokeTests.csproj", "{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C3CCB34E-0D7D-4F6D-AD9D-3E3F82E28702}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.KnowledgeGraph.Domain", "src\HotSwap.KnowledgeGraph.Domain\HotSwap.KnowledgeGraph.Domain.csproj", "{48852FE9-4DBF-4298-926F-AD3E390EA7A6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.KnowledgeGraph.Tests", "tests\HotSwap.KnowledgeGraph.Tests\HotSwap.KnowledgeGraph.Tests.csproj", "{17EFB851-7D46-414B-90E1-0374E034222B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.KnowledgeGraph.Infrastructure", "src\HotSwap.KnowledgeGraph.Infrastructure\HotSwap.KnowledgeGraph.Infrastructure.csproj", "{6F6EC18F-C763-4904-A165-031A85CCDFB3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.KnowledgeGraph.QueryEngine", "src\HotSwap.KnowledgeGraph.QueryEngine\HotSwap.KnowledgeGraph.QueryEngine.csproj", "{0B07AA37-2DAE-41EE-968A-04CFB2A8E536}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,8 +63,28 @@ Global
 		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48852FE9-4DBF-4298-926F-AD3E390EA7A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48852FE9-4DBF-4298-926F-AD3E390EA7A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48852FE9-4DBF-4298-926F-AD3E390EA7A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48852FE9-4DBF-4298-926F-AD3E390EA7A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17EFB851-7D46-414B-90E1-0374E034222B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17EFB851-7D46-414B-90E1-0374E034222B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17EFB851-7D46-414B-90E1-0374E034222B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17EFB851-7D46-414B-90E1-0374E034222B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F6EC18F-C763-4904-A165-031A85CCDFB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F6EC18F-C763-4904-A165-031A85CCDFB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F6EC18F-C763-4904-A165-031A85CCDFB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F6EC18F-C763-4904-A165-031A85CCDFB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B07AA37-2DAE-41EE-968A-04CFB2A8E536}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B07AA37-2DAE-41EE-968A-04CFB2A8E536}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B07AA37-2DAE-41EE-968A-04CFB2A8E536}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B07AA37-2DAE-41EE-968A-04CFB2A8E536}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77} = {005DAF90-8176-41DB-B3DD-EDBFCD639007}
+		{48852FE9-4DBF-4298-926F-AD3E390EA7A6} = {C3CCB34E-0D7D-4F6D-AD9D-3E3F82E28702}
+		{17EFB851-7D46-414B-90E1-0374E034222B} = {005DAF90-8176-41DB-B3DD-EDBFCD639007}
+		{6F6EC18F-C763-4904-A165-031A85CCDFB3} = {C3CCB34E-0D7D-4F6D-AD9D-3E3F82E28702}
+		{0B07AA37-2DAE-41EE-968A-04CFB2A8E536} = {C3CCB34E-0D7D-4F6D-AD9D-3E3F82E28702}
 	EndGlobalSection
 EndGlobal
