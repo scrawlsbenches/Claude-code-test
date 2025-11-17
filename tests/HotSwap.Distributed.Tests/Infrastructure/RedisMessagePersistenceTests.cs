@@ -12,26 +12,54 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
     private IConnectionMultiplexer _redis = null!;
     private RedisMessagePersistence _persistence = null!;
     private readonly string _testKeyPrefix = "test:msg:";
+    private bool _redisAvailable;
 
     public async Task InitializeAsync()
     {
-        // Connect to Redis (assumes Redis is running on localhost:6379)
-        _redis = await ConnectionMultiplexer.ConnectAsync("localhost:6379");
-        _persistence = new RedisMessagePersistence(_redis, _testKeyPrefix);
+        try
+        {
+            // Try to connect to Redis (assumes Redis is running on localhost:6379)
+            // abortConnect=true (default) makes it fail fast if Redis is unavailable
+            _redis = await ConnectionMultiplexer.ConnectAsync("localhost:6379,connectTimeout=1000");
+
+            // Verify connection is actually working
+            var db = _redis.GetDatabase();
+            await db.PingAsync();
+
+            _persistence = new RedisMessagePersistence(_redis, _testKeyPrefix);
+            _redisAvailable = true;
+        }
+        catch (Exception)
+        {
+            // Redis is not available - tests will be skipped
+            _redisAvailable = false;
+        }
     }
 
     public async Task DisposeAsync()
     {
-        // Clean up test data
-        var db = _redis.GetDatabase();
-        var server = _redis.GetServer(_redis.GetEndPoints()[0]);
-
-        await foreach (var key in server.KeysAsync(pattern: $"{_testKeyPrefix}*"))
+        if (!_redisAvailable || _redis == null)
         {
-            await db.KeyDeleteAsync(key);
+            return;
         }
 
-        await _redis.DisposeAsync();
+        try
+        {
+            // Clean up test data
+            var db = _redis.GetDatabase();
+            var server = _redis.GetServer(_redis.GetEndPoints()[0]);
+
+            await foreach (var key in server.KeysAsync(pattern: $"{_testKeyPrefix}*"))
+            {
+                await db.KeyDeleteAsync(key);
+            }
+
+            await _redis.DisposeAsync();
+        }
+        catch
+        {
+            // Ignore cleanup errors
+        }
     }
 
     private Message CreateTestMessage(string id, string topicName = "test.topic")
@@ -49,9 +77,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         };
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task StoreAsync_WithValidMessage_StoresSuccessfully()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var message = CreateTestMessage("msg-1");
 
@@ -66,9 +96,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         retrieved.Payload.Should().Be("{\"test\":\"data\"}");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task StoreAsync_WithNullMessage_ThrowsArgumentNullException()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         Message nullMessage = null!;
 
@@ -79,9 +111,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RetrieveAsync_WithExistingMessage_ReturnsMessage()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var message = CreateTestMessage("msg-2", "test.topic.2");
         await _persistence.StoreAsync(message);
@@ -95,9 +129,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         result.TopicName.Should().Be("test.topic.2");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RetrieveAsync_WithNonExistentMessage_ReturnsNull()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var nonExistentId = "non-existent-msg";
 
@@ -108,9 +144,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         result.Should().BeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task DeleteAsync_WithExistingMessage_ReturnsTrue()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var message = CreateTestMessage("msg-3");
         await _persistence.StoreAsync(message);
@@ -126,9 +164,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         retrieved.Should().BeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task DeleteAsync_WithNonExistentMessage_ReturnsFalse()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var nonExistentId = "non-existent-msg";
 
@@ -139,9 +179,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         deleted.Should().BeFalse();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByTopicAsync_WithMessagesInTopic_ReturnsFilteredMessages()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var msg1 = CreateTestMessage("topic-msg-1", "orders.created");
         var msg2 = CreateTestMessage("topic-msg-2", "orders.created");
@@ -159,9 +201,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         results.Should().OnlyContain(m => m.TopicName == "orders.created");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByTopicAsync_WithLimit_ReturnsLimitedMessages()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         for (int i = 0; i < 5; i++)
         {
@@ -176,9 +220,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         results.Should().HaveCount(3);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByTopicAsync_WithNoMessages_ReturnsEmptyList()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var emptyTopic = "empty.topic";
 
@@ -189,9 +235,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         results.Should().BeEmpty();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task StoreAsync_PreservesMessageProperties()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var message = new Message
         {
@@ -227,9 +275,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         retrieved.Headers["correlation-id"].Should().Be("abc123");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ConcurrentStoreAsync_ThreadSafe()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var tasks = new List<Task>();
 
@@ -248,9 +298,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         results.Should().HaveCount(50);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task StoreAsync_UpdatesExistingMessage()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var message = CreateTestMessage("update-test");
         await _persistence.StoreAsync(message);
@@ -267,9 +319,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         retrieved.DeliveredAt.Should().NotBeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByTopicAsync_WithZeroLimit_ReturnsEmptyList()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var message = CreateTestMessage("zero-limit", "test.zero");
         await _persistence.StoreAsync(message);
@@ -281,9 +335,11 @@ public class RedisMessagePersistenceTests : IAsyncLifetime
         results.Should().BeEmpty();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByTopicAsync_WithNegativeLimit_ReturnsEmptyList()
     {
+        Skip.IfNot(_redisAvailable, "Redis server is not available");
+
         // Arrange
         var message = CreateTestMessage("neg-limit", "test.negative");
         await _persistence.StoreAsync(message);
