@@ -14,17 +14,20 @@ public class GraphQueryEngine : IQueryEngine
     private readonly IGraphRepository _repository;
     private readonly GraphTraversalService _traversalService;
     private readonly DijkstraPathFinder _dijkstraPathFinder;
+    private readonly QueryCacheService _cacheService;
 
     /// <summary>
     /// Initializes a new instance of the GraphQueryEngine.
     /// </summary>
     /// <param name="repository">The graph repository for data access.</param>
+    /// <param name="cacheDurationSeconds">Cache entry TTL in seconds. Default: 300 (5 minutes).</param>
     /// <exception cref="ArgumentNullException">Thrown when repository is null.</exception>
-    public GraphQueryEngine(IGraphRepository repository)
+    public GraphQueryEngine(IGraphRepository repository, int cacheDurationSeconds = 300)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _traversalService = new GraphTraversalService(repository);
         _dijkstraPathFinder = new DijkstraPathFinder(repository);
+        _cacheService = new QueryCacheService(cacheDurationSeconds);
     }
 
     /// <inheritdoc/>
@@ -35,12 +38,17 @@ public class GraphQueryEngine : IQueryEngine
             throw new ArgumentNullException(nameof(query));
         }
 
+        // Check cache first
+        if (_cacheService.TryGet(query, out var cachedResult))
+        {
+            return cachedResult!;
+        }
+
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            // Delegate to repository for basic query execution
-            // The repository handles entity type filtering, property filtering, and pagination
+            // Cache miss - execute query via repository
             var result = await _repository.ExecuteQueryAsync(query, cancellationToken);
 
             stopwatch.Stop();
@@ -48,7 +56,7 @@ public class GraphQueryEngine : IQueryEngine
             // Update execution time if not set by repository
             if (result.ExecutionTime == TimeSpan.Zero)
             {
-                return new GraphQueryResult
+                result = new GraphQueryResult
                 {
                     Entities = result.Entities,
                     Relationships = result.Relationships,
@@ -56,10 +64,13 @@ public class GraphQueryEngine : IQueryEngine
                     ExecutionTime = stopwatch.Elapsed,
                     QueryPlan = result.QueryPlan,
                     TraceId = result.TraceId,
-                    FromCache = result.FromCache,
+                    FromCache = false,
                     Warnings = result.Warnings
                 };
             }
+
+            // Store in cache for future requests
+            _cacheService.Set(query, result);
 
             return result;
         }
