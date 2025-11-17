@@ -293,8 +293,8 @@ builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
 // Register rate limit cleanup service
 builder.Services.AddHostedService<RateLimitCleanupService>();
 
-// Register orchestrator initialization service
-builder.Services.AddHostedService<OrchestratorInitializationService>();
+// Note: Orchestrator initialization now happens synchronously after app.Build()
+// to ensure it's ready before accepting requests (removed background service)
 
 // Register orchestrator as singleton
 builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
@@ -316,8 +316,8 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
         pipelineConfig,
         deploymentTracker);
 
-    // Note: Cluster initialization happens asynchronously via OrchestratorInitializationService
-    // to avoid blocking the application startup
+    // Note: Orchestrator is created here but clusters are initialized synchronously
+    // after app.Build() to ensure it's ready before accepting requests
 
     return orchestrator;
 });
@@ -368,6 +368,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Initialize orchestrator clusters BEFORE starting the API
+// This ensures the orchestrator is ready before any requests are handled
+// Without this, first requests fail with "Orchestrator not initialized"
+var orchestrator = app.Services.GetRequiredService<DistributedKernelOrchestrator>();
+await orchestrator.InitializeClustersAsync();
+Log.Information("Orchestrator clusters initialized successfully");
 
 // Configure the HTTP request pipeline
 
