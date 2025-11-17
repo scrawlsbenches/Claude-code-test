@@ -1,11 +1,10 @@
-using HotSwap.Distributed.Domain.Enums;
-using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Api.Models;
 
 namespace HotSwap.Distributed.IntegrationTests.Helpers;
 
 /// <summary>
 /// Builder class for creating test data in integration tests.
-/// Provides fluent API for constructing test deployment requests and modules.
+/// Provides fluent API for constructing test deployment requests.
 /// </summary>
 public class TestDataBuilder
 {
@@ -43,24 +42,22 @@ public class TestDataBuilder
 }
 
 /// <summary>
-/// Builder for creating DeploymentRequest objects in tests.
+/// Builder for creating CreateDeploymentRequest objects in tests.
 /// </summary>
 public class DeploymentRequestBuilder
 {
-    private readonly DeploymentRequest _request;
+    private readonly CreateDeploymentRequest _request;
 
     public DeploymentRequestBuilder(string moduleName, string targetEnvironment)
     {
-        _request = new DeploymentRequest
+        _request = new CreateDeploymentRequest
         {
             ModuleName = moduleName,
             Version = "1.0.0",
             TargetEnvironment = targetEnvironment,
             RequesterEmail = "integrationtest@example.com",
-            ModuleUrl = $"https://example.com/modules/{moduleName}/1.0.0.ko",
-            SignatureUrl = $"https://example.com/modules/{moduleName}/1.0.0.sig",
-            Hash = "abc123def456", // Mock hash for testing
-            VerifySignature = false, // Disable signature verification in tests
+            RequireApproval = false,
+            Description = "Integration test deployment",
             Metadata = new Dictionary<string, string>
             {
                 ["IntegrationTest"] = "true",
@@ -88,20 +85,20 @@ public class DeploymentRequestBuilder
     }
 
     /// <summary>
-    /// Sets the module URL.
+    /// Sets whether approval is required.
     /// </summary>
-    public DeploymentRequestBuilder WithModuleUrl(string url)
+    public DeploymentRequestBuilder WithApprovalRequired(bool requireApproval = true)
     {
-        _request.ModuleUrl = url;
+        _request.RequireApproval = requireApproval;
         return this;
     }
 
     /// <summary>
-    /// Enables signature verification for this deployment.
+    /// Sets the deployment description.
     /// </summary>
-    public DeploymentRequestBuilder WithSignatureVerification()
+    public DeploymentRequestBuilder WithDescription(string description)
     {
-        _request.VerifySignature = true;
+        _request.Description = description;
         return this;
     }
 
@@ -116,26 +113,17 @@ public class DeploymentRequestBuilder
     }
 
     /// <summary>
-    /// Sets the hash value.
+    /// Builds the CreateDeploymentRequest.
     /// </summary>
-    public DeploymentRequestBuilder WithHash(string hash)
-    {
-        _request.Hash = hash;
-        return this;
-    }
-
-    /// <summary>
-    /// Builds the DeploymentRequest.
-    /// </summary>
-    public DeploymentRequest Build()
+    public CreateDeploymentRequest Build()
     {
         return _request;
     }
 
     /// <summary>
-    /// Implicit conversion to DeploymentRequest for convenience.
+    /// Implicit conversion to CreateDeploymentRequest for convenience.
     /// </summary>
-    public static implicit operator DeploymentRequest(DeploymentRequestBuilder builder)
+    public static implicit operator CreateDeploymentRequest(DeploymentRequestBuilder builder)
     {
         return builder.Build();
     }

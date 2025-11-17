@@ -1,7 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using HotSwap.Distributed.Api.Models;
-using HotSwap.Distributed.Domain.Models;
 
 namespace HotSwap.Distributed.IntegrationTests.Helpers;
 
@@ -19,22 +18,22 @@ public class ApiClientHelper
     }
 
     /// <summary>
-    /// Creates a deployment and returns the deployment result.
+    /// Creates a deployment and returns the deployment response.
     /// </summary>
-    public async Task<DeploymentResult> CreateDeploymentAsync(DeploymentRequest request)
+    public async Task<DeploymentResponse> CreateDeploymentAsync(CreateDeploymentRequest request)
     {
         var response = await _client.PostAsJsonAsync("/api/v1/deployments", request);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<DeploymentResult>(content, new JsonSerializerOptions
+        var result = JsonSerializer.Deserialize<DeploymentResponse>(content, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
         if (result == null)
         {
-            throw new InvalidOperationException("Failed to deserialize deployment result");
+            throw new InvalidOperationException("Failed to deserialize deployment response");
         }
 
         return result;
@@ -43,7 +42,7 @@ public class ApiClientHelper
     /// <summary>
     /// Gets the status of a deployment by execution ID.
     /// </summary>
-    public async Task<DeploymentResult?> GetDeploymentStatusAsync(string executionId)
+    public async Task<DeploymentStatusResponse?> GetDeploymentStatusAsync(string executionId)
     {
         var response = await _client.GetAsync($"/api/v1/deployments/{executionId}");
 
@@ -55,7 +54,7 @@ public class ApiClientHelper
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<DeploymentResult>(content, new JsonSerializerOptions
+        var result = JsonSerializer.Deserialize<DeploymentStatusResponse>(content, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
@@ -70,8 +69,8 @@ public class ApiClientHelper
     /// <param name="executionId">The deployment execution ID</param>
     /// <param name="timeout">Maximum time to wait (default: 2 minutes)</param>
     /// <param name="pollInterval">How often to check status (default: 1 second)</param>
-    /// <returns>The final deployment result</returns>
-    public async Task<DeploymentResult> WaitForDeploymentCompletionAsync(
+    /// <returns>The final deployment status</returns>
+    public async Task<DeploymentStatusResponse> WaitForDeploymentCompletionAsync(
         string executionId,
         TimeSpan? timeout = null,
         TimeSpan? pollInterval = null)
@@ -90,8 +89,9 @@ public class ApiClientHelper
                 throw new InvalidOperationException($"Deployment {executionId} not found");
             }
 
-            // Check if deployment is complete (not in progress)
-            if (result.IsComplete || result.Success || result.Failed)
+            // Check if deployment is complete (Status indicates completion)
+            // Statuses: "Pending", "InProgress", "Succeeded", "Failed", "Cancelled"
+            if (result.Status == "Succeeded" || result.Status == "Failed" || result.Status == "Cancelled")
             {
                 return result;
             }
@@ -105,18 +105,18 @@ public class ApiClientHelper
     /// <summary>
     /// Gets the list of all deployments.
     /// </summary>
-    public async Task<List<DeploymentResult>> ListDeploymentsAsync()
+    public async Task<List<DeploymentSummary>> ListDeploymentsAsync()
     {
         var response = await _client.GetAsync("/api/v1/deployments");
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        var results = JsonSerializer.Deserialize<List<DeploymentResult>>(content, new JsonSerializerOptions
+        var results = JsonSerializer.Deserialize<List<DeploymentSummary>>(content, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
-        return results ?? new List<DeploymentResult>();
+        return results ?? new List<DeploymentSummary>();
     }
 
     /// <summary>

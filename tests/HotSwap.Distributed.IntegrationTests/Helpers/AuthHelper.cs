@@ -56,17 +56,17 @@ public class AuthHelper
         }
 
         // Login and get token
-        var loginRequest = new
+        var loginRequest = new AuthenticationRequest
         {
-            username,
-            password
+            Username = username,
+            Password = password
         };
 
         var response = await _client.PostAsJsonAsync("/api/v1/authentication/login", loginRequest);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        var loginResponse = JsonSerializer.Deserialize<LoginResponse>(content, new JsonSerializerOptions
+        var loginResponse = JsonSerializer.Deserialize<AuthenticationResponse>(content, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
