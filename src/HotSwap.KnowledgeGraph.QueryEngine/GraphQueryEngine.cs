@@ -13,6 +13,7 @@ public class GraphQueryEngine : IQueryEngine
 {
     private readonly IGraphRepository _repository;
     private readonly GraphTraversalService _traversalService;
+    private readonly DijkstraPathFinder _dijkstraPathFinder;
 
     /// <summary>
     /// Initializes a new instance of the GraphQueryEngine.
@@ -23,6 +24,7 @@ public class GraphQueryEngine : IQueryEngine
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _traversalService = new GraphTraversalService(repository);
+        _dijkstraPathFinder = new DijkstraPathFinder(repository);
     }
 
     /// <inheritdoc/>
@@ -71,9 +73,10 @@ public class GraphQueryEngine : IQueryEngine
     /// <inheritdoc/>
     public async Task<PathResult?> FindShortestPathAsync(Guid sourceId, Guid targetId, CancellationToken cancellationToken = default)
     {
-        // Use BFS for shortest path in unweighted graph
-        // TODO: For weighted graphs, implement Dijkstra's algorithm
-        return await _traversalService.BreadthFirstSearchAsync(sourceId, targetId, cancellationToken);
+        // Use Dijkstra's algorithm for weighted shortest path
+        // Dijkstra handles both weighted and unweighted graphs optimally
+        // (unweighted is just the special case where all weights = 1.0)
+        return await _dijkstraPathFinder.FindShortestPathAsync(sourceId, targetId, cancellationToken);
     }
 
     /// <inheritdoc/>
