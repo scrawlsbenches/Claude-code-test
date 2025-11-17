@@ -1,6 +1,7 @@
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Data.Entities;
+using HotSwap.Distributed.Infrastructure.Deployments;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Orchestrator.Interfaces;
@@ -24,6 +25,7 @@ public class DeploymentPipeline : IDisposable
     private readonly Dictionary<EnvironmentType, IDeploymentStrategy> _strategies;
     private readonly IApprovalService? _approvalService;
     private readonly IAuditLogService? _auditLogService;
+    private readonly IDeploymentTracker? _deploymentTracker;
 
     public DeploymentPipeline(
         ILogger<DeploymentPipeline> logger,
@@ -33,7 +35,8 @@ public class DeploymentPipeline : IDisposable
         PipelineConfiguration config,
         Dictionary<EnvironmentType, IDeploymentStrategy> strategies,
         IApprovalService? approvalService = null,
-        IAuditLogService? auditLogService = null)
+        IAuditLogService? auditLogService = null,
+        IDeploymentTracker? deploymentTracker = null)
     {
         _logger = logger;
         _clusterRegistry = clusterRegistry;
@@ -43,6 +46,7 @@ public class DeploymentPipeline : IDisposable
         _strategies = strategies;
         _approvalService = approvalService;
         _auditLogService = auditLogService;
+        _deploymentTracker = deploymentTracker;
     }
 
     /// <summary>
@@ -83,9 +87,13 @@ public class DeploymentPipeline : IDisposable
             _logger.LogInformation("Starting deployment pipeline for {ModuleName} v{Version} (Execution: {ExecutionId})",
                 request.Module.Name, request.Module.Version, request.ExecutionId);
 
+            // Initialize pipeline state tracking
+            await UpdatePipelineStateAsync(request, "Running", null, result.StageResults);
+
             // Stage 1: Build
             var buildStage = await ExecuteBuildStageAsync(request, cancellationToken);
             result.StageResults.Add(buildStage);
+            await UpdatePipelineStateAsync(request, "Running", buildStage.StageName, result.StageResults);
 
             if (buildStage.Status != PipelineStageStatus.Succeeded)
             {
@@ -98,6 +106,7 @@ public class DeploymentPipeline : IDisposable
             // Stage 2: Test
             var testStage = await ExecuteTestStageAsync(request, cancellationToken);
             result.StageResults.Add(testStage);
+            await UpdatePipelineStateAsync(request, "Running", testStage.StageName, result.StageResults);
 
             if (testStage.Status != PipelineStageStatus.Succeeded)
             {
@@ -110,6 +119,7 @@ public class DeploymentPipeline : IDisposable
             // Stage 3: Security Scan
             var securityStage = await ExecuteSecurityScanStageAsync(request, cancellationToken);
             result.StageResults.Add(securityStage);
+            await UpdatePipelineStateAsync(request, "Running", securityStage.StageName, result.StageResults);
 
             if (securityStage.Status != PipelineStageStatus.Succeeded)
             {
@@ -120,8 +130,9 @@ public class DeploymentPipeline : IDisposable
             }
 
             // Stage 4-7: Deploy to environments based on target
-            var deploymentStages = await ExecuteDeploymentStagesAsync(request, cancellationToken);
+            var deploymentStages = await ExecuteDeploymentStagesAsync(request, cancellationToken, result.StageResults);
             result.StageResults.AddRange(deploymentStages);
+            await UpdatePipelineStateAsync(request, "Running", "Deployments", result.StageResults);
 
             var failedDeployment = deploymentStages.FirstOrDefault(s => s.Status == PipelineStageStatus.Failed);
 
@@ -136,6 +147,7 @@ public class DeploymentPipeline : IDisposable
             // Stage: Final Validation
             var validationStage = await ExecuteValidationStageAsync(request, cancellationToken);
             result.StageResults.Add(validationStage);
+            await UpdatePipelineStateAsync(request, "Running", validationStage.StageName, result.StageResults);
 
             result.Success = validationStage.Status == PipelineStageStatus.Succeeded;
             result.Message = result.Success
@@ -341,7 +353,8 @@ public class DeploymentPipeline : IDisposable
 
     private async Task<List<PipelineStageResult>> ExecuteDeploymentStagesAsync(
         DeploymentRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        List<PipelineStageResult>? previousStages = null)
     {
         var stages = new List<PipelineStageResult>();
 
@@ -360,10 +373,19 @@ public class DeploymentPipeline : IDisposable
             // Check if approval is required for this environment
             if (RequiresApproval(request, environment))
             {
+                // Combine previous stages with current deployment stages for full context
+                var allPreviousStages = new List<PipelineStageResult>();
+                if (previousStages != null)
+                {
+                    allPreviousStages.AddRange(previousStages);
+                }
+                allPreviousStages.AddRange(stages);
+
                 var approvalStage = await ExecuteApprovalStageAsync(
                     request,
                     environment,
-                    cancellationToken);
+                    cancellationToken,
+                    allPreviousStages);
 
                 stages.Add(approvalStage);
 
@@ -521,7 +543,8 @@ public class DeploymentPipeline : IDisposable
     private async Task<PipelineStageResult> ExecuteApprovalStageAsync(
         DeploymentRequest request,
         EnvironmentType environment,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        List<PipelineStageResult>? previousStages = null)
     {
         var stage = new PipelineStageResult
         {
@@ -562,6 +585,13 @@ public class DeploymentPipeline : IDisposable
             _logger.LogInformation(
                 "Approval request {ApprovalId} created, waiting for decision (timeout: {Timeout})",
                 approvalRequest.ApprovalId, approvalRequest.TimeoutAt);
+
+            // Update pipeline state to PendingApproval (includes all previous stages + current approval stage)
+            if (previousStages != null)
+            {
+                var stagesWithApproval = new List<PipelineStageResult>(previousStages) { stage };
+                await UpdatePipelineStateAsync(request, "PendingApproval", stage.StageName, stagesWithApproval);
+            }
 
             // Wait for approval decision
             var result = await _approvalService.WaitForApprovalAsync(
@@ -687,6 +717,43 @@ public class DeploymentPipeline : IDisposable
         {
             // Log the error but don't fail the pipeline due to audit logging issues
             _logger.LogError(ex, "Failed to write audit log for deployment event {EventType}", eventType);
+        }
+    }
+
+    /// <summary>
+    /// Updates the deployment tracker with current pipeline state.
+    /// </summary>
+    private async Task UpdatePipelineStateAsync(
+        DeploymentRequest request,
+        string status,
+        string? currentStage,
+        List<PipelineStageResult> stages)
+    {
+        if (_deploymentTracker == null)
+        {
+            // Deployment tracking not configured, skip update
+            return;
+        }
+
+        try
+        {
+            var state = new PipelineExecutionState
+            {
+                ExecutionId = request.ExecutionId,
+                Request = request,
+                Status = status,
+                CurrentStage = currentStage,
+                Stages = stages.ToList(), // Create a copy
+                StartTime = stages.FirstOrDefault()?.StartTime ?? DateTime.UtcNow,
+                LastUpdated = DateTime.UtcNow
+            };
+
+            await _deploymentTracker.UpdatePipelineStateAsync(request.ExecutionId, state);
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't fail the pipeline due to state tracking issues
+            _logger.LogError(ex, "Failed to update pipeline state for execution {ExecutionId}", request.ExecutionId);
         }
     }
 

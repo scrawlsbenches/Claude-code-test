@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Deployments;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Metrics;
 using HotSwap.Distributed.Infrastructure.Security;
@@ -24,6 +25,7 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
     private readonly IModuleVerifier _moduleVerifier;
     private readonly TelemetryProvider _telemetry;
     private readonly PipelineConfiguration _pipelineConfig;
+    private readonly IDeploymentTracker? _deploymentTracker;
     private readonly ConcurrentDictionary<EnvironmentType, EnvironmentCluster> _clusters;
     private readonly Dictionary<EnvironmentType, IDeploymentStrategy> _strategies;
     private DeploymentPipeline? _pipeline;
@@ -36,7 +38,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
         IMetricsProvider? metricsProvider = null,
         IModuleVerifier? moduleVerifier = null,
         TelemetryProvider? telemetry = null,
-        PipelineConfiguration? pipelineConfig = null)
+        PipelineConfiguration? pipelineConfig = null,
+        IDeploymentTracker? deploymentTracker = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -46,6 +49,7 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
             _loggerFactory.CreateLogger<ModuleVerifier>());
         _telemetry = telemetry ?? new TelemetryProvider();
         _pipelineConfig = pipelineConfig ?? new PipelineConfiguration();
+        _deploymentTracker = deploymentTracker;
         _clusters = new ConcurrentDictionary<EnvironmentType, EnvironmentCluster>();
         _strategies = new Dictionary<EnvironmentType, IDeploymentStrategy>();
 
@@ -133,7 +137,10 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
                 _moduleVerifier,
                 _telemetry,
                 _pipelineConfig,
-                _strategies);
+                _strategies,
+                approvalService: null,
+                auditLogService: null,
+                deploymentTracker: _deploymentTracker);
 
             _initialized = true;
 

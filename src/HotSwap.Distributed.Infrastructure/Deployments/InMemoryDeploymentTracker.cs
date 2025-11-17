@@ -1,8 +1,9 @@
 using System.Collections.Concurrent;
 using HotSwap.Distributed.Domain.Models;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
-namespace HotSwap.Distributed.Api.Services;
+namespace HotSwap.Distributed.Infrastructure.Deployments;
 
 /// <summary>
 /// In-memory implementation of deployment tracker using IMemoryCache
@@ -15,6 +16,7 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
     // Cache key prefixes
     private const string ResultKeyPrefix = "deployment:result:";
     private const string InProgressKeyPrefix = "deployment:inprogress:";
+    private const string PipelineStateKeyPrefix = "deployment:state:";
 
     // Cache expiration settings
     private static readonly TimeSpan ResultExpiration = TimeSpan.FromHours(24);
@@ -130,5 +132,29 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
 
         _logger.LogDebug("Retrieved {Count} in-progress deployments", requests.Count);
         return Task.FromResult<IEnumerable<DeploymentRequest>>(requests);
+    }
+
+    public Task UpdatePipelineStateAsync(Guid executionId, PipelineExecutionState state)
+    {
+        var key = PipelineStateKeyPrefix + executionId;
+        var options = new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = InProgressExpiration,
+            Priority = CacheItemPriority.High // Pipeline state should not be evicted
+        };
+
+        state.LastUpdated = DateTime.UtcNow;
+        _cache.Set(key, state, options);
+        _logger.LogDebug("Updated pipeline state for execution {ExecutionId}: Status={Status}, Stage={Stage}",
+            executionId, state.Status, state.CurrentStage);
+
+        return Task.CompletedTask;
+    }
+
+    public Task<PipelineExecutionState?> GetPipelineStateAsync(Guid executionId)
+    {
+        var key = PipelineStateKeyPrefix + executionId;
+        _cache.TryGetValue(key, out PipelineExecutionState? state);
+        return Task.FromResult(state);
     }
 }

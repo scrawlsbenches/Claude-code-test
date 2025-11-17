@@ -1,7 +1,7 @@
 using FluentAssertions;
-using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Deployments;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
