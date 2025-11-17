@@ -21,6 +21,11 @@ public enum SchemaStatus
     Approved,
 
     /// <summary>
+    /// Schema approval was rejected.
+    /// </summary>
+    Rejected,
+
+    /// <summary>
     /// Schema is deprecated (marked for removal).
     /// </summary>
     Deprecated
