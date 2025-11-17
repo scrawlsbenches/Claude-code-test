@@ -51,7 +51,7 @@ dotnet build --no-incremental
 dotnet test --verbosity quiet
 
 # 5. Check current test count
-# Expected: "Passed! - Failed: 0, Passed: 93, Skipped: 0"
+# Expected: "Passed! - Failed: 0, Passed: 568, Skipped: 14, Total: 582"
 ```
 
 **If ANY command fails**: STOP. Fix the issue before proceeding.
@@ -79,7 +79,7 @@ dotnet test
 
 # Expected results:
 # - Build: 0 errors, 0-1 warnings (System.Text.Json warning is OK)
-# - Tests: All passing (currently 93 tests)
+# - Tests: 568 passing, 14 skipped, 582 total
 
 # If ANY step fails → DO NOT COMMIT
 ```
@@ -334,7 +334,7 @@ Claude-code-test/
 │   ├── HotSwap.Distributed.Orchestrator/    # Business logic (depends on Domain)
 │   └── HotSwap.Distributed.Api/             # REST API (depends on all)
 ├── tests/
-│   ├── HotSwap.Distributed.Tests/           # Unit tests (93 tests)
+│   ├── HotSwap.Distributed.Tests/           # Unit tests (582 tests: 568 passing, 14 skipped)
 │   └── HotSwap.Distributed.SmokeTests/      # Integration tests
 └── examples/
     └── ApiUsageExample/                      # API usage examples
@@ -689,15 +689,15 @@ git push -u origin claude/[branch]
 **Read these files BEFORE starting work**:
 
 1. **CLAUDE.md** - Complete development guide (84KB, ~2000 lines)
-   - Quick Reference (lines 1-150) ⭐⭐⭐ CRITICAL
-   - Pre-Commit Checklist (lines 600-800) ⭐⭐⭐ CRITICAL
-   - TDD Workflow (lines 800-1100) ⭐⭐⭐ CRITICAL
+   - Quick Reference section ⭐⭐⭐ CRITICAL
+   - Pre-Commit Checklist section ⭐⭐⭐ CRITICAL
+   - TDD Workflow section ⭐⭐⭐ CRITICAL
 
 2. **TASK_LIST.md** - Task roadmap (20+ tasks with priorities)
 
 3. **README.md** - Project overview
 
-4. **PROJECT_STATUS_REPORT.md** - Current status (95% spec compliance, 93 tests)
+4. **PROJECT_STATUS_REPORT.md** - Current status (95% spec compliance, 582 tests)
 
 **Reference as needed**:
 
@@ -748,7 +748,7 @@ git push -u origin claude/[branch]
 Examples:
 [2025-11-17 10:00:00] BUILD STARTED Building solution...
 [2025-11-17 10:00:20] BUILD SUCCESS 0 errors, 1 warning
-[2025-11-17 10:00:25] TEST STARTED Running 93 tests...
+[2025-11-17 10:00:25] TEST STARTED Running 582 tests...
 [2025-11-17 10:00:35] TEST SUCCESS All tests passed
 [2025-11-17 10:00:40] COMMIT CREATED feat: add rate limiting
 [2025-11-17 10:00:45] PUSH SUCCESS Pushed to claude/add-rate-limiting-012tfd
