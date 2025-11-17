@@ -8,7 +8,11 @@ COPY ["src/HotSwap.Distributed.Domain/HotSwap.Distributed.Domain.csproj", "src/H
 COPY ["src/HotSwap.Distributed.Infrastructure/HotSwap.Distributed.Infrastructure.csproj", "src/HotSwap.Distributed.Infrastructure/"]
 COPY ["src/HotSwap.Distributed.Orchestrator/HotSwap.Distributed.Orchestrator.csproj", "src/HotSwap.Distributed.Orchestrator/"]
 COPY ["src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj", "src/HotSwap.Distributed.Api/"]
+COPY ["src/HotSwap.KnowledgeGraph.Domain/HotSwap.KnowledgeGraph.Domain.csproj", "src/HotSwap.KnowledgeGraph.Domain/"]
+COPY ["src/HotSwap.KnowledgeGraph.Infrastructure/HotSwap.KnowledgeGraph.Infrastructure.csproj", "src/HotSwap.KnowledgeGraph.Infrastructure/"]
+COPY ["src/HotSwap.KnowledgeGraph.QueryEngine/HotSwap.KnowledgeGraph.QueryEngine.csproj", "src/HotSwap.KnowledgeGraph.QueryEngine/"]
 COPY ["tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj", "tests/HotSwap.Distributed.Tests/"]
+COPY ["tests/HotSwap.KnowledgeGraph.Tests/HotSwap.KnowledgeGraph.Tests.csproj", "tests/HotSwap.KnowledgeGraph.Tests/"]
 COPY ["tests/HotSwap.Distributed.SmokeTests/HotSwap.Distributed.SmokeTests.csproj", "tests/HotSwap.Distributed.SmokeTests/"]
 COPY ["examples/ApiUsageExample/ApiUsageExample.csproj", "examples/ApiUsageExample/"]
 
@@ -25,7 +29,7 @@ RUN dotnet build "HotSwap.Distributed.Api.csproj" -c Release -o /app/build
 # Test stage
 FROM build AS test
 WORKDIR /src
-RUN dotnet test "tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj" --configuration Release --no-restore --verbosity normal
+RUN dotnet test "DistributedKernel.sln" --configuration Release --no-restore --verbosity normal
 
 # Publish
 FROM build AS publish
