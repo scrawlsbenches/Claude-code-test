@@ -1,3 +1,5 @@
+using Xunit;
+
 namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 
 /// <summary>
