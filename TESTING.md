@@ -123,11 +123,329 @@ public async Task DeployAsync_WithHealthyCluster_ReturnsSuccess()
 
 ### Integration Tests
 
-Test complete workflows:
+Integration tests verify complete workflows using real dependencies (PostgreSQL, Redis) via Testcontainers. These tests validate end-to-end scenarios with an in-memory API server.
+
+#### Test Structure
+
+```
+tests/HotSwap.Distributed.IntegrationTests/
+├── Fixtures/
+│   ├── PostgreSqlContainerFixture.cs   # PostgreSQL 16 Testcontainer
+│   ├── RedisContainerFixture.cs        # Redis 7 Testcontainer
+│   └── IntegrationTestFactory.cs       # Custom WebApplicationFactory
+├── Helpers/
+│   ├── AuthHelper.cs                   # JWT token management
+│   ├── ApiClientHelper.cs              # API operation helpers
+│   └── TestDataBuilder.cs              # Test data creation
+└── Tests/
+    ├── BasicIntegrationTests.cs                    # 9 tests - Health, auth, clusters
+    ├── DeploymentStrategyIntegrationTests.cs       # 9 tests - All 4 strategies
+    ├── ApprovalWorkflowIntegrationTests.cs         # 10 tests - Approve/reject
+    ├── RollbackScenarioIntegrationTests.cs         # 10 tests - Rollback workflows
+    ├── ConcurrentDeploymentIntegrationTests.cs     # 8 tests - Concurrency & stress
+    ├── MessagingIntegrationTests.cs                # 19 tests - Message queue system
+    └── MultiTenantIntegrationTests.cs              # 17 tests - Multi-tenant features
+```
+
+**Total**: 82 integration tests across 6 test files
+
+#### Prerequisites
+
+Integration tests require Docker to run Testcontainers:
 
 ```bash
-# Run integration tests
-dotnet test --filter "Category=Integration"
+# Verify Docker is running
+docker ps
+
+# If Docker is not running, start it
+# macOS/Windows: Start Docker Desktop
+# Linux: sudo systemctl start docker
+```
+
+#### Running Integration Tests Locally
+
+**Important**: Integration tests cannot run without Docker. They use Testcontainers to spin up real PostgreSQL and Redis instances.
+
+```bash
+# Run all integration tests (requires Docker)
+dotnet test tests/HotSwap.Distributed.IntegrationTests/HotSwap.Distributed.IntegrationTests.csproj
+
+# Run with detailed output
+dotnet test tests/HotSwap.Distributed.IntegrationTests/ --verbosity normal
+
+# Run specific test file
+dotnet test --filter "FullyQualifiedName~BasicIntegrationTests"
+
+# Run specific test method
+dotnet test --filter "FullyQualifiedName~DeploymentStrategyIntegrationTests.DirectDeployment_ToDevelopmentEnvironment_CompletesSuccessfully"
+```
+
+**Expected Output**:
+```
+Passed!  - Failed:     0, Passed:    82, Skipped:     0, Total:    82, Duration: 45 s
+```
+
+**Note**: First run will be slower as Docker images are pulled (postgres:16-alpine, redis:7-alpine).
+
+#### Integration Test Details
+
+##### 1. BasicIntegrationTests.cs (9 tests)
+
+Tests fundamental API functionality:
+- Health check endpoint returns 200 OK
+- Authentication with 3 roles (Admin, Deployer, Viewer)
+- JWT token generation and validation
+- Cluster listing and retrieval
+- Authorization (401 Unauthorized, 403 Forbidden)
+
+```bash
+dotnet test --filter "FullyQualifiedName~BasicIntegrationTests"
+```
+
+##### 2. DeploymentStrategyIntegrationTests.cs (9 tests)
+
+Tests all 4 deployment strategies based on target environment:
+- **Direct Strategy** (Development) - Deploys to all nodes simultaneously
+- **Rolling Strategy** (QA) - Deploys in batches with health checks
+- **Blue-Green Strategy** (Staging) - Deploys to standby, then switches
+- **Canary Strategy** (Production) - Gradual rollout with monitoring
+
+Each strategy test verifies:
+- Deployment completes successfully
+- Correct strategy is applied
+- Deployment stages execute in order
+- Final status is "Succeeded"
+
+```bash
+dotnet test --filter "FullyQualifiedName~DeploymentStrategyIntegrationTests"
+```
+
+##### 3. ApprovalWorkflowIntegrationTests.cs (10 tests)
+
+Tests approval/rejection workflows for production deployments:
+- Deployment requiring approval creates pending approval request
+- Approving deployment allows it to proceed and complete
+- Rejecting deployment cancels it and stops execution
+- Only Admin role can approve/reject (Deployer returns 403)
+- Multiple deployments can be approved/rejected independently
+- Deployments not requiring approval proceed immediately
+
+```bash
+dotnet test --filter "FullyQualifiedName~ApprovalWorkflowIntegrationTests"
+```
+
+##### 4. RollbackScenarioIntegrationTests.cs (10 tests)
+
+Tests rollback functionality for failed/unwanted deployments:
+- Rolling back successful deployment restores previous version
+- Rolling back failed deployment works correctly
+- Rollback of already-rolled-back deployment fails gracefully
+- Rollback of in-progress deployment fails with BadRequest/Conflict
+- Rollback of non-existent deployment returns 404 NotFound
+- Only Deployer/Admin roles can rollback (Viewer returns 403)
+
+```bash
+dotnet test --filter "FullyQualifiedName~RollbackScenarioIntegrationTests"
+```
+
+##### 5. ConcurrentDeploymentIntegrationTests.cs (8 tests)
+
+Tests system behavior under concurrent load:
+- **Concurrent to different environments** - All succeed independently
+- **Different modules to same environment** - All succeed with isolation
+- **Respects concurrency limits** - Queues deployments when limit reached
+- **Maintains isolation** - No data leakage between concurrent requests
+- **Concurrent read/write** - Status queries and deployments don't conflict
+- **High concurrency stress** - 20 simultaneous deployments remain stable
+- **Concurrent approvals** - Multiple pending approvals handled correctly
+
+```bash
+dotnet test --filter "FullyQualifiedName~ConcurrentDeploymentIntegrationTests"
+```
+
+##### 6. MessagingIntegrationTests.cs (19 tests)
+
+Tests messaging system (publish/consume/acknowledge):
+- Message lifecycle (publish → retrieve → acknowledge → delete)
+- Message creation with auto-ID generation
+- Publishing to topics
+- Retrieving messages by ID and by topic
+- Acknowledging messages (status changes to Acknowledged)
+- Deleting messages
+- Message validation (required fields)
+- Message priority levels
+- Authorization requirements
+
+```bash
+dotnet test --filter "FullyQualifiedName~MessagingIntegrationTests"
+```
+
+##### 7. MultiTenantIntegrationTests.cs (17 tests)
+
+Tests multi-tenant system features:
+- **Tenant creation** (3 tests) - Valid data, validation, multiple tenants
+- **Tenant retrieval** (3 tests) - By ID, non-existent (404), list all
+- **Tenant updates** (1 test) - Update name, contact, metadata
+- **Subscription management** (2 tests) - Upgrade/downgrade tiers
+- **Tenant suspension** (2 tests) - Suspend and reactivate
+- **Authorization** (2 tests) - Admin-only operations, require auth
+- **Tenant isolation** (1 test) - Unique domains and IDs
+
+```bash
+dotnet test --filter "FullyQualifiedName~MultiTenantIntegrationTests"
+```
+
+#### CI/CD Integration
+
+Integration tests run automatically in GitHub Actions CI/CD pipeline:
+
+```yaml
+# .github/workflows/build-and-test.yml
+
+integration-tests:
+  runs-on: ubuntu-latest
+  needs: build-and-test
+
+  steps:
+  - name: Run integration tests
+    run: dotnet test tests/HotSwap.Distributed.IntegrationTests/
+```
+
+**GitHub Actions Environment**:
+- Ubuntu-latest runner (Docker pre-installed)
+- Testcontainers pulls PostgreSQL 16 and Redis 7 images
+- Tests run in isolation with fresh containers
+- Test logs uploaded as artifacts for debugging
+
+**View Integration Test Results**:
+1. Go to GitHub Actions tab
+2. Click on latest workflow run
+3. Check "integration-tests" job
+4. Download "integration-test-logs" artifact if tests fail
+
+#### Testcontainers Architecture
+
+Integration tests use [Testcontainers](https://dotnet.testcontainers.org/) to run real dependencies:
+
+**PostgreSQL Container**:
+- Image: postgres:16-alpine
+- Database: testdb
+- User: testuser
+- Password: testpass
+- Port: Random (to avoid conflicts)
+- Lifecycle: Shared across all tests (fixture)
+
+**Redis Container**:
+- Image: redis:7-alpine
+- Port: Random (to avoid conflicts)
+- Lifecycle: Shared across all tests (fixture)
+
+**Benefits**:
+- Tests use real databases, not mocks
+- Catches database-specific issues
+- Tests connection pooling, transactions, concurrency
+- Automatic cleanup after test run
+
+#### Troubleshooting Integration Tests
+
+##### Docker Not Running
+
+```bash
+# Error: Cannot connect to Docker daemon
+# Solution: Start Docker
+
+# macOS/Windows
+# Start Docker Desktop application
+
+# Linux
+sudo systemctl start docker
+```
+
+##### Port Conflicts
+
+Testcontainers uses random ports to avoid conflicts. If you see port-related errors:
+
+```bash
+# Check for processes using ports
+lsof -i :5432  # PostgreSQL default
+lsof -i :6379  # Redis default
+
+# Kill conflicting processes or restart Docker
+docker restart $(docker ps -q)
+```
+
+##### Containers Not Cleaned Up
+
+```bash
+# List running Testcontainers
+docker ps --filter "label=org.testcontainers=true"
+
+# Stop all Testcontainers
+docker stop $(docker ps -q --filter "label=org.testcontainers=true")
+
+# Remove all Testcontainers
+docker rm $(docker ps -aq --filter "label=org.testcontainers=true")
+```
+
+##### Slow Test Execution
+
+First run is slow due to image pulling:
+
+```bash
+# Pre-pull images to speed up first run
+docker pull postgres:16-alpine
+docker pull redis:7-alpine
+```
+
+Subsequent runs are faster (30-60 seconds for all 82 tests).
+
+##### Out of Memory
+
+Integration tests spawn multiple containers. Increase Docker memory:
+
+- Docker Desktop → Settings → Resources → Memory: 4 GB minimum
+
+#### Writing New Integration Tests
+
+Use existing test files as templates:
+
+```csharp
+[Collection("IntegrationTests")]
+public class MyIntegrationTests : IClassFixture<PostgreSqlContainerFixture>,
+                                   IClassFixture<RedisContainerFixture>,
+                                   IAsyncLifetime
+{
+    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
+    private readonly RedisContainerFixture _redisFixture;
+    private IntegrationTestFactory? _factory;
+    private HttpClient? _client;
+    private AuthHelper? _authHelper;
+
+    public async Task InitializeAsync()
+    {
+        _factory = new IntegrationTestFactory(_postgreSqlFixture, _redisFixture);
+        await _factory.InitializeAsync();
+
+        _client = _factory.CreateClient();
+        _authHelper = new AuthHelper(_client);
+
+        var token = await _authHelper.GetAdminTokenAsync();
+        _authHelper.AddAuthorizationHeader(_client, token);
+    }
+
+    [Fact]
+    public async Task MyTest_Scenario_ExpectedBehavior()
+    {
+        // Arrange
+        var request = new CreateDeploymentRequest { /* ... */ };
+
+        // Act
+        var response = await _client!.PostAsJsonAsync("/api/v1/deployments", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+}
 ```
 
 ### Performance Tests
