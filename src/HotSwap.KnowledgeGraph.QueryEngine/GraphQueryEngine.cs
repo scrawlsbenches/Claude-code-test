@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using HotSwap.KnowledgeGraph.Domain.Models;
 using HotSwap.KnowledgeGraph.Infrastructure.Repositories;
+using HotSwap.KnowledgeGraph.QueryEngine.Services;
 
 namespace HotSwap.KnowledgeGraph.QueryEngine;
 
@@ -11,6 +12,7 @@ namespace HotSwap.KnowledgeGraph.QueryEngine;
 public class GraphQueryEngine : IQueryEngine
 {
     private readonly IGraphRepository _repository;
+    private readonly GraphTraversalService _traversalService;
 
     /// <summary>
     /// Initializes a new instance of the GraphQueryEngine.
@@ -20,6 +22,7 @@ public class GraphQueryEngine : IQueryEngine
     public GraphQueryEngine(IGraphRepository repository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _traversalService = new GraphTraversalService(repository);
     }
 
     /// <inheritdoc/>
@@ -68,18 +71,15 @@ public class GraphQueryEngine : IQueryEngine
     /// <inheritdoc/>
     public async Task<PathResult?> FindShortestPathAsync(Guid sourceId, Guid targetId, CancellationToken cancellationToken = default)
     {
-        // TODO: Implement Dijkstra's shortest path algorithm
-        // This will be implemented in a later task
-        await Task.CompletedTask;
-        return null;
+        // Use BFS for shortest path in unweighted graph
+        // TODO: For weighted graphs, implement Dijkstra's algorithm
+        return await _traversalService.BreadthFirstSearchAsync(sourceId, targetId, cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<List<PathResult>> FindAllPathsAsync(Guid sourceId, Guid targetId, int maxDepth = 5, CancellationToken cancellationToken = default)
     {
-        // TODO: Implement DFS-based all-paths algorithm
-        // This will be implemented in a later task
-        await Task.CompletedTask;
-        return new List<PathResult>();
+        // Use DFS to find all paths up to maxDepth
+        return await _traversalService.DepthFirstSearchAsync(sourceId, targetId, maxDepth, cancellationToken);
     }
 }
