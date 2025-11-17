@@ -69,7 +69,7 @@ public class MessageRouter
                 strategy.StrategyName);
 
             // Execute the routing strategy
-            var result = await strategy.RouteAsync(message, subscriptions, cancellationToken);
+            var result = await strategy.RouteAsync(message, subscriptions!, cancellationToken);
 
             if (result.Success)
             {

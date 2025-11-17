@@ -377,12 +377,12 @@ public class DeliveryServiceTests
         // Arrange
         var message = CreateTestMessage("msg-14");
         var attemptCount = 0;
-        var deliveryFunc = new Func<Message, CancellationToken, Task<DeliveryResult>>(async (msg, ct) =>
+        var deliveryFunc = new Func<Message, CancellationToken, Task<DeliveryResult>>((msg, ct) =>
         {
             attemptCount++;
             if (attemptCount < 3)
                 throw new InvalidOperationException("Delivery failed");
-            return DeliveryResult.Success(msg.MessageId, "consumer-1");
+            return Task.FromResult(DeliveryResult.Success(msg.MessageId, "consumer-1"));
         });
 
         // Act

@@ -191,7 +191,7 @@ public class InMemoryMessageQueueTests
     }
 
     [Fact]
-    public async Task IsEmpty_ReturnsTrueForEmptyQueue()
+    public void IsEmpty_ReturnsTrueForEmptyQueue()
     {
         // Arrange
         var queue = CreateQueue();
