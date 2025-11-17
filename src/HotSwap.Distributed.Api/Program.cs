@@ -109,8 +109,14 @@ builder.Services.AddOpenTelemetry()
             .SetResourceBuilder(ResourceBuilder.CreateDefault()
                 .AddService(TelemetryProvider.ServiceName, serviceVersion: TelemetryProvider.ServiceVersion))
             .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddConsoleExporter();
+            .AddHttpClientInstrumentation();
+
+        // Only add console exporter if explicitly enabled (disabled for tests to reduce log spam)
+        var enableConsoleExporter = builder.Configuration.GetValue<bool>("Telemetry:EnableConsoleExporter", false);
+        if (enableConsoleExporter)
+        {
+            tracerProviderBuilder.AddConsoleExporter();
+        }
 
         // Add Jaeger exporter if configured
         var jaegerEndpoint = builder.Configuration["Telemetry:JaegerEndpoint"];

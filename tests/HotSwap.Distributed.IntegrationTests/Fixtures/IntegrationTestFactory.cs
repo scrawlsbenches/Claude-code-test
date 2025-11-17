@@ -84,6 +84,10 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 ["Logging:LogLevel:Default"] = "Warning",
                 ["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning",
                 ["Logging:LogLevel:HotSwap.Distributed"] = "Warning",
+
+                // Disable OpenTelemetry Activity console output (prevents massive trace spam)
+                ["Logging:Console:FormatterName"] = "simple",
+                ["Logging:Console:FormatterOptions:IncludeScopes"] = "false",
             });
         });
 
