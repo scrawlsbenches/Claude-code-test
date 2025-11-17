@@ -15,7 +15,7 @@ public interface ISubscriptionService
     /// <param name="tier">Subscription tier</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created subscription</returns>
-    Task<Subscription> CreateSubscriptionAsync(Guid tenantId, SubscriptionTier tier, CancellationToken cancellationToken = default);
+    Task<TenantSubscription> CreateSubscriptionAsync(Guid tenantId, SubscriptionTier tier, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Upgrades a tenant's subscription to a higher tier.
@@ -24,7 +24,7 @@ public interface ISubscriptionService
     /// <param name="newTier">New subscription tier</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Updated subscription</returns>
-    Task<Subscription> UpgradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default);
+    Task<TenantSubscription> UpgradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Downgrades a tenant's subscription to a lower tier.
@@ -33,7 +33,7 @@ public interface ISubscriptionService
     /// <param name="newTier">New subscription tier</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Updated subscription</returns>
-    Task<Subscription> DowngradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default);
+    Task<TenantSubscription> DowngradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Suspends a subscription due to non-payment.
@@ -59,5 +59,5 @@ public interface ISubscriptionService
     /// <param name="tenantId">Tenant ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Current subscription if exists</returns>
-    Task<Subscription?> GetCurrentSubscriptionAsync(Guid tenantId, CancellationToken cancellationToken = default);
+    Task<TenantSubscription?> GetCurrentSubscriptionAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }

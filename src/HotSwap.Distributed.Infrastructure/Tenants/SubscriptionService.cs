@@ -14,7 +14,7 @@ public class SubscriptionService : ISubscriptionService
 {
     private readonly ITenantRepository _tenantRepository;
     private readonly ILogger<SubscriptionService> _logger;
-    private readonly ConcurrentDictionary<Guid, Subscription> _subscriptions = new();
+    private readonly ConcurrentDictionary<Guid, TenantSubscription> _subscriptions = new();
     private readonly ConcurrentDictionary<Guid, List<UsageReport>> _usageReports = new();
 
     public SubscriptionService(
@@ -25,7 +25,7 @@ public class SubscriptionService : ISubscriptionService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Subscription> CreateSubscriptionAsync(Guid tenantId, SubscriptionTier tier, CancellationToken cancellationToken = default)
+    public async Task<TenantSubscription> CreateSubscriptionAsync(Guid tenantId, SubscriptionTier tier, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating subscription for tenant {TenantId} with tier {Tier}", tenantId, tier);
 
@@ -33,7 +33,7 @@ public class SubscriptionService : ISubscriptionService
         if (tenant == null)
             throw new InvalidOperationException($"Tenant {tenantId} not found");
 
-        var subscription = new Subscription
+        var subscription = new TenantSubscription
         {
             SubscriptionId = Guid.NewGuid(),
             TenantId = tenantId,
@@ -59,7 +59,7 @@ public class SubscriptionService : ISubscriptionService
         return subscription;
     }
 
-    public async Task<Subscription> UpgradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default)
+    public async Task<TenantSubscription> UpgradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Upgrading subscription for tenant {TenantId} to tier {NewTier}",
             tenantId, newTier);
@@ -89,7 +89,7 @@ public class SubscriptionService : ISubscriptionService
         return subscription;
     }
 
-    public async Task<Subscription> DowngradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default)
+    public async Task<TenantSubscription> DowngradeSubscriptionAsync(Guid tenantId, SubscriptionTier newTier, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Downgrading subscription for tenant {TenantId} to tier {NewTier}",
             tenantId, newTier);
@@ -182,7 +182,7 @@ public class SubscriptionService : ISubscriptionService
         return Task.FromResult(report);
     }
 
-    public Task<Subscription?> GetCurrentSubscriptionAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    public Task<TenantSubscription?> GetCurrentSubscriptionAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         _subscriptions.TryGetValue(tenantId, out var subscription);
         return Task.FromResult(subscription);
