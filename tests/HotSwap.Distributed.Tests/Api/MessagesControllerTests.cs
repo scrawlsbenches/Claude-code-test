@@ -18,48 +18,22 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Api;
 
-public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class MessagesControllerTests : IClassFixture<MessagesControllerTestsFixture>
 {
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly Mock<IMessageQueue> _mockQueue;
-    private readonly Mock<IMessagePersistence> _mockPersistence;
+    private readonly MessagesControllerTestsFixture _fixture;
 
-    public MessagesControllerTests(WebApplicationFactory<Program> factory)
+    public MessagesControllerTests(MessagesControllerTestsFixture fixture)
     {
-        _mockQueue = new Mock<IMessageQueue>();
-        _mockPersistence = new Mock<IMessagePersistence>();
+        _fixture = fixture;
 
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                // Replace real services with mocks
-                var descriptors = services.Where(d =>
-                    d.ServiceType == typeof(IMessageQueue) ||
-                    d.ServiceType == typeof(IMessagePersistence)).ToList();
-
-                foreach (var descriptor in descriptors)
-                {
-                    services.Remove(descriptor);
-                }
-
-                services.AddSingleton(_mockQueue.Object);
-                services.AddSingleton(_mockPersistence.Object);
-
-                // Add test authentication
-                services.AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = "TestScheme";
-                    options.DefaultChallengeScheme = "TestScheme";
-                })
-                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", options => { });
-            });
-        });
+        // Reset mocks before each test to ensure isolation
+        _fixture.MockQueue.Reset();
+        _fixture.MockPersistence.Reset();
     }
 
     private HttpClient CreateAuthenticatedClient(Guid? userId = null, List<string>? roles = null)
     {
-        var client = _factory.CreateClient();
+        var client = _fixture.Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
         return client;
     }
@@ -86,10 +60,10 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         var client = CreateAuthenticatedClient();
         var message = CreateTestMessage();
 
-        _mockQueue.Setup(x => x.EnqueueAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+        _fixture.MockQueue.Setup(x => x.EnqueueAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _mockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -100,15 +74,15 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         response.Headers.Location.Should().NotBeNull();
         response.Headers.Location!.ToString().Should().Contain($"/api/messages/{message.MessageId}");
 
-        _mockQueue.Verify(x => x.EnqueueAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Once);
-        _mockPersistence.Verify(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Once);
+        _fixture.MockQueue.Verify(x => x.EnqueueAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Once);
+        _fixture.MockPersistence.Verify(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task PublishMessage_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = _fixture.Factory.CreateClient();
         var message = CreateTestMessage();
 
         // Act
@@ -145,7 +119,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         var client = CreateAuthenticatedClient();
         var message = CreateTestMessage("msg-123");
 
-        _mockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(message);
 
         // Act
@@ -164,7 +138,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         // Arrange
         var client = CreateAuthenticatedClient();
 
-        _mockPersistence.Setup(x => x.RetrieveAsync("non-existent", It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.RetrieveAsync("non-existent", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Message?)null);
 
         // Act
@@ -178,7 +152,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
     public async Task GetMessage_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = _fixture.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/api/messages/msg-123");
@@ -198,7 +172,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
             CreateTestMessage("msg-2", "orders.created")
         };
 
-        _mockPersistence.Setup(x => x.GetByTopicAsync("orders.created", 100, It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.GetByTopicAsync("orders.created", 100, It.IsAny<CancellationToken>()))
             .ReturnsAsync(messages);
 
         // Act
@@ -219,7 +193,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         var client = CreateAuthenticatedClient();
         var messages = new List<Message> { CreateTestMessage() };
 
-        _mockPersistence.Setup(x => x.GetByTopicAsync("test.topic", 100, It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.GetByTopicAsync("test.topic", 100, It.IsAny<CancellationToken>()))
             .ReturnsAsync(messages);
 
         // Act
@@ -227,14 +201,14 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        _mockPersistence.Verify(x => x.GetByTopicAsync("test.topic", 100, It.IsAny<CancellationToken>()), Times.Once);
+        _fixture.MockPersistence.Verify(x => x.GetByTopicAsync("test.topic", 100, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task GetMessagesByTopic_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = _fixture.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/api/messages/topic/test.topic");
@@ -250,10 +224,10 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         var client = CreateAuthenticatedClient();
         var message = CreateTestMessage("msg-123");
 
-        _mockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(message);
 
-        _mockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -262,7 +236,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        _mockPersistence.Verify(x => x.StoreAsync(
+        _fixture.MockPersistence.Verify(x => x.StoreAsync(
             It.Is<Message>(m =>
                 m.MessageId == "msg-123" &&
                 m.Status == MessageStatus.Acknowledged &&
@@ -277,7 +251,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         // Arrange
         var client = CreateAuthenticatedClient();
 
-        _mockPersistence.Setup(x => x.RetrieveAsync("non-existent", It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.RetrieveAsync("non-existent", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Message?)null);
 
         // Act
@@ -291,7 +265,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
     public async Task AcknowledgeMessage_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = _fixture.Factory.CreateClient();
 
         // Act
         var response = await client.PostAsync("/api/messages/msg-123/acknowledge", null);
@@ -306,7 +280,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         // Arrange
         var client = CreateAuthenticatedClient();
 
-        _mockPersistence.Setup(x => x.DeleteAsync("msg-123", It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.DeleteAsync("msg-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         // Act
@@ -314,7 +288,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        _mockPersistence.Verify(x => x.DeleteAsync("msg-123", It.IsAny<CancellationToken>()), Times.Once);
+        _fixture.MockPersistence.Verify(x => x.DeleteAsync("msg-123", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -323,7 +297,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         // Arrange
         var client = CreateAuthenticatedClient();
 
-        _mockPersistence.Setup(x => x.DeleteAsync("non-existent", It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.DeleteAsync("non-existent", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         // Act
@@ -337,7 +311,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
     public async Task DeleteMessage_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = _fixture.Factory.CreateClient();
 
         // Act
         var response = await client.DeleteAsync("/api/messages/msg-123");
@@ -355,7 +329,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         message.MessageId = ""; // Let server generate ID
 
         Message? storedMessage = null;
-        _mockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
             .Callback<Message, CancellationToken>((m, ct) => storedMessage = m)
             .Returns(Task.CompletedTask);
 
@@ -377,7 +351,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         var beforePublish = DateTime.UtcNow;
 
         Message? storedMessage = null;
-        _mockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
             .Callback<Message, CancellationToken>((m, ct) => storedMessage = m)
             .Returns(Task.CompletedTask);
 
@@ -398,7 +372,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         var client = CreateAuthenticatedClient();
         var messages = new List<Message> { CreateTestMessage() };
 
-        _mockPersistence.Setup(x => x.GetByTopicAsync("test.topic", 50, It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.GetByTopicAsync("test.topic", 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync(messages);
 
         // Act
@@ -406,7 +380,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        _mockPersistence.Verify(x => x.GetByTopicAsync("test.topic", 50, It.IsAny<CancellationToken>()), Times.Once);
+        _fixture.MockPersistence.Verify(x => x.GetByTopicAsync("test.topic", 50, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -416,7 +390,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         var client = CreateAuthenticatedClient();
         var messages = new List<Message> { CreateTestMessage() };
 
-        _mockPersistence.Setup(x => x.GetByTopicAsync("test.topic", 1000, It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.GetByTopicAsync("test.topic", 1000, It.IsAny<CancellationToken>()))
             .ReturnsAsync(messages);
 
         // Act
@@ -424,7 +398,7 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        _mockPersistence.Verify(x => x.GetByTopicAsync("test.topic", 1000, It.IsAny<CancellationToken>()), Times.Once);
+        _fixture.MockPersistence.Verify(x => x.GetByTopicAsync("test.topic", 1000, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -436,11 +410,11 @@ public class MessagesControllerTests : IClassFixture<WebApplicationFactory<Progr
         message.Status = MessageStatus.Delivered;
         var beforeAck = DateTime.UtcNow;
 
-        _mockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(message);
 
         Message? updatedMessage = null;
-        _mockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+        _fixture.MockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
             .Callback<Message, CancellationToken>((m, ct) => updatedMessage = m)
             .Returns(Task.CompletedTask);
 
