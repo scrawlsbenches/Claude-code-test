@@ -244,6 +244,9 @@ public class KernelNode : IAsyncDisposable
         if (_disposed)
             return;
 
+        // Use a separate flag to track if we need to dispose the semaphore
+        bool shouldDisposeSemaphore = false;
+
         await _disposeLock.WaitAsync();
         try
         {
@@ -259,13 +262,27 @@ public class KernelNode : IAsyncDisposable
 
             Status = NodeStatus.Stopped;
             _disposed = true;
+            shouldDisposeSemaphore = true;
 
             _logger.LogInformation("Kernel node {NodeId} disposed", NodeId);
         }
         finally
         {
-            _disposeLock.Release();
-            _disposeLock.Dispose();
+            // Always release the lock if we acquired it (we're in finally, so we acquired it)
+            try
+            {
+                _disposeLock.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Semaphore already disposed by another thread, ignore
+            }
+
+            // Only dispose the semaphore if we actually performed disposal
+            if (shouldDisposeSemaphore)
+            {
+                _disposeLock.Dispose();
+            }
         }
     }
 }
