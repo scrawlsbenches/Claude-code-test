@@ -151,7 +151,7 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
         approvalStage!.Status.Should().Be("Succeeded", "Approval stage should be completed");
 
         // Verify deployment stage executed
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to Staging");
         deploymentStage.Should().NotBeNull();
         deploymentStage!.Status.Should().Be("Succeeded", "Deployment should execute after approval");
     }
@@ -235,10 +235,10 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
             "Approval stage should show rejection");
 
         // Verify deployment stage did NOT execute
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to Staging");
         if (deploymentStage != null)
         {
-            deploymentStage.Status.Should().NotBe("Completed",
+            deploymentStage.Status.Should().NotBe("Succeeded",
                 "Deployment should not complete after rejection");
         }
     }
@@ -352,7 +352,7 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
         approvalStage.Should().BeNull("Deployment not requiring approval should not have approval stage");
 
         // Verify deployment executed directly
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to Development");
         deploymentStage.Should().NotBeNull();
         deploymentStage!.Status.Should().Be("Succeeded");
     }

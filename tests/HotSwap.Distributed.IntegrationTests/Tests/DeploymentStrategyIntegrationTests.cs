@@ -86,10 +86,10 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         finalStatus.Stages.Should().NotBeEmpty();
 
         // Verify deployment stage exists and used Direct strategy
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to Development");
         deploymentStage.Should().NotBeNull();
         deploymentStage!.Strategy.Should().Be("Direct", "Development environment should use Direct deployment strategy");
-        deploymentStage.Status.Should().Be("Completed");
+        deploymentStage.Status.Should().Be("Succeeded");
         deploymentStage.NodesDeployed.Should().BeGreaterThan(0, "At least one node should be deployed");
     }
 
@@ -163,10 +163,10 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         finalStatus.ModuleName.Should().Be("rolling-test-module");
 
         // Verify deployment stage used Rolling strategy
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to QA");
         deploymentStage.Should().NotBeNull();
         deploymentStage!.Strategy.Should().Be("Rolling", "QA environment should use Rolling deployment strategy");
-        deploymentStage.Status.Should().Be("Completed");
+        deploymentStage.Status.Should().Be("Succeeded");
         deploymentStage.NodesDeployed.Should().BeGreaterThan(0);
         deploymentStage.NodesFailed.Should().Be(0, "Rolling deployment should not have failed nodes");
     }
@@ -197,7 +197,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         duration.Should().BeGreaterThan(TimeSpan.FromSeconds(1),
             "Rolling deployment should take time to deploy in batches");
 
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to QA");
         deploymentStage!.Strategy.Should().Be("Rolling");
     }
 
@@ -231,10 +231,10 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         finalStatus.ModuleName.Should().Be("bluegreen-test-module");
 
         // Verify deployment stage used Blue-Green strategy
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to Staging");
         deploymentStage.Should().NotBeNull();
         deploymentStage!.Strategy.Should().Be("BlueGreen", "Staging environment should use Blue-Green deployment strategy");
-        deploymentStage.Status.Should().Be("Completed");
+        deploymentStage.Status.Should().Be("Succeeded");
         deploymentStage.NodesDeployed.Should().BeGreaterThan(0);
     }
 
@@ -297,10 +297,10 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         finalStatus.ModuleName.Should().Be("canary-test-module");
 
         // Verify deployment stage used Canary strategy
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to Production");
         deploymentStage.Should().NotBeNull();
         deploymentStage!.Strategy.Should().Be("Canary", "Production environment should use Canary deployment strategy");
-        deploymentStage.Status.Should().Be("Completed");
+        deploymentStage.Status.Should().Be("Succeeded");
         deploymentStage.NodesDeployed.Should().BeGreaterThan(0);
     }
 
@@ -332,7 +332,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         duration.Should().BeGreaterThan(TimeSpan.FromSeconds(5),
             "Canary deployment should take time for gradual traffic increase");
 
-        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deploy to Production");
         deploymentStage!.Strategy.Should().Be("Canary");
     }
 
@@ -381,7 +381,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
             response.ExecutionId.ToString(),
             timeout: TimeSpan.FromMinutes(10));
 
-        var deploymentStage = status.Stages.FirstOrDefault(s => s.Name == "Deployment");
+        var deploymentStage = status.Stages.FirstOrDefault(s => s.Name == $"Deploy to {environment}");
         return (environment, deploymentStage?.Strategy ?? "Unknown");
     }
 
