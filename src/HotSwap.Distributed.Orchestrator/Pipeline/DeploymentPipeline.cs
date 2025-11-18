@@ -90,6 +90,28 @@ public class DeploymentPipeline : IDisposable
             // Initialize pipeline state tracking
             await UpdatePipelineStateAsync(request, "Running", null, result.StageResults);
 
+            // Check if approval is required BEFORE starting any stages
+            if (RequiresApprovalUpfront(request))
+            {
+                _logger.LogInformation("Deployment requires approval before proceeding with pipeline stages");
+
+                var approvalStage = await ExecuteApprovalStageAsync(
+                    request,
+                    request.TargetEnvironment,
+                    cancellationToken,
+                    result.StageResults);
+
+                result.StageResults.Add(approvalStage);
+
+                if (approvalStage.Status != PipelineStageStatus.Succeeded)
+                {
+                    result.Success = false;
+                    result.Message = "Pipeline failed at Approval stage";
+                    result.EndTime = DateTime.UtcNow;
+                    return result;
+                }
+            }
+
             // Stage 1: Build
             var buildStage = await ExecuteBuildStageAsync(request, cancellationToken);
             result.StageResults.Add(buildStage);
@@ -524,6 +546,22 @@ public class DeploymentPipeline : IDisposable
     }
 
     /// <summary>
+    /// Determines if approval is required BEFORE starting the pipeline (upfront approval).
+    /// This is used for deployments that should pause at PendingApproval before any stages execute.
+    /// </summary>
+    private bool RequiresApprovalUpfront(DeploymentRequest request)
+    {
+        // Approval required upfront if:
+        // 1. Approval service is available AND
+        // 2. RequireApproval flag is set AND
+        // 3. Target environment is Staging or Production
+        return _approvalService != null &&
+               request.RequireApproval &&
+               (request.TargetEnvironment == EnvironmentType.Staging ||
+                request.TargetEnvironment == EnvironmentType.Production);
+    }
+
+    /// <summary>
     /// Determines if approval is required for deploying to the specified environment.
     /// </summary>
     private bool RequiresApproval(DeploymentRequest request, EnvironmentType environment)
@@ -531,7 +569,15 @@ public class DeploymentPipeline : IDisposable
         // Approval required if:
         // 1. Approval service is available AND
         // 2. RequireApproval flag is set AND
-        // 3. Environment is Staging or Production
+        // 3. Environment is Staging or Production AND
+        // 4. We haven't already done upfront approval (to avoid double approval)
+
+        // If upfront approval was done, skip environment-specific approval
+        if (RequiresApprovalUpfront(request))
+        {
+            return false; // Already handled upfront
+        }
+
         return _approvalService != null &&
                request.RequireApproval &&
                (environment == EnvironmentType.Staging || environment == EnvironmentType.Production);
@@ -548,8 +594,8 @@ public class DeploymentPipeline : IDisposable
     {
         var stage = new PipelineStageResult
         {
-            StageName = $"Approval for {environment}",
-            Status = PipelineStageStatus.WaitingForApproval,
+            StageName = "Approval",
+            Status = PipelineStageStatus.Pending,
             StartTime = DateTime.UtcNow
         };
 
@@ -587,11 +633,11 @@ public class DeploymentPipeline : IDisposable
                 approvalRequest.ApprovalId, approvalRequest.TimeoutAt);
 
             // Update pipeline state to PendingApproval (includes all previous stages + current approval stage)
-            if (previousStages != null)
-            {
-                var stagesWithApproval = new List<PipelineStageResult>(previousStages) { stage };
-                await UpdatePipelineStateAsync(request, "PendingApproval", stage.StageName, stagesWithApproval);
-            }
+            var stagesWithApproval = previousStages != null
+                ? new List<PipelineStageResult>(previousStages) { stage }
+                : new List<PipelineStageResult> { stage };
+
+            await UpdatePipelineStateAsync(request, "PendingApproval", stage.StageName, stagesWithApproval);
 
             // Wait for approval decision
             var result = await _approvalService.WaitForApprovalAsync(

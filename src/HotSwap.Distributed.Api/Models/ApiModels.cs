@@ -22,7 +22,6 @@ public class CreateDeploymentRequest
 public class ApprovalDecisionRequest
 {
     public required string ApproverEmail { get; set; }
-    public required bool Approved { get; set; }
     public string? Reason { get; set; }
 }
 

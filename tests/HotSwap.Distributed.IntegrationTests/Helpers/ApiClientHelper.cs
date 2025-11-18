@@ -162,9 +162,9 @@ public class ApiClientHelper
     /// <summary>
     /// Approves a pending deployment.
     /// </summary>
-    public async Task<HttpResponseMessage> ApproveDeploymentAsync(string executionId, string reason = "Integration test approval")
+    public async Task<HttpResponseMessage> ApproveDeploymentAsync(string executionId, string reason = "Integration test approval", string approverEmail = "admin@example.com")
     {
-        var request = new { reason };
+        var request = new { approverEmail, reason };
         var response = await _client.PostAsJsonAsync($"/api/v1/approvals/deployments/{executionId}/approve", request);
         return response;
     }
@@ -172,9 +172,9 @@ public class ApiClientHelper
     /// <summary>
     /// Rejects a pending deployment.
     /// </summary>
-    public async Task<HttpResponseMessage> RejectDeploymentAsync(string executionId, string reason = "Integration test rejection")
+    public async Task<HttpResponseMessage> RejectDeploymentAsync(string executionId, string reason = "Integration test rejection", string approverEmail = "admin@example.com")
     {
-        var request = new { reason };
+        var request = new { approverEmail, reason };
         var response = await _client.PostAsJsonAsync($"/api/v1/approvals/deployments/{executionId}/reject", request);
         return response;
     }
