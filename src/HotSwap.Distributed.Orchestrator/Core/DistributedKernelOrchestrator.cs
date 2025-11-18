@@ -26,6 +26,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
     private readonly TelemetryProvider _telemetry;
     private readonly PipelineConfiguration _pipelineConfig;
     private readonly IDeploymentTracker? _deploymentTracker;
+    private readonly IApprovalService? _approvalService;
+    private readonly IAuditLogService? _auditLogService;
     private readonly ConcurrentDictionary<EnvironmentType, EnvironmentCluster> _clusters;
     private readonly Dictionary<EnvironmentType, IDeploymentStrategy> _strategies;
     private DeploymentPipeline? _pipeline;
@@ -39,7 +41,9 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
         IModuleVerifier? moduleVerifier = null,
         TelemetryProvider? telemetry = null,
         PipelineConfiguration? pipelineConfig = null,
-        IDeploymentTracker? deploymentTracker = null)
+        IDeploymentTracker? deploymentTracker = null,
+        IApprovalService? approvalService = null,
+        IAuditLogService? auditLogService = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -50,6 +54,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
         _telemetry = telemetry ?? new TelemetryProvider();
         _pipelineConfig = pipelineConfig ?? new PipelineConfiguration();
         _deploymentTracker = deploymentTracker;
+        _approvalService = approvalService;
+        _auditLogService = auditLogService;
         _clusters = new ConcurrentDictionary<EnvironmentType, EnvironmentCluster>();
         _strategies = new Dictionary<EnvironmentType, IDeploymentStrategy>();
 
@@ -138,8 +144,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
                 _telemetry,
                 _pipelineConfig,
                 _strategies,
-                approvalService: null,
-                auditLogService: null,
+                approvalService: _approvalService,
+                auditLogService: _auditLogService,
                 deploymentTracker: _deploymentTracker);
 
             _initialized = true;

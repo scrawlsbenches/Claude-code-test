@@ -284,8 +284,17 @@ builder.Services.AddSingleton<INotificationService, LoggingNotificationService>(
 builder.Services.AddSingleton<IApprovalService, ApprovalService>();
 builder.Services.AddHostedService<ApprovalTimeoutBackgroundService>();
 
-// Register audit log retention background service
-builder.Services.AddHostedService<AuditLogRetentionBackgroundService>();
+// Register audit log service only if PostgreSQL is configured
+if (!string.IsNullOrEmpty(builder.Configuration["ConnectionStrings:PostgreSql"]))
+{
+    builder.Services.AddSingleton<IAuditLogService, HotSwap.Distributed.Infrastructure.Services.AuditLogService>();
+    builder.Services.AddHostedService<AuditLogRetentionBackgroundService>();
+}
+else
+{
+    // No PostgreSQL available, audit logging will be disabled
+    Log.Warning("PostgreSQL not configured - audit logging disabled");
+}
 
 // Register deployment tracking service
 builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
@@ -306,6 +315,8 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
     var telemetry = sp.GetRequiredService<TelemetryProvider>();
     var pipelineConfig = sp.GetRequiredService<PipelineConfiguration>();
     var deploymentTracker = sp.GetRequiredService<IDeploymentTracker>();
+    var approvalService = sp.GetRequiredService<IApprovalService>();
+    var auditLogService = sp.GetService<IAuditLogService>(); // Optional - may be null
 
     var orchestrator = new DistributedKernelOrchestrator(
         logger,
@@ -314,7 +325,9 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
         moduleVerifier,
         telemetry,
         pipelineConfig,
-        deploymentTracker);
+        deploymentTracker,
+        approvalService,
+        auditLogService);
 
     // Note: Orchestrator is created here but clusters are initialized synchronously
     // after app.Build() to ensure it's ready before accepting requests
