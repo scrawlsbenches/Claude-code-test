@@ -11,7 +11,7 @@ Welcome to the documentation hub for the Claude Code Test repository. This index
 
 | Category | Description | Key Documents |
 |----------|-------------|---------------|
-| **Tasks & Planning** | All project tasks and roadmaps | [TASKS.md](../TASKS.md) |
+| **Tasks & Planning** | All project tasks and roadmaps | [TASK_LIST.md](../TASK_LIST.md) |
 | **Design Documents** | System architecture and design | 3 design docs |
 | **Implementation Guides** | Step-by-step setup and configuration | 4 guides |
 | **Status & Reports** | Current project status and metrics | 4 status reports |
@@ -21,7 +21,7 @@ Welcome to the documentation hub for the Claude Code Test repository. This index
 
 ## 📋 Tasks & Planning
 
-### [TASKS.md](../TASKS.md) - Complete Project Task List
+### [TASK_LIST.md](../TASK_LIST.md) - Complete Project Task List
 **Single source of truth for all project tasks**
 
 **Contents:**
@@ -331,7 +331,7 @@ Older documentation that is no longer actively used but preserved for reference.
 - Historical feature additions
 - Implementation notes
 
-**Note:** Current enhancements are now tracked in PROJECT_STATUS_REPORT.md and TASKS.md.
+**Note:** Current enhancements are now tracked in PROJECT_STATUS_REPORT.md and TASK_LIST.md.
 
 ---
 
@@ -341,18 +341,18 @@ Older documentation that is no longer actively used but preserved for reference.
 1. Start with [README.md](../README.md) for project overview
 2. Read [CLAUDE.md](../CLAUDE.md) for development workflows
 3. Review [PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md) for current status
-4. Check [TASKS.md](../TASKS.md) for available work
+4. Check [TASK_LIST.md](../TASK_LIST.md) for available work
 
 ### For AI Assistants
 1. **MUST READ:** [CLAUDE.md](../CLAUDE.md) - Complete AI assistant guide
-2. Review [TASKS.md](../TASKS.md) for current priorities
+2. Review [TASK_LIST.md](../TASK_LIST.md) for current priorities
 3. Check [PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md) for project state
 4. Follow TDD workflow and pre-commit checklist from CLAUDE.md
 
 ### For Task Planning
-1. Check [TASKS.md](../TASKS.md) for all initiatives
+1. Check [TASK_LIST.md](../TASK_LIST.md) for all initiatives
 2. Review design documents for new initiatives
-3. Update TASKS.md when tasks are completed
+3. Update TASK_LIST.md when tasks are completed
 4. Reference implementation guides for similar features
 
 ### For Code Reviews
@@ -381,7 +381,7 @@ See [CLAUDE.md](../CLAUDE.md) section "Avoiding Stale Documentation" for compreh
 ## 📞 Getting Help
 
 **Questions about:**
-- **Tasks & Priorities:** See [TASKS.md](../TASKS.md)
+- **Tasks & Priorities:** See [TASK_LIST.md](../TASK_LIST.md)
 - **Development Workflow:** See [CLAUDE.md](../CLAUDE.md)
 - **Project Status:** See [PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md)
 - **Testing:** See [TESTING.md](TESTING.md)

@@ -38,7 +38,7 @@ Claude-code-test/
 ├── test-critical-paths.sh                    # Critical path validation
 ├── validate-code.sh                          # Code validation script
 ├── CLAUDE.md                                 # This file (AI assistant guide)
-├── TASKS.md                                  # Consolidated task list (all initiatives)
+├── TASK_LIST.md                                  # Consolidated task list (all initiatives)
 ├── docs/                                      # Documentation directory
 │   ├── README.md                             # Documentation index
 │   ├── PROJECT_STATUS_REPORT.md              # Production readiness status
@@ -158,7 +158,7 @@ Claude-code-test/
 15. [Testing Requirements](#testing-requirements) ⭐
 16. [Security Best Practices](#security-best-practices)
 17. [Documentation Standards](#documentation-standards)
-18. [Task Management with TASKS.md](#working-with-tasksmd)
+18. [Task Management with TASK_LIST.md](#working-with-tasksmd)
 
 ### AI Assistant Guidelines
 19. [AI Assistant Critical Rules](#ai-assistant-guidelines) ⭐⭐⭐
@@ -2074,17 +2074,17 @@ This project enforces Test-Driven Development. See the [Test-Driven Development 
 - **Break down complex tasks** into smaller steps
 - **Never mark a task complete if build or tests fail**
 
-### Working with TASKS.md
+### Working with TASK_LIST.md
 
 **Overview:**
-TASKS.md is the project's consolidated task list containing all tasks across three major initiatives:
+TASK_LIST.md is the project's consolidated task list containing all tasks across three major initiatives:
 1. Core System (HotSwap Distributed Kernel) - 20 tasks, 95% complete
 2. Knowledge Graph Initiative - 40 tasks, design complete
 3. Build Server Initiative - 30 tasks, design complete
 
 Total: 90 tasks representing ~20 weeks of work. It serves as the single source of truth for all planned work.
 
-**When to Consult TASKS.md:**
+**When to Consult TASK_LIST.md:**
 1. **At the start of any session** - Review to understand project priorities
 2. **When asked "what needs to be done"** - Reference the task list
 3. **Before proposing new features** - Check if already documented
@@ -2093,7 +2093,7 @@ Total: 90 tasks representing ~20 weeks of work. It serves as the single source o
 
 **Task List Structure:**
 ```
-TASKS.md
+TASK_LIST.md
 ├── Major Tasks (High Priority)
 │   ├── Task #1-5: Critical items (Auth, Security, etc.)
 │   └── Detailed requirements, acceptance criteria, effort estimates
@@ -2108,12 +2108,12 @@ TASKS.md
     └── Recommended sprint planning
 ```
 
-**How to Use TASKS.md:**
+**How to Use TASK_LIST.md:**
 
 1. **Read Before Starting Work:**
    ```bash
    # Always review the task list first
-   Read TASKS.md
+   Read TASK_LIST.md
    # Look for relevant tasks in your area
    ```
 
@@ -2164,45 +2164,45 @@ TASKS.md
    - Add references to related documentation
 
 3. **Communicate Changes:**
-   - Commit TASKS.md updates separately or with related code
+   - Commit TASK_LIST.md updates separately or with related code
    - Use descriptive commit messages for task list changes
-   - Example: `docs: update TASKS.md - mark rate limiting as completed`
+   - Example: `docs: update TASK_LIST.md - mark rate limiting as completed`
 
 4. **Reference in Commits:**
    When implementing a task from the list, reference it in commit messages:
    ```bash
-   git commit -m "feat: implement JWT authentication (Task #1 from TASKS.md)"
+   git commit -m "feat: implement JWT authentication (Task #1 from TASK_LIST.md)"
    ```
 
 **Example Workflow:**
 
 ```markdown
 # At start of session
-1. Read TASKS.md to understand priorities
+1. Read TASK_LIST.md to understand priorities
 2. User asks: "Add rate limiting to the API"
-3. Check TASKS.md - find Task #5: API Rate Limiting
+3. Check TASK_LIST.md - find Task #5: API Rate Limiting
 4. Review requirements, effort estimate (1 day), priority (Medium)
 5. Implement the feature following the documented requirements
-6. Update TASKS.md:
+6. Update TASK_LIST.md:
    - Change status from ⏳ to ✅
    - Add completion notes: "Implemented in src/Middleware/RateLimitingMiddleware.cs"
-7. Commit both code and TASKS.md update
+7. Commit both code and TASK_LIST.md update
 ```
 
-**When to Create a New TASKS.md:**
+**When to Create a New TASK_LIST.md:**
 - If the current one becomes too large (>50 tasks)
 - Archive old completed tasks to TASK_HISTORY.md
-- Start fresh TASKS.md with only pending/in-progress tasks
+- Start fresh TASK_LIST.md with only pending/in-progress tasks
 - Keep the summary statistics section updated
 
 **Integration with Other Documents:**
 - **docs/archive/ENHANCEMENTS.md** - Documents completed enhancements (archived)
 - **docs/PROJECT_STATUS_REPORT.md** - References task list for next steps
-- **README.md** - Links to TASKS.md and documentation
+- **README.md** - Links to TASK_LIST.md and documentation
 - **docs/SPEC_COMPLIANCE_REVIEW.md** - Identifies gaps that become tasks
 
 **Common Mistakes to Avoid:**
-- ❌ Don't skip reading TASKS.md when starting work
+- ❌ Don't skip reading TASK_LIST.md when starting work
 - ❌ Don't implement features without checking if they're documented
 - ❌ Don't forget to update status after completing tasks
 - ❌ Don't add duplicate tasks without checking existing entries
@@ -2376,10 +2376,10 @@ public async Task<string?> AuthenticateAsync(string username, string password)
    # 4. Update file references in other docs
    ```
 
-6. **Complete tasks from TASKS.md** - Update multiple docs
+6. **Complete tasks from TASK_LIST.md** - Update multiple docs
    ```bash
    # When completing a task:
-   # 1. Update TASKS.md (status from ⏳ to ✅)
+   # 1. Update TASK_LIST.md (status from ⏳ to ✅)
    # 2. Update docs/PROJECT_STATUS_REPORT.md (if status changed)
    # 3. Update docs/archive/ENHANCEMENTS.md or status report (add details)
    # 4. Update README.md (if user-facing feature)
@@ -2662,7 +2662,7 @@ dotnet test               # Should succeed
 1. **Use relative references** that auto-update
    ```markdown
    ✅ "See the [Authentication section](#authentication)"
-   ✅ "Refer to TASKS.md for current priorities"
+   ✅ "Refer to TASK_LIST.md for current priorities"
    ```
 
 2. **Document behavior, not implementation**
@@ -2702,7 +2702,7 @@ dotnet test               # Should succeed
    - Implements rate limiting middleware
    - Updates CLAUDE.md with rate limiting setup
    - Updates README.md with rate limiting configuration
-   - Updates TASKS.md (mark Task #5 as complete)
+   - Updates TASK_LIST.md (mark Task #5 as complete)
    - Adds rate limiting tests"
 
    # Bad commit:
@@ -2725,7 +2725,7 @@ dotnet test               # Should succeed
    # ✅ Tests passing
    # ✅ CLAUDE.md updated (if setup/testing affected)
    # ✅ README.md updated (if user-facing)
-   # ✅ TASKS.md updated (status changed)
+   # ✅ TASK_LIST.md updated (status changed)
    # ✅ Changelog updated in relevant docs
    ```
 
@@ -2739,7 +2739,7 @@ dotnet test               # Should succeed
    - TODO: Add examples to README.md
    - TODO: Update API documentation"
 
-   # Then create a TASKS.md entry to track it
+   # Then create a TASK_LIST.md entry to track it
    ```
 
 #### Documentation Staleness Detection
@@ -3442,16 +3442,16 @@ docker-compose --version
   - Build succeeds with expected 1 warning
 - Total additions: ~60 lines of installation and first-run documentation
 
-### 2025-11-15 (TASKS.md Integration)
-- **Added comprehensive "Working with TASKS.md" section** to AI Assistant Guidelines
-  - Overview and purpose of TASKS.md
+### 2025-11-15 (TASK_LIST.md Integration)
+- **Added comprehensive "Working with TASK_LIST.md" section** to AI Assistant Guidelines
+  - Overview and purpose of TASK_LIST.md
   - When to consult and how to use the task list
   - Task status indicators and priority levels
   - Best practices for maintenance and updates
   - Example workflows and task entry formats
   - Integration with other project documents
   - Common mistakes to avoid
-- **Updated Project Structure** to include TASKS.md and ENHANCEMENTS.md
+- **Updated Project Structure** to include TASK_LIST.md and ENHANCEMENTS.md
 - Total additions: ~160 lines of task management guidance
 
 ### 2025-11-14 (Update)

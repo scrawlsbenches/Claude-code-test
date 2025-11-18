@@ -221,7 +221,7 @@ dotnet test                    # 80 tests, ~10s
 ## Documentation
 
 **Quick Links:**
-- 📋 **[All Project Tasks (TASKS.md)](TASKS.md)** - Consolidated task list for all initiatives
+- 📋 **[All Project Tasks (TASK_LIST.md)](TASK_LIST.md)** - Consolidated task list for all initiatives
 - 📚 **[Documentation Index (docs/README.md)](docs/README.md)** - Complete documentation guide
 - 🤖 **[AI Assistant Guide (CLAUDE.md)](CLAUDE.md)** - Development workflows and guidelines
 - 📊 **[Project Status (docs/PROJECT_STATUS_REPORT.md)](docs/PROJECT_STATUS_REPORT.md)** - Current status and metrics
@@ -232,7 +232,7 @@ dotnet test                    # 80 tests, ~10s
 This repository uses a consolidated documentation structure:
 
 **Root Level:**
-- **[TASKS.md](TASKS.md)** - Single source of truth for all project tasks
+- **[TASK_LIST.md](TASK_LIST.md)** - Single source of truth for all project tasks
   - Core System (20 tasks, 95% complete)
   - Knowledge Graph Initiative (40 tasks, design complete)
   - Build Server Initiative (30 tasks, design complete)
@@ -257,12 +257,12 @@ This repository uses a consolidated documentation structure:
 1. Start with **[README.md](README.md)** (this file) for project overview
 2. Read **[CLAUDE.md](CLAUDE.md)** for development workflows
 3. Review **[docs/PROJECT_STATUS_REPORT.md](docs/PROJECT_STATUS_REPORT.md)** for current status
-4. Check **[TASKS.md](TASKS.md)** for available work
+4. Check **[TASK_LIST.md](TASK_LIST.md)** for available work
 
 ### For AI Assistants
 
 1. **MUST READ:** [CLAUDE.md](CLAUDE.md) - Complete AI assistant guide with TDD workflow
-2. Review [TASKS.md](TASKS.md) for current priorities
+2. Review [TASK_LIST.md](TASK_LIST.md) for current priorities
 3. Check [docs/PROJECT_STATUS_REPORT.md](docs/PROJECT_STATUS_REPORT.md) for project state
 4. Follow pre-commit checklist before EVERY commit
 
