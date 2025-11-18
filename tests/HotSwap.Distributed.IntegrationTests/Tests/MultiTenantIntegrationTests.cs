@@ -14,28 +14,28 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 /// Tests tenant creation, management, subscription updates, and tenant isolation.
 /// </summary>
 [Collection("IntegrationTests")]
-public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IAsyncLifetime
+public class MultiTenantIntegrationTests : IAsyncLifetime
 {
+    private readonly IntegrationTestFactory _factory;
     private readonly PostgreSqlContainerFixture _postgreSqlFixture;
     private readonly RedisContainerFixture _redisFixture;
-    private IntegrationTestFactory? _factory;
     private HttpClient? _client;
     private AuthHelper? _authHelper;
 
     public MultiTenantIntegrationTests(
+        IntegrationTestFactory factory,
         PostgreSqlContainerFixture postgreSqlFixture,
         RedisContainerFixture redisFixture)
     {
+        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
         _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
     }
 
     public async Task InitializeAsync()
     {
-        // Create factory and client for each test
-        _factory = new IntegrationTestFactory(_postgreSqlFixture, _redisFixture);
-        await _factory.InitializeAsync();
-
+        // Factory is already initialized by collection fixture
+        // Just create client for each test
         _client = _factory.CreateClient();
         _authHelper = new AuthHelper(_client);
 
@@ -47,10 +47,8 @@ public class MultiTenantIntegrationTests : IClassFixture<PostgreSqlContainerFixt
     public async Task DisposeAsync()
     {
         _client?.Dispose();
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        // Factory is disposed by collection fixture, not here
+        await Task.CompletedTask;
     }
 
     #region Tenant Creation Tests

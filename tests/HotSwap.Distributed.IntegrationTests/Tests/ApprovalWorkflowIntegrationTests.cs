@@ -12,11 +12,11 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 /// including approval, rejection, and timeout scenarios.
 /// </summary>
 [Collection("IntegrationTests")]
-public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IAsyncLifetime
+public class ApprovalWorkflowIntegrationTests : IAsyncLifetime
 {
+    private readonly IntegrationTestFactory _factory;
     private readonly PostgreSqlContainerFixture _postgreSqlFixture;
     private readonly RedisContainerFixture _redisFixture;
-    private IntegrationTestFactory? _factory;
     private HttpClient? _client;
     private HttpClient? _adminClient;
     private AuthHelper? _authHelper;
@@ -24,18 +24,19 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
     private ApiClientHelper? _adminApiHelper;
 
     public ApprovalWorkflowIntegrationTests(
+        IntegrationTestFactory factory,
         PostgreSqlContainerFixture postgreSqlFixture,
         RedisContainerFixture redisFixture)
     {
+        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
         _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
     }
 
     public async Task InitializeAsync()
     {
-        // Create factory and clients for each test
-        _factory = new IntegrationTestFactory(_postgreSqlFixture, _redisFixture);
-        await _factory.InitializeAsync();
+        // Factory is already initialized by collection fixture
+        // Just create clients for each test
 
         // Create deployer client (for creating deployments)
         _client = _factory.CreateClient();
@@ -56,10 +57,8 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
     {
         _client?.Dispose();
         _adminClient?.Dispose();
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        // Factory is disposed by collection fixture, not here
+        await Task.CompletedTask;
     }
 
     #region Approval Creation Tests
