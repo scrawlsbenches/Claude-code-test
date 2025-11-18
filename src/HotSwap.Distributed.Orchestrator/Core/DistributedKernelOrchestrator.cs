@@ -294,7 +294,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
         var disposeTasks = _clusters.Values.Select(c => c.DisposeAsync().AsTask());
         await Task.WhenAll(disposeTasks);
 
-        _clusters.Clear();
+        // Don't clear clusters dictionary - allow in-flight deployments to complete gracefully
+        // Clusters are already disposed individually above
 
         // Dispose telemetry
         _telemetry.Dispose();

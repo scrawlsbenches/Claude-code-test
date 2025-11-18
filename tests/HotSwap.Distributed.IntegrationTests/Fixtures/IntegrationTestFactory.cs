@@ -63,12 +63,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // Security configuration for tests
                 ["Security:StrictMode"] = "false", // Relax signature verification in tests
 
-                // Rate limiting - higher limits for tests
-                ["RateLimiting:GlobalRateLimit"] = "10000",
-                ["RateLimiting:DeploymentRateLimit"] = "100",
-                ["RateLimiting:ClusterRateLimit"] = "600",
-                ["RateLimiting:ApprovalRateLimit"] = "300",
-                ["RateLimiting:AuthenticationRateLimit"] = "50",
+                // Disable rate limiting for integration tests
+                // Tests should not be blocked by rate limits - they test functionality, not rate limiting
+                ["RateLimiting:Enabled"] = "false",
 
                 // CORS - allow test origins
                 ["Cors:AllowedOrigins:0"] = "http://localhost",
@@ -76,6 +73,21 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // Pipeline configuration
                 ["Pipeline:MaxConcurrentDeployments"] = "10",
                 ["Pipeline:DefaultTimeoutMinutes"] = "5",
+
+                // Reduce logging verbosity for integration tests
+                // Only log warnings and errors to avoid 27k+ log lines
+                ["Serilog:MinimumLevel:Default"] = "Warning",
+                ["Serilog:MinimumLevel:Override:Microsoft"] = "Warning",
+                ["Serilog:MinimumLevel:Override:Microsoft.AspNetCore"] = "Warning",
+                ["Serilog:MinimumLevel:Override:System"] = "Warning",
+                ["Serilog:MinimumLevel:Override:HotSwap.Distributed"] = "Warning",
+                ["Logging:LogLevel:Default"] = "Warning",
+                ["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning",
+                ["Logging:LogLevel:HotSwap.Distributed"] = "Warning",
+
+                // Disable OpenTelemetry Activity console output (prevents massive trace spam)
+                ["Logging:Console:FormatterName"] = "simple",
+                ["Logging:Console:FormatterOptions:IncludeScopes"] = "false",
             });
         });
 

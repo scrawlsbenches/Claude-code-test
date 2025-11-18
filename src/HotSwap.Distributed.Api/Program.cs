@@ -37,10 +37,10 @@ builder.Services.Configure<FormOptions>(options =>
 });
 
 // Configure Serilog
+// Note: Console sink is configured in appsettings.json - don't add it again here
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -109,8 +109,14 @@ builder.Services.AddOpenTelemetry()
             .SetResourceBuilder(ResourceBuilder.CreateDefault()
                 .AddService(TelemetryProvider.ServiceName, serviceVersion: TelemetryProvider.ServiceVersion))
             .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddConsoleExporter();
+            .AddHttpClientInstrumentation();
+
+        // Only add console exporter if explicitly enabled (disabled for tests to reduce log spam)
+        var enableConsoleExporter = builder.Configuration.GetValue<bool>("Telemetry:EnableConsoleExporter", false);
+        if (enableConsoleExporter)
+        {
+            tracerProviderBuilder.AddConsoleExporter();
+        }
 
         // Add Jaeger exporter if configured
         var jaegerEndpoint = builder.Configuration["Telemetry:JaegerEndpoint"];
@@ -151,11 +157,31 @@ builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 
 // Register messaging services
 builder.Services.AddSingleton<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessageQueue>();
-builder.Services.AddSingleton<IMessagePersistence>(sp =>
+
+// Only register Redis-based message persistence if Redis is configured
+if (!string.IsNullOrEmpty(builder.Configuration["Redis:ConnectionString"]))
 {
-    var redis = sp.GetRequiredService<IConnectionMultiplexer>();
-    return new HotSwap.Distributed.Infrastructure.Messaging.RedisMessagePersistence(redis);
-});
+    builder.Services.AddSingleton<IMessagePersistence>(sp =>
+    {
+        try
+        {
+            var redis = sp.GetRequiredService<IConnectionMultiplexer>();
+            return new HotSwap.Distributed.Infrastructure.Messaging.RedisMessagePersistence(redis);
+        }
+        catch (Exception ex)
+        {
+            var logger = sp.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Redis not available for message persistence, using in-memory fallback. Error: {Error}", ex.Message);
+            // Fallback to in-memory (messages won't persist, but app will work)
+            return new HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessagePersistence();
+        }
+    });
+}
+else
+{
+    // No Redis configured, use in-memory persistence
+    builder.Services.AddSingleton<IMessagePersistence, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessagePersistence>();
+}
 
 // Configure JWT authentication
 builder.Services.AddAuthentication(options =>
@@ -207,7 +233,40 @@ var redisConnection = builder.Configuration["Redis:ConnectionString"];
 if (!string.IsNullOrEmpty(redisConnection))
 {
     builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-        ConnectionMultiplexer.Connect(redisConnection));
+    {
+        var logger = sp.GetRequiredService<ILogger<Program>>();
+
+        // Retry logic with exponential backoff for Redis connection
+        var maxRetries = 3;
+        var baseDelay = TimeSpan.FromSeconds(1);
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                logger.LogInformation("Attempting to connect to Redis (attempt {Attempt}/{MaxRetries})", attempt + 1, maxRetries);
+                var connection = ConnectionMultiplexer.Connect(redisConnection);
+                logger.LogInformation("Successfully connected to Redis");
+                return connection;
+            }
+            catch (Exception ex) when (attempt < maxRetries - 1)
+            {
+                var delay = baseDelay * Math.Pow(2, attempt); // Exponential backoff: 1s, 2s, 4s
+                logger.LogWarning("Failed to connect to Redis (attempt {Attempt}/{MaxRetries}). Retrying in {Delay}s. Error: {Error}",
+                    attempt + 1, maxRetries, delay.TotalSeconds, ex.Message);
+                Thread.Sleep(delay);
+            }
+            catch (Exception ex)
+            {
+                // Final attempt failed - log once and return null
+                logger.LogError("Failed to connect to Redis after {MaxRetries} attempts. Redis features will be unavailable. Error: {Error}",
+                    maxRetries, ex.Message);
+                throw; // Let DI handle the failure
+            }
+        }
+
+        throw new InvalidOperationException("Failed to connect to Redis after retries");
+    });
 
     builder.Services.AddSingleton<IDistributedLock, RedisDistributedLock>();
 }
@@ -234,8 +293,8 @@ builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
 // Register rate limit cleanup service
 builder.Services.AddHostedService<RateLimitCleanupService>();
 
-// Register orchestrator initialization service
-builder.Services.AddHostedService<OrchestratorInitializationService>();
+// Note: Orchestrator initialization now happens synchronously after app.Build()
+// to ensure it's ready before accepting requests (removed background service)
 
 // Register orchestrator as singleton
 builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
@@ -257,8 +316,8 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
         pipelineConfig,
         deploymentTracker);
 
-    // Note: Cluster initialization happens asynchronously via OrchestratorInitializationService
-    // to avoid blocking the application startup
+    // Note: Orchestrator is created here but clusters are initialized synchronously
+    // after app.Build() to ensure it's ready before accepting requests
 
     return orchestrator;
 });
@@ -309,6 +368,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Initialize orchestrator clusters BEFORE starting the API
+// This ensures the orchestrator is ready before any requests are handled
+// Without this, first requests fail with "Orchestrator not initialized"
+var orchestrator = app.Services.GetRequiredService<DistributedKernelOrchestrator>();
+await orchestrator.InitializeClustersAsync();
+Log.Information("Orchestrator clusters initialized successfully");
 
 // Configure the HTTP request pipeline
 

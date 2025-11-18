@@ -40,6 +40,9 @@ RUN dotnet publish "HotSwap.Distributed.Api.csproj" -c Release -o /app/publish /
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
+# Install curl for health checks (as root before switching to appuser)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
@@ -49,8 +52,8 @@ COPY --from=publish --chown=appuser:appuser /app/publish .
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# Health check with longer start period to avoid race condition during app startup
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["dotnet", "HotSwap.Distributed.Api.dll"]
