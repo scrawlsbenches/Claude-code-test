@@ -220,54 +220,51 @@ dotnet test                    # 80 tests, ~10s
 
 ## Documentation
 
-This repository includes comprehensive documentation organized into multiple sections:
+**Quick Links:**
+- 📋 **[All Project Tasks (TASK_LIST.md)](TASK_LIST.md)** - Consolidated task list for all initiatives
+- 📚 **[Documentation Index (docs/README.md)](docs/README.md)** - Complete documentation guide
+- 🤖 **[AI Assistant Guide (CLAUDE.md)](CLAUDE.md)** - Development workflows and guidelines
+- 📊 **[Project Status (docs/PROJECT_STATUS_REPORT.md)](docs/PROJECT_STATUS_REPORT.md)** - Current status and metrics
+- 🔍 **[Swagger/OpenAPI](http://localhost:5000/swagger)** - Interactive API documentation (when API is running)
 
-### Core Documentation
-- **[README.md](README.md)** - Quick start and overview (this file)
-- **[CLAUDE.md](CLAUDE.md)** - Development guidelines for AI assistants
-- **[TESTING.md](TESTING.md)** - Complete testing guide and procedures
-- **[PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md)** - Production readiness status
-- **[SPEC_COMPLIANCE_REVIEW.md](SPEC_COMPLIANCE_REVIEW.md)** - Specification compliance analysis
-- **[BUILD_STATUS.md](BUILD_STATUS.md)** - Build validation report
-- **Swagger/OpenAPI** - Interactive API documentation at `/swagger`
+### Documentation Structure
 
-### Workflows & Guides
-- **[workflows/pre-commit-checklist.md](workflows/pre-commit-checklist.md)** - Visual pre-commit workflow with Mermaid diagrams
-- **[workflows/tdd-workflow.md](workflows/tdd-workflow.md)** - Test-Driven Development Red-Green-Refactor cycle
-- **[workflows/git-workflow.md](workflows/git-workflow.md)** - Git conventions and branching strategy
-- **[workflows/task-management.md](workflows/task-management.md)** - Using TASK_LIST.md for project planning
+This repository uses a consolidated documentation structure:
 
-### Code Templates
-- **[templates/test-template.cs](templates/test-template.cs)** - Comprehensive unit test template with xUnit and FluentAssertions
-- **[templates/service-template.cs](templates/service-template.cs)** - Service layer implementation template with DI and async patterns
-- **[templates/controller-template.cs](templates/controller-template.cs)** - REST API controller template with validation and error handling
+**Root Level:**
+- **[TASK_LIST.md](TASK_LIST.md)** - Single source of truth for all project tasks
+  - Core System (20 tasks, 95% complete)
+  - Knowledge Graph Initiative (40 tasks, design complete)
+  - Build Server Initiative (30 tasks, design complete)
+- **[CLAUDE.md](CLAUDE.md)** - Comprehensive guide for AI assistants and developers
+- **[README.md](README.md)** - This file (project overview and quick start)
 
-### Detailed Appendices
-- **[appendices/A-DETAILED-SETUP.md](appendices/A-DETAILED-SETUP.md)** - Step-by-step development environment setup
-- **[appendices/B-NO-SDK-CHECKLIST.md](appendices/B-NO-SDK-CHECKLIST.md)** - Development workflow without local .NET SDK
-- **[appendices/C-STALE-DOCS-GUIDE.md](appendices/C-STALE-DOCS-GUIDE.md)** - Preventing stale documentation
-- **[appendices/D-TDD-PATTERNS.md](appendices/D-TDD-PATTERNS.md)** - Advanced Test-Driven Development patterns
-- **[appendices/E-TROUBLESHOOTING.md](appendices/E-TROUBLESHOOTING.md)** - Comprehensive troubleshooting guide
-- **[appendices/F-CHANGELOG.md](appendices/F-CHANGELOG.md)** - Complete changelog history
+**docs/ Directory:**
+- **[docs/README.md](docs/README.md)** - Documentation index and navigation hub
+- **Status Reports:** PROJECT_STATUS_REPORT.md, SPEC_COMPLIANCE_REVIEW.md, BUILD_STATUS.md
+- **Design Documents:** BUILD_SERVER_DESIGN.md, KNOWLEDGE_GRAPH_DESIGN.md, MULTITENANT_WEBSITE_SYSTEM_PLAN.md
+- **Implementation Guides:** JWT_AUTHENTICATION_GUIDE.md, HTTPS_SETUP_GUIDE.md, APPROVAL_WORKFLOW_GUIDE.md
+- **Testing:** TESTING.md - Complete testing strategy and results
+- **archive/** - Older documentation preserved for reference
 
-### Automation Scripts
-- **update-docs-metrics.sh** - Auto-update documentation metrics (test count, .NET version)
-- **docs-validation.sh** - Validate documentation freshness and accuracy
-- **pre-commit-docs-reminder.sh** - Pre-commit documentation reminders
-- **hooks/pre-commit** - Git pre-commit hook for documentation validation
+**Specialized Directories:**
+- **workflows/** - Visual workflow guides (TDD, Git, pre-commit)
+- **templates/** - Code templates for tests, services, controllers
+- **appendices/** - Detailed setup, troubleshooting, and reference guides
 
-**Usage:**
-```bash
-# Update documentation metrics automatically
-./update-docs-metrics.sh --yes
+### For New Developers
 
-# Validate documentation freshness
-./docs-validation.sh
+1. Start with **[README.md](README.md)** (this file) for project overview
+2. Read **[CLAUDE.md](CLAUDE.md)** for development workflows
+3. Review **[docs/PROJECT_STATUS_REPORT.md](docs/PROJECT_STATUS_REPORT.md)** for current status
+4. Check **[TASK_LIST.md](TASK_LIST.md)** for available work
 
-# Install pre-commit hook
-cp hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
-```
+### For AI Assistants
+
+1. **MUST READ:** [CLAUDE.md](CLAUDE.md) - Complete AI assistant guide with TDD workflow
+2. Review [TASK_LIST.md](TASK_LIST.md) for current priorities
+3. Check [docs/PROJECT_STATUS_REPORT.md](docs/PROJECT_STATUS_REPORT.md) for project state
+4. Follow pre-commit checklist before EVERY commit
 
 ## Security
 

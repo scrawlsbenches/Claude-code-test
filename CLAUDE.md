@@ -38,13 +38,15 @@ Claude-code-test/
 ├── test-critical-paths.sh                    # Critical path validation
 ├── validate-code.sh                          # Code validation script
 ├── CLAUDE.md                                 # This file (AI assistant guide)
-├── TASK_LIST.md                              # Comprehensive task roadmap (20+ tasks)
-├── ENHANCEMENTS.md                           # Recent enhancements documentation
+├── TASK_LIST.md                                  # Consolidated task list (all initiatives)
+├── docs/                                      # Documentation directory
+│   ├── README.md                             # Documentation index
+│   ├── PROJECT_STATUS_REPORT.md              # Production readiness status
+│   ├── SPEC_COMPLIANCE_REVIEW.md             # Specification compliance
+│   ├── BUILD_STATUS.md                       # Build validation report
+│   ├── TESTING.md                            # Testing documentation
+│   └── archive/                              # Archived documentation
 ├── README.md                                 # Project overview
-├── TESTING.md                                # Testing documentation
-├── PROJECT_STATUS_REPORT.md                  # Production readiness status
-├── SPEC_COMPLIANCE_REVIEW.md                 # Specification compliance
-├── BUILD_STATUS.md                           # Build validation report
 ├── LICENSE                                   # MIT License
 └── .gitignore                               # .NET gitignore
 ```
@@ -156,7 +158,7 @@ Claude-code-test/
 15. [Testing Requirements](#testing-requirements) ⭐
 16. [Security Best Practices](#security-best-practices)
 17. [Documentation Standards](#documentation-standards)
-18. [Task Management with TASK_LIST.md](#working-with-task_listmd)
+18. [Task Management with TASK_LIST.md](#working-with-tasksmd)
 
 ### AI Assistant Guidelines
 19. [AI Assistant Critical Rules](#ai-assistant-guidelines) ⭐⭐⭐
@@ -2075,7 +2077,12 @@ This project enforces Test-Driven Development. See the [Test-Driven Development 
 ### Working with TASK_LIST.md
 
 **Overview:**
-TASK_LIST.md is the project's comprehensive task roadmap, containing 20+ prioritized tasks derived from analyzing all project documentation. It serves as the single source of truth for planned enhancements, known gaps, and future work.
+TASK_LIST.md is the project's consolidated task list containing all tasks across three major initiatives:
+1. Core System (HotSwap Distributed Kernel) - 20 tasks, 95% complete
+2. Knowledge Graph Initiative - 40 tasks, design complete
+3. Build Server Initiative - 30 tasks, design complete
+
+Total: 90 tasks representing ~20 weeks of work. It serves as the single source of truth for all planned work.
 
 **When to Consult TASK_LIST.md:**
 1. **At the start of any session** - Review to understand project priorities
@@ -2189,10 +2196,10 @@ TASK_LIST.md
 - Keep the summary statistics section updated
 
 **Integration with Other Documents:**
-- **ENHANCEMENTS.md** - Documents completed enhancements in detail
-- **PROJECT_STATUS_REPORT.md** - References task list for next steps
-- **README.md** - May link to high-priority tasks
-- **SPEC_COMPLIANCE_REVIEW.md** - Identifies gaps that become tasks
+- **docs/archive/ENHANCEMENTS.md** - Documents completed enhancements (archived)
+- **docs/PROJECT_STATUS_REPORT.md** - References task list for next steps
+- **README.md** - Links to TASK_LIST.md and documentation
+- **docs/SPEC_COMPLIANCE_REVIEW.md** - Identifies gaps that become tasks
 
 **Common Mistakes to Avoid:**
 - ❌ Don't skip reading TASK_LIST.md when starting work
@@ -2373,8 +2380,8 @@ public async Task<string?> AuthenticateAsync(string username, string password)
    ```bash
    # When completing a task:
    # 1. Update TASK_LIST.md (status from ⏳ to ✅)
-   # 2. Update PROJECT_STATUS_REPORT.md (if status changed)
-   # 3. Update ENHANCEMENTS.md (add implementation details)
+   # 2. Update docs/PROJECT_STATUS_REPORT.md (if status changed)
+   # 3. Update docs/archive/ENHANCEMENTS.md or status report (add details)
    # 4. Update README.md (if user-facing feature)
    # 5. Update CLAUDE.md (if it affects setup, testing, or workflows)
    ```

@@ -1,430 +1,190 @@
-# Comprehensive Task List - Distributed Kernel Orchestration System
+# Project Tasks - Claude Code Test
 
-**Generated:** 2025-11-15
-**Source:** Analysis of all project markdown documentation
-**Current Status:** Production Ready (95% Spec Compliance)
+**Last Updated:** 2025-11-18
+**Repository:** scrawlsbenches/Claude-code-test
 
 ---
 
 ## Overview
 
-This document consolidates all identified tasks, enhancements, and gaps from the project documentation into a prioritized action plan.
+This document consolidates all tasks across three major initiatives in the Claude Code Test repository. Tasks are organized by initiative, priority, and status.
 
-## Major Tasks (High Priority)
+**Quick Navigation:**
+- [Core System Tasks](#1-core-system-tasks-hotswap-distributed-kernel) - Main orchestration system (95% complete)
+- [Knowledge Graph Initiative](#2-knowledge-graph-initiative) - Graph storage and query system (Design complete, 0% implemented)
+- [Build Server Initiative](#3-build-server-initiative) - Distributed build system (Design complete, 0% implemented)
 
-These tasks are critical for enterprise production deployment or address specification gaps.
+---
 
-### 1. Authentication & Authorization
-**Priority:** 🔴 Critical
-**Status:** ✅ **Completed** (2025-11-15)
-**Effort:** 2-3 days (Actual: 1 day)
-**References:** README.md:238, PROJECT_STATUS_REPORT.md:514, SPEC_COMPLIANCE_REVIEW.md:313, ENHANCEMENTS.md:22
+## Task Summary
 
-**Requirements:**
-- [x] Implement JWT bearer token authentication
-- [x] Add authentication middleware to API pipeline
-- [x] Create token validation service
-- [x] Implement role-based access control (RBAC)
-- [x] Add authorization policies for deployment operations
-- [x] Create user/service principal management
-- [x] Add authentication to Swagger UI
+| Initiative | Total Tasks | Completed | In Progress | Not Started | Estimated Effort |
+|-----------|-------------|-----------|-------------|-------------|------------------|
+| **Core System** | 20 | 5 (25%) | 0 | 15 | 40-60 days |
+| **Knowledge Graph** | 40 | 0 (0%) | 0 | 40 | 37.5 days (7.5 weeks) |
+| **Build Server** | 30 | 0 (0%) | 0 | 30 | 153 hours (4 weeks) |
+| **TOTAL** | **90** | **5 (6%)** | **0** | **85** | **~20 weeks** |
 
-**Implementation Summary:**
+**Status Legend:**
+- ✅ Completed
+- ⏳ Not Started
+- 🔄 In Progress
+- ⚠️ Blocked
+
+**Priority Legend:**
+- 🔴 Critical - Required for production
+- 🟡 High - Important for enterprise use
+- 🟢 Medium - Valuable enhancements
+- ⚪ Low - Nice-to-have features
+
+---
+
+# 1. Core System Tasks (HotSwap Distributed Kernel)
+
+**Status:** Production Ready (95% Specification Compliance)
+**Build Status:** ✅ Passing (582 tests: 568 passing, 14 skipped)
+**Test Coverage:** 85%+
+
+## 1.1 Completed Tasks (Sprint 1 - November 2025)
+
+### ✅ Task 1: Authentication & Authorization
+**Priority:** 🔴 Critical | **Status:** ✅ Completed (2025-11-15) | **Effort:** 1 day
+
+**Implementation:**
 - JWT bearer token authentication with configurable expiration
-- Three user roles: Admin (full access), Deployer (deployment management), Viewer (read-only)
-- BCrypt password hashing for secure credential storage
-- Swagger UI integrated with Bearer token authentication
-- Demo users for testing (admin/Admin123!, deployer/Deploy123!, viewer/Viewer123!)
+- Three user roles: Admin, Deployer, Viewer
+- BCrypt password hashing for secure credentials
+- Swagger UI with Bearer token auth
 - 30+ comprehensive unit tests
-- Complete documentation in JWT_AUTHENTICATION_GUIDE.md
-
-**New Files:**
-- Domain: UserRole enum, User model, AuthenticationModels
-- Infrastructure: IJwtTokenService, IUserRepository, JwtTokenService, InMemoryUserRepository
-- API: AuthenticationController with login/me/demo-credentials endpoints
-- Tests: JwtTokenServiceTests (15 tests), InMemoryUserRepositoryTests (15 tests)
-
-**API Endpoints:**
-```
-POST   /api/v1/authentication/login           - Login and get JWT token
-GET    /api/v1/authentication/me              - Get current user info
-GET    /api/v1/authentication/demo-credentials - Get demo credentials (dev only)
-```
-
-**Protected Endpoints:**
-- Deployments (Deployer/Admin): POST create, POST rollback
-- Deployments (All roles): GET list, GET status
-- Approvals (Admin only): POST approve, POST reject
-- Approvals (All roles): GET pending, GET details
-- Clusters (All roles): GET all, GET details, GET metrics
-
-**Acceptance Criteria:**
-- ✅ All API endpoints require valid JWT tokens
-- ✅ Different roles (Admin, Deployer, Viewer) have appropriate permissions
-- ✅ Token expiration and validation working
-- ✅ Secure token storage guidance in documentation
-
-**Impact:** High - Production security requirement now satisfied
-
----
-
-### 2. Approval Workflow System
-**Priority:** 🔴 High
-**Status:** ✅ **Completed** (2025-11-15)
-**Effort:** 3-4 days (Actual: 1 day)
-**References:** SPEC_COMPLIANCE_REVIEW.md:228, BUILD_STATUS.md:378, APPROVAL_WORKFLOW_GUIDE.md
-
-**Requirements:**
-- [x] Implement approval gate for Staging deployments
-- [x] Implement approval gate for Production deployments
-- [x] Create approval request model and API endpoints
-- [x] Add approval status tracking to deployments
-- [x] Implement email notifications to approvers
-- [x] Add approval timeout handling (auto-reject after 24h)
-- [x] Create approval audit trail (logged events)
-
-**API Endpoints:**
-```
-GET    /api/v1/approvals/pending
-GET    /api/v1/approvals/deployments/{executionId}
-POST   /api/v1/approvals/deployments/{executionId}/approve
-POST   /api/v1/approvals/deployments/{executionId}/reject
-```
-
-**Acceptance Criteria:**
-- ✅ Staging deployments pause for approval before execution
-- ✅ Production deployments require explicit approval
-- ✅ Approvers receive notifications (logged to console)
-- ✅ Approval decisions are logged in audit trail
-- ✅ Deployments auto-reject after timeout (background service)
-
-**Implementation Summary:**
-- Domain models: ApprovalStatus enum, ApprovalRequest, ApprovalDecision
-- Services: ApprovalService, LoggingNotificationService
-- Pipeline integration: Approval gates before Staging and Production
-- API: ApprovalsController with 4 endpoints
-- Background service: ApprovalTimeoutBackgroundService (5-min interval)
-- Unit tests: 10+ comprehensive test cases
-- Documentation: APPROVAL_WORKFLOW_GUIDE.md
-
-**Impact:** High - Specification requirement at 80% compliance
-
----
-
-### 3. PostgreSQL Audit Log Persistence
-**Priority:** 🟡 Medium-High
-**Status:** ✅ Complete (Production Ready)
-**Effort:** 2-3 days (100% complete)
-**Completed:** 2025-11-16
-**References:** SPEC_COMPLIANCE_REVIEW.md:235, PROJECT_STATUS_REPORT.md:496, docs/AUDIT_LOG_SCHEMA.md
-
-**Requirements:**
-- [x] Design audit log database schema
-- [x] Implement Entity Framework Core models
-- [x] Create AuditLogService with repository pattern
-- [x] Persist all deployment events (pipeline-level)
-- [x] Persist approval events
-- [ ] Persist rollback events
-- [ ] Persist configuration changes
-- [x] Persist security events (authentication/authorization)
-- [x] Implement retention policy (configurable)
-- [x] Add database migration scripts
-
-**Schema Tables:**
-```sql
-- audit_logs (id, timestamp, event_type, user, details, trace_id)
-- deployment_events (deployment_id, stage, status, duration)
-- approval_events (deployment_id, approver, decision, reason)
-```
-
-**Implementation Summary (2025-11-16):**
-- Comprehensive database schema designed: 5 tables with full indexing strategy
-- EF Core entity models created: AuditLog, DeploymentAuditEvent, ApprovalAuditEvent, AuthenticationAuditEvent, ConfigurationAuditEvent
-- AuditLogDbContext with complete configuration (indexes, relationships, PostgreSQL-specific features)
-- IAuditLogService interface with 10 methods for CRUD operations
-- AuditLogService implementation with comprehensive error handling
-- 13 comprehensive unit tests using in-memory database (all passing)
-- EF Core migration generated (InitialAuditLogSchema)
-- DeploymentPipeline integrated: pipeline start/completion/failure events
-- ApprovalService integrated: approval requested/granted/rejected events
-- AuthenticationController integrated: login success/failure, token validation, suspicious activity detection
-- AuditLogRetentionBackgroundService: daily cleanup of logs older than 90 days
-- AuditLogsController: 5 REST API endpoints for querying audit logs (Admin-only)
-- OpenTelemetry trace ID correlation for distributed tracing
-- HTTP context data capture: source IP, user agent
-
-**Files Created/Modified:**
-- docs/AUDIT_LOG_SCHEMA.md - Comprehensive schema documentation
-- 5 entity models in Infrastructure/Data/Entities/
-- AuditLogDbContext.cs and AuditLogDbContextFactory.cs
-- IAuditLogService.cs and AuditLogService.cs
-- AuditLogServiceTests.cs (13 tests)
-- Migration: 20251116202007_InitialAuditLogSchema.cs
-- DeploymentPipeline.cs - Integrated audit logging (3 events)
-- ApprovalService.cs - Integrated audit logging (3 events)
-- AuthenticationController.cs - Integrated audit logging (4 events + suspicious activity detection)
-- AuditLogRetentionBackgroundService.cs - Daily cleanup of old audit logs
-- AuditLogsController.cs - REST API for querying audit logs (5 endpoints)
-- Program.cs - Registered retention background service
-
-**Acceptance Criteria:**
-- ✅ Database schema designed and indexed for performance
-- ✅ All deployment pipeline events persisted to PostgreSQL
-- ✅ Approval events persisted
-- ✅ Authentication events persisted with suspicious activity detection
-- ✅ Retention policy implemented (90-day default, daily execution)
-- ✅ Query API for audit log retrieval (5 Admin-only endpoints)
-
-**Impact:** Medium - Important for compliance and troubleshooting
-
----
-
-### 4. Integration Test Suite
-**Priority:** 🟡 Medium
-**Status:** ✅ **Completed** (2025-11-17)
-**Effort:** 3-4 days (Actual: 1 day)
-**Completed:** 2025-11-17
-**References:** TESTING.md:124, SPEC_COMPLIANCE_REVIEW.md:276, BUILD_STATUS.md:386, INTEGRATION_TEST_PLAN.md
-
-**Requirements:**
-- [x] Set up Testcontainers for Docker-based testing
-- [x] Create integration test project
-- [x] Write end-to-end deployment tests (all strategies)
-- [x] Test API endpoint integration
-- [x] Test Redis distributed lock integration
-- [x] Test Jaeger tracing integration
-- [x] Test PostgreSQL audit log integration
-- [x] Add CI/CD integration test stage
-- [x] Test messaging system integration
-- [x] Test multi-tenant system integration
-
-**Test Coverage - 82 Integration Tests:**
-
-1. **BasicIntegrationTests.cs** (9 tests)
-   - Health check endpoint verification
-   - Authentication with 3 roles (Admin, Deployer, Viewer)
-   - JWT token generation and validation
-   - Cluster listing and retrieval
-   - Authorization (401/403 responses)
-
-2. **DeploymentStrategyIntegrationTests.cs** (9 tests)
-   - Direct Strategy (Development) - 2 tests
-   - Rolling Strategy (QA) - 2 tests
-   - Blue-Green Strategy (Staging) - 2 tests
-   - Canary Strategy (Production) - 2 tests
-   - Cross-strategy comparison - 1 test
-
-3. **ApprovalWorkflowIntegrationTests.cs** (10 tests)
-   - Approval creation and pending status
-   - Approval grants deployment to proceed
-   - Rejection cancels deployment
-   - Role-based approval authorization
-   - Multiple independent approvals
-   - Deployments without approval proceed immediately
-
-4. **RollbackScenarioIntegrationTests.cs** (10 tests)
-   - Rollback successful deployment
-   - Rollback failed deployment
-   - Rollback already-rolled-back deployment (error case)
-   - Rollback in-progress deployment (error case)
-   - Rollback non-existent deployment (404)
-   - Authorization for rollback operations
-
-5. **ConcurrentDeploymentIntegrationTests.cs** (8 tests)
-   - Concurrent deployments to different environments
-   - Different modules to same environment
-   - Respects concurrency limits (queuing)
-   - Maintains deployment isolation (no data leakage)
-   - Concurrent read/write operations (no conflicts)
-   - High concurrency stress (20 simultaneous deployments)
-   - Concurrent approvals
-
-6. **MessagingIntegrationTests.cs** (19 tests)
-   - Message lifecycle (publish → retrieve → acknowledge → delete)
-   - Auto-ID generation for messages
-   - Topic-based message retrieval
-   - Message status transitions
-   - Message validation
-   - Priority levels
-   - Authorization requirements
-
-7. **MultiTenantIntegrationTests.cs** (17 tests)
-   - Tenant creation (valid data, validation, multiple tenants)
-   - Tenant retrieval (by ID, list all, 404 for non-existent)
-   - Tenant updates (name, contact, metadata)
-   - Subscription management (upgrade/downgrade tiers)
-   - Tenant suspension and reactivation
-   - Authorization (Admin-only operations)
-   - Tenant isolation (unique domains and IDs)
-
-**Infrastructure:**
-- **Testcontainers**: PostgreSQL 16, Redis 7 (Docker-based)
-- **WebApplicationFactory**: In-memory API server
-- **Test Fixtures**: Shared container lifecycle across tests
-- **Helpers**: AuthHelper (JWT tokens), ApiClientHelper (API operations), TestDataBuilder
-
-**CI/CD Integration:**
-```yaml
-integration-tests:
-  runs-on: ubuntu-latest
-  needs: build-and-test
-
-  steps:
-  - name: Run integration tests
-    run: dotnet test tests/HotSwap.Distributed.IntegrationTests/
-    env:
-      DOCKER_HOST: unix:///var/run/docker.sock
-```
 
 **Files Created:**
-- tests/HotSwap.Distributed.IntegrationTests/HotSwap.Distributed.IntegrationTests.csproj
-- Fixtures/ (3 files): PostgreSqlContainerFixture, RedisContainerFixture, IntegrationTestFactory
-- Helpers/ (3 files): AuthHelper, ApiClientHelper, TestDataBuilder
-- Tests/ (7 files): 82 tests covering all major workflows
+- `src/HotSwap.Distributed.Domain/`: UserRole enum, User model, AuthenticationModels
+- `src/HotSwap.Distributed.Infrastructure/`: IJwtTokenService, IUserRepository, JwtTokenService, InMemoryUserRepository
+- `src/HotSwap.Distributed.Api/`: AuthenticationController
+- `tests/`: JwtTokenServiceTests (15 tests), InMemoryUserRepositoryTests (15 tests)
 
-**Acceptance Criteria:**
-- ✅ Integration tests run in CI/CD pipeline (GitHub Actions job added)
-- ✅ All deployment strategies tested end-to-end (Direct, Rolling, Blue-Green, Canary)
-- ✅ Tests use real Docker containers (PostgreSQL, Redis via Testcontainers)
-- ✅ Code coverage for integration paths documented in TESTING.md
-- ✅ Tests cover messaging system and multi-tenant features
-- ✅ Comprehensive documentation added to TESTING.md (~327 lines)
-
-**Implementation Summary:**
-- Complete integration test infrastructure with Testcontainers
-- 82 comprehensive tests across 7 test files (all compile successfully)
-- Tests require Docker to execute (GitHub Actions CI/CD pipeline configured)
-- Covers deployment strategies, approval workflows, rollbacks, concurrency, messaging, multi-tenancy
-- Uses real dependencies (PostgreSQL 16, Redis 7) for accurate testing
-- In-memory API server via WebApplicationFactory for fast execution
-- Average test execution time: 45 seconds (after Docker image pull)
-
-**Impact:** High - Critical for production confidence and regression prevention
+**Documentation:** `JWT_AUTHENTICATION_GUIDE.md`
 
 ---
 
-### 5. API Rate Limiting
-**Priority:** 🟡 Medium
-**Status:** ✅ **Completed** (2025-11-15)
-**Effort:** 1 day (Already implemented)
-**References:** README.md:239, BUILD_STATUS.md:286
+### ✅ Task 2: Approval Workflow System
+**Priority:** 🔴 High | **Status:** ✅ Completed (2025-11-15) | **Effort:** 1 day
 
-**Requirements:**
-- [x] Implement rate limiting middleware
-- [x] Configure per-endpoint rate limits
-- [x] Add IP-based rate limiting
-- [x] Add token-based rate limiting (per user/service)
-- [x] Configure rate limit response headers
-- [x] Add rate limit exceeded handling (429 responses)
-- [ ] Create admin API to adjust rate limits (Future enhancement)
+**Implementation:**
+- Approval gates for Staging and Production deployments
+- Email notifications to approvers (console logging)
+- Approval timeout handling (24h auto-reject)
+- Audit trail for approval decisions
+- 10+ comprehensive unit tests
 
-**Rate Limits Configured:**
-```
-Production:
-- Global: 1000 req/min per IP
-- Deployments: 10 req/min per user
-- Clusters: 60 req/min per user
-- Approvals: 30 req/min per user
-- Auth: 5 req/min per user
-- Health: Unlimited (bypassed)
+**API Endpoints:**
+- `GET /api/v1/approvals/pending`
+- `GET /api/v1/approvals/deployments/{executionId}`
+- `POST /api/v1/approvals/deployments/{executionId}/approve`
+- `POST /api/v1/approvals/deployments/{executionId}/reject`
 
-Development (10x higher for testing):
-- Global: 10000 req/min per IP
-- Deployments: 100 req/min per user
-- Clusters: 600 req/min per user
-- Approvals: 300 req/min per user
-- Auth: 50 req/min per user
-```
-
-**Implementation Summary:**
-- RateLimitingMiddleware.cs: Comprehensive sliding window implementation
-- IP-based rate limiting for unauthenticated requests
-- Token-based rate limiting for authenticated users (separate quotas per user)
-- X-Forwarded-For header support for proxy environments
-- Proper HTTP 429 responses with X-RateLimit-* and Retry-After headers
-- Background cleanup of expired rate limit entries
-- 10 comprehensive unit tests
-- Configuration in appsettings.json (enabled by default)
-
-**Acceptance Criteria:**
-- ✅ Rate limits enforced on all endpoints except /health
-- ✅ Proper HTTP 429 responses with Retry-After header
-- ✅ Rate limit counters reset correctly (sliding window algorithm)
-- ✅ Configuration without restart (via appsettings.json)
-
-**Impact:** Medium - Production-ready protection against API abuse
+**Documentation:** `APPROVAL_WORKFLOW_GUIDE.md`
 
 ---
 
-## Minor Tasks (Medium Priority)
+### ✅ Task 3: PostgreSQL Audit Log Persistence
+**Priority:** 🟡 Medium-High | **Status:** ✅ Complete (2025-11-16) | **Effort:** 2-3 days
 
-These tasks enhance functionality but are not critical for initial production deployment.
+**Implementation:**
+- Comprehensive database schema: 5 tables with full indexing
+- EF Core entity models and migrations
+- AuditLogService with repository pattern
+- Pipeline, approval, and authentication event logging
+- Retention policy (90-day default, daily cleanup)
+- 13 comprehensive unit tests
 
-### 6. WebSocket Real-Time Updates
-**Priority:** 🟢 Medium
-**Status:** Not Implemented
-**Effort:** 2-3 days
-**References:** BUILD_STATUS.md:378, PROJECT_STATUS_REPORT.md:519, examples/ApiUsageExample/README.md:515
+**Files Created:**
+- `docs/AUDIT_LOG_SCHEMA.md`
+- `src/HotSwap.Distributed.Infrastructure/Data/`: 5 entity models, AuditLogDbContext, migrations
+- `src/HotSwap.Distributed.Infrastructure/Services/`: AuditLogService
+- `src/HotSwap.Distributed.Api/Controllers/`: AuditLogsController (5 endpoints)
+
+---
+
+### ✅ Task 4: Integration Test Suite
+**Priority:** 🟡 Medium | **Status:** ✅ Completed (2025-11-17) | **Effort:** 1 day
+
+**Implementation:**
+- 82 integration tests across 7 test files
+- Testcontainers for PostgreSQL 16 and Redis 7
+- Tests all deployment strategies, approval workflows, rollbacks, concurrency
+- Tests messaging system and multi-tenant features
+- CI/CD GitHub Actions job configured
+
+**Test Coverage:**
+- BasicIntegrationTests (9 tests): Auth, health checks, clusters
+- DeploymentStrategyIntegrationTests (9 tests): All 4 strategies
+- ApprovalWorkflowIntegrationTests (10 tests): Approval flows
+- RollbackScenarioIntegrationTests (10 tests): Rollback scenarios
+- ConcurrentDeploymentIntegrationTests (8 tests): Concurrency
+- MessagingIntegrationTests (19 tests): Message lifecycle
+- MultiTenantIntegrationTests (17 tests): Tenant management
+
+**Documentation:** Updated `TESTING.md` with 327 lines
+
+---
+
+### ✅ Task 5: HTTPS/TLS Configuration
+**Priority:** 🔴 Critical | **Status:** ✅ Completed (2025-11-15) | **Effort:** 1 day
+
+**Implementation:**
+- Kestrel configuration: HTTP (5000), HTTPS (5001)
+- HSTS middleware (1-year max-age, subdomains)
+- TLS 1.2+ enforcement
+- Development certificate generation script
+- Docker Compose HTTPS support
+
+**Files Created:**
+- `generate-dev-cert.sh`
+- Updated `appsettings.json`, `Program.cs`, `docker-compose.yml`
+- `HTTPS_SETUP_GUIDE.md`
+
+---
+
+## 1.2 High Priority Tasks (Not Started)
+
+### Task 6: WebSocket Real-Time Updates
+**Priority:** 🟢 Medium | **Status:** ⏳ Not Started | **Effort:** 2-3 days
 
 **Requirements:**
 - [ ] Add SignalR NuGet package
 - [ ] Create DeploymentHub for WebSocket connections
-- [ ] Implement real-time deployment status updates
-- [ ] Implement real-time metrics streaming
-- [ ] Add client subscription management
-- [ ] Create JavaScript client example
-- [ ] Update API examples to demonstrate WebSocket usage
+- [ ] Real-time deployment status updates
+- [ ] Real-time metrics streaming
+- [ ] Client subscription management
+- [ ] JavaScript client example
 
 **Features:**
 - Subscribe to deployment progress
-- Real-time pipeline stage updates
-- Live metrics streaming
+- Live pipeline stage updates
 - Cluster health change notifications
 
-**Acceptance Criteria:**
-- Clients can subscribe to deployment updates
-- Real-time events pushed on status changes
-- Connection management and reconnection logic
-- Performance tested with 100+ concurrent connections
-
-**Impact:** Medium - Better user experience for monitoring
+**References:** BUILD_STATUS.md:378, PROJECT_STATUS_REPORT.md:519
 
 ---
 
-### 7. Prometheus Metrics Exporter
-**Priority:** 🟢 Medium
-**Status:** Metrics collected, exporter not implemented
-**Effort:** 1-2 days
-**References:** SPEC_COMPLIANCE_REVIEW.md:343, BUILD_STATUS.md:381
+### Task 7: Prometheus Metrics Exporter
+**Priority:** 🟢 Medium | **Status:** ⏳ Not Started | **Effort:** 1-2 days
 
 **Requirements:**
-- [ ] Add Prometheus.AspNetCore.HealthChecks NuGet package
-- [ ] Configure Prometheus exporter endpoint
+- [ ] Add Prometheus.AspNetCore.HealthChecks package
+- [ ] Configure Prometheus exporter endpoint (`/metrics`)
 - [ ] Export all OpenTelemetry metrics
 - [ ] Add custom business metrics
 - [ ] Create Grafana dashboard JSON
 - [ ] Document Prometheus setup
 
-**Metrics Endpoint:**
-```
-GET /metrics  # Prometheus format
-```
-
-**Acceptance Criteria:**
-- Prometheus can scrape /metrics endpoint
-- All key metrics exported in Prometheus format
-- Grafana dashboard visualizes metrics
-- Documentation includes setup guide
-
-**Impact:** Medium - Industry-standard monitoring integration
+**References:** SPEC_COMPLIANCE_REVIEW.md:343, BUILD_STATUS.md:381
 
 ---
 
-### 8. Helm Charts for Kubernetes
-**Priority:** 🟢 Medium
-**Status:** Not Implemented
-**Effort:** 2 days
-**References:** BUILD_STATUS.md:387, PROJECT_STATUS_REPORT.md:521
+### Task 8: Helm Charts for Kubernetes
+**Priority:** 🟢 Medium | **Status:** ⏳ Not Started | **Effort:** 2 days
 
 **Requirements:**
 - [ ] Create Helm chart structure
@@ -433,73 +193,31 @@ GET /metrics  # Prometheus format
 - [ ] Add Service and Ingress templates
 - [ ] Configure HPA (Horizontal Pod Autoscaler)
 - [ ] Add PodDisruptionBudget
-- [ ] Create values.yaml with sensible defaults
-- [ ] Add NOTES.txt with deployment instructions
-- [ ] Test on multiple Kubernetes versions (1.26, 1.27, 1.28)
+- [ ] Create values.yaml with defaults
+- [ ] Test on Kubernetes 1.26, 1.27, 1.28
 
-**Chart Structure:**
-```
-helm/
-├── Chart.yaml
-├── values.yaml
-├── templates/
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── ingress.yaml
-│   ├── configmap.yaml
-│   ├── secret.yaml
-│   ├── hpa.yaml
-│   └── pdb.yaml
-└── README.md
-```
-
-**Acceptance Criteria:**
-- Helm chart deploys successfully to Kubernetes
-- All configuration externalized to values.yaml
-- Chart passes `helm lint`
-- Documentation includes installation guide
-
-**Impact:** Medium - Simplifies Kubernetes deployment
+**References:** BUILD_STATUS.md:387, PROJECT_STATUS_REPORT.md:521
 
 ---
 
-### 9. Service Discovery Integration
-**Priority:** 🟢 Low-Medium
-**Status:** In-memory implementation
-**Effort:** 2-3 days
-**References:** SPEC_COMPLIANCE_REVIEW.md:242, PROJECT_STATUS_REPORT.md:502
+### Task 9: Service Discovery Integration
+**Priority:** 🟢 Low-Medium | **Status:** ⏳ Not Started | **Effort:** 2-3 days
 
 **Requirements:**
 - [ ] Add Consul client NuGet package
 - [ ] Implement IServiceDiscovery interface
 - [ ] Create ConsulServiceDiscovery implementation
-- [ ] Add automatic node registration
-- [ ] Implement health check registration
-- [ ] Add service lookup and caching
-- [ ] Support multiple discovery backends (Consul, etcd)
-- [ ] Add configuration options
+- [ ] Automatic node registration
+- [ ] Health check registration
+- [ ] Service lookup and caching
+- [ ] Support multiple backends (Consul, etcd)
 
-**Features:**
-- Automatic node discovery
-- Dynamic cluster membership
-- Health check integration
-- Failover support
-
-**Acceptance Criteria:**
-- Nodes automatically register with Consul
-- Cluster discovers nodes dynamically
-- Health checks update service status
-- Supports both Consul and etcd
-
-**Impact:** Low-Medium - Needed for multi-instance deployments
+**References:** SPEC_COMPLIANCE_REVIEW.md:242, PROJECT_STATUS_REPORT.md:502
 
 ---
 
-### 10. Load Testing Suite
-**Priority:** 🟢 Low-Medium
-**Status:** Not Implemented
-**Effort:** 2 days
-**References:** TESTING.md:236
+### Task 10: Load Testing Suite
+**Priority:** 🟢 Low-Medium | **Status:** ⏳ Not Started | **Effort:** 2 days
 
 **Requirements:**
 - [ ] Create k6 load test scripts
@@ -509,35 +227,21 @@ helm/
 - [ ] Measure API latency percentiles (p50, p95, p99)
 - [ ] Identify performance bottlenecks
 - [ ] Document performance characteristics
-- [ ] Add load test to CI/CD (optional)
 
 **Test Scenarios:**
-```javascript
 - Sustained load: 100 req/s for 10 minutes
 - Spike test: 0 → 500 req/s
 - Soak test: 50 req/s for 1 hour
 - Stress test: Increase until breaking point
-```
 
-**Acceptance Criteria:**
-- Load tests run successfully
-- Performance metrics documented
-- No memory leaks under sustained load
-- API meets SLA targets (p95 < 500ms)
-
-**Impact:** Low-Medium - Performance validation
+**References:** TESTING.md:236
 
 ---
 
-## Low Priority Tasks (Nice to Have)
+## 1.3 Low Priority Tasks
 
-These tasks are enhancements that can be implemented based on specific needs.
-
-### 11. GraphQL API Layer
-**Priority:** ⚪ Low
-**Status:** Not Implemented
-**Effort:** 3-4 days
-**References:** BUILD_STATUS.md:390, PROJECT_STATUS_REPORT.md:524
+### Task 11: GraphQL API Layer
+**Priority:** ⚪ Low | **Status:** ⏳ Not Started | **Effort:** 3-4 days
 
 **Requirements:**
 - [ ] Add HotChocolate NuGet package
@@ -548,13 +252,14 @@ These tasks are enhancements that can be implemented based on specific needs.
 - [ ] Add GraphQL playground
 - [ ] Create client examples
 
+**References:** BUILD_STATUS.md:390
+
 ---
 
-### 12. Multi-Tenancy Support
-**Priority:** ⚪ Low
-**Status:** Not Implemented
-**Effort:** 4-5 days
-**References:** BUILD_STATUS.md:391, PROJECT_STATUS_REPORT.md:525
+### Task 12: Multi-Tenancy Support
+**Priority:** ⚪ Low | **Status:** ⏳ Not Started | **Effort:** 4-5 days
+
+**Note:** Multi-tenant system already implemented for website hosting. This task is for extending kernel orchestration to support multi-tenancy.
 
 **Requirements:**
 - [ ] Add tenant context to all operations
@@ -564,13 +269,12 @@ These tasks are enhancements that can be implemented based on specific needs.
 - [ ] Implement tenant-based metrics
 - [ ] Add tenant-based audit logs
 
+**References:** BUILD_STATUS.md:391, docs/MULTITENANT_IMPLEMENTATION_SUMMARY.md
+
 ---
 
-### 13. ML-Based Anomaly Detection
-**Priority:** ⚪ Low
-**Status:** Not Implemented
-**Effort:** 5-7 days
-**References:** BUILD_STATUS.md:392, PROJECT_STATUS_REPORT.md:526
+### Task 13: ML-Based Anomaly Detection
+**Priority:** ⚪ Low | **Status:** ⏳ Not Started | **Effort:** 5-7 days
 
 **Requirements:**
 - [ ] Integrate ML.NET or Azure ML
@@ -580,13 +284,12 @@ These tasks are enhancements that can be implemented based on specific needs.
 - [ ] Add anomaly alerting
 - [ ] Create anomaly dashboard
 
+**References:** BUILD_STATUS.md:392
+
 ---
 
-### 14. Admin Dashboard UI
-**Priority:** ⚪ Low
-**Status:** Not Implemented
-**Effort:** 7-10 days
-**References:** BUILD_STATUS.md:393
+### Task 14: Admin Dashboard UI
+**Priority:** ⚪ Low | **Status:** ⏳ Not Started | **Effort:** 7-10 days
 
 **Requirements:**
 - [ ] Create React/Vue.js frontend
@@ -597,69 +300,33 @@ These tasks are enhancements that can be implemented based on specific needs.
 - [ ] Implement user management UI
 - [ ] Add approval workflow UI
 
----
-
-## Security Tasks
-
-Critical security items from production checklist.
-
-### 15. HTTPS/TLS Configuration
-**Priority:** 🔴 Critical
-**Status:** ✅ **Completed** (2025-11-15)
-**Effort:** 1 day
-**References:** README.md:240, PROJECT_STATUS_REPORT.md:673, HTTPS_SETUP_GUIDE.md
-
-**Requirements:**
-- [x] Generate/obtain SSL certificates (development script created)
-- [x] Configure Kestrel HTTPS endpoints
-- [x] Add HSTS headers
-- [x] Configure TLS 1.2+ only
-- [x] Add certificate generation automation (generate-dev-cert.sh)
-- [x] Update Docker Compose for HTTPS
-- [x] Update documentation (HTTPS_SETUP_GUIDE.md)
-
-**Implementation Summary:**
-- **Kestrel Configuration:** HTTP (port 5000) and HTTPS (port 5001) endpoints
-- **HSTS Middleware:** Configurable via appsettings.json
-  - MaxAge: 31536000 seconds (1 year)
-  - IncludeSubDomains: true
-  - Preload: false (development), true (production)
-- **TLS Enforcement:** TLS 1.2+ enforced by .NET 8.0 defaults
-- **Certificate Management:**
-  - Development: `generate-dev-cert.sh` creates self-signed certificates
-  - Production: Documented process for Let's Encrypt and commercial CAs
-- **Docker Support:** Updated docker-compose.yml with HTTPS ports and certificate mounting
-- **Documentation:** Comprehensive HTTPS_SETUP_GUIDE.md covering:
-  - Quick start for development and Docker
-  - Production setup with Let's Encrypt
-  - Certificate management and renewal
-  - Troubleshooting common issues
-  - Security best practices
-
-**Files Created/Modified:**
-- `generate-dev-cert.sh` - Certificate generation script
-- `appsettings.json` - Kestrel and HSTS configuration
-- `Program.cs` - HSTS middleware integration
-- `docker-compose.yml` - HTTPS ports and certificate volumes
-- `HTTPS_SETUP_GUIDE.md` - Complete setup documentation
-
-**Acceptance Criteria:**
-- ✅ SSL certificates can be generated for development
-- ✅ Kestrel serves HTTPS on port 5001
-- ✅ HSTS headers sent in production (Strict-Transport-Security)
-- ✅ TLS 1.0/1.1 disabled, TLS 1.2+ enforced
-- ✅ Docker Compose supports HTTPS deployment
-- ✅ Comprehensive documentation available
-
-**Impact:** High - Critical production security requirement now satisfied
+**References:** BUILD_STATUS.md:393
 
 ---
 
-### 16. Secret Rotation System
-**Priority:** 🟡 High
-**Status:** Not Implemented
-**Effort:** 2-3 days
-**References:** README.md:241, PROJECT_STATUS_REPORT.md:674
+## 1.4 Security Tasks
+
+### Task 15: API Rate Limiting (Already Implemented)
+**Priority:** 🟡 Medium | **Status:** ✅ Completed (2025-11-15) | **Effort:** 1 day
+
+**Implementation:**
+- RateLimitingMiddleware with sliding window algorithm
+- IP-based and token-based rate limiting
+- Configurable per-endpoint limits
+- HTTP 429 responses with Retry-After headers
+- 10 comprehensive unit tests
+
+**Rate Limits (Production):**
+- Global: 1000 req/min per IP
+- Deployments: 10 req/min per user
+- Clusters: 60 req/min per user
+- Approvals: 30 req/min per user
+- Auth: 5 req/min per user
+
+---
+
+### Task 16: Secret Rotation System
+**Priority:** 🟡 High | **Status:** ⏳ Not Started | **Effort:** 2-3 days
 
 **Requirements:**
 - [ ] Integrate Azure Key Vault or HashiCorp Vault
@@ -669,34 +336,33 @@ Critical security items from production checklist.
 - [ ] Add secret expiration monitoring
 - [ ] Create runbook for manual rotation
 
+**References:** README.md:241, PROJECT_STATUS_REPORT.md:674
+
 ---
 
-### 17. OWASP Top 10 Security Review
-**Priority:** 🟡 High
-**Status:** Not Completed
-**Effort:** 2-3 days
-**References:** README.md:242, PROJECT_STATUS_REPORT.md:678
+### Task 17: OWASP Top 10 Security Review
+**Priority:** 🟡 High | **Status:** ⏳ Not Started | **Effort:** 2-3 days
 
 **Requirements:**
-- [ ] A01:2021 - Broken Access Control (Add RBAC)
+- [ ] A01:2021 - Broken Access Control (✅ RBAC implemented)
 - [ ] A02:2021 - Cryptographic Failures (Review signatures)
 - [ ] A03:2021 - Injection (Review input validation)
 - [ ] A04:2021 - Insecure Design (Architecture review)
 - [ ] A05:2021 - Security Misconfiguration (Review configs)
 - [ ] A06:2021 - Vulnerable Components (Update dependencies)
-- [ ] A07:2021 - Authentication Failures (Add JWT)
-- [ ] A08:2021 - Software/Data Integrity (Already implemented)
+- [ ] A07:2021 - Authentication Failures (✅ JWT implemented)
+- [ ] A08:2021 - Software/Data Integrity (✅ Implemented)
 - [ ] A09:2021 - Security Logging Failures (Review logs)
 - [ ] A10:2021 - SSRF (Review HTTP clients)
 
+**References:** README.md:242, PROJECT_STATUS_REPORT.md:678
+
 ---
 
-## Documentation Tasks
+## 1.5 Documentation Tasks
 
-### 18. API Client SDKs
-**Priority:** 🟢 Medium
-**Status:** C# example exists
-**Effort:** 3-4 days per language
+### Task 18: API Client SDKs
+**Priority:** 🟢 Medium | **Status:** ⏳ Not Started | **Effort:** 3-4 days per language
 
 **Requirements:**
 - [ ] Create TypeScript/JavaScript SDK
@@ -707,12 +373,12 @@ Critical security items from production checklist.
 - [ ] Add SDK documentation
 - [ ] Create SDK examples
 
+**Note:** C# example exists in `examples/ApiUsageExample/`
+
 ---
 
-### 19. Architecture Decision Records (ADR)
-**Priority:** 🟢 Low
-**Status:** Not Created
-**Effort:** 2 days
+### Task 19: Architecture Decision Records (ADR)
+**Priority:** 🟢 Low | **Status:** ⏳ Not Started | **Effort:** 2 days
 
 **Requirements:**
 - [ ] Document deployment strategy decisions
@@ -720,14 +386,12 @@ Critical security items from production checklist.
 - [ ] Document security architecture
 - [ ] Document scalability decisions
 - [ ] Create ADR template
-- [ ] Store in docs/adr/
+- [ ] Store in `docs/adr/`
 
 ---
 
-### 20. Runbooks and Operations Guide
-**Priority:** 🟢 Medium
-**Status:** Partial
-**Effort:** 2-3 days
+### Task 20: Runbooks and Operations Guide
+**Priority:** 🟢 Medium | **Status:** ⏳ Not Started | **Effort:** 2-3 days
 
 **Requirements:**
 - [ ] Create incident response runbook
@@ -740,61 +404,388 @@ Critical security items from production checklist.
 
 ---
 
-## Summary Statistics
+# 2. Knowledge Graph Initiative
 
-**Total Tasks:** 20
+**Status:** Design Complete, Not Started (0% implemented)
+**Estimated Effort:** 37.5 days (7.5 weeks)
+**Total Tasks:** 40 tasks across 8 epics
 
-**By Priority:**
-- 🔴 Critical: 3 tasks (15%)
-- 🟡 High: 2 tasks (10%)
-- 🟢 Medium: 11 tasks (55%)
-- ⚪ Low: 4 tasks (20%)
+**Design Document:** `docs/KNOWLEDGE_GRAPH_DESIGN.md`
 
-**By Status:**
-- ✅ Completed: 4 tasks (20%)
-- Not Implemented: 14 tasks (70%)
-- Partial: 2 tasks (10%)
+## 2.1 Overview
 
-**Estimated Total Effort:** 60-85 days
+This initiative builds a knowledge graph system on top of the HotSwap Distributed Kernel, adding graph storage, query execution, and zero-downtime schema evolution capabilities.
 
-**✅ Sprint 1 Completed (2025-11-15):**
-1. ✅ JWT Authentication (2-3 days) - COMPLETED
-2. ✅ Approval Workflow (3-4 days) - COMPLETED
-3. ✅ HTTPS/TLS Configuration (1 day) - COMPLETED
-4. ✅ API Rate Limiting (1 day) - COMPLETED (already existed)
+**Key Features:**
+- PostgreSQL-backed graph storage with JSONB
+- Pattern matching and graph traversal (BFS, DFS, shortest path)
+- Schema versioning with backward compatibility
+- REST API with 25+ endpoints
+- Hot-swappable query algorithms
+- Zero-downtime schema migrations
 
-**Recommended Next Actions (Sprint 2):**
-1. PostgreSQL Audit Log (2-3 days)
-2. Integration Tests (3-4 days)
-3. Secret Rotation (2-3 days)
-4. OWASP Security Review (2-3 days)
+**Technology Stack:**
+- PostgreSQL with JSONB columns for properties
+- Entity Framework Core for ORM
+- Redis for query result caching
+- OpenTelemetry for distributed tracing
 
 ---
 
-## Task Dependencies
+## 2.2 Phase 1: Core Foundation (10 days)
+
+### Epic 1: Core Graph Domain Model (5 tasks, 4 days)
+
+**Task 2.1:** Entity Model Implementation
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 1 day
+- Implement `Entity` class with Id, Type, Properties, timestamps
+- 10 unit tests
+
+**Task 2.2:** Relationship Model Implementation
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 1 day
+- Implement `Relationship` class with Source, Target, Weight, IsDirected
+- 10 unit tests
+
+**Task 2.3:** Graph Schema Model Implementation
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 1 day
+- Schema versioning and backward compatibility checking
+- 15 unit tests
+
+**Task 2.4:** Graph Query Model Implementation
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 0.5 day
+- Pattern matching syntax, pagination support
+- 8 unit tests
+
+**Task 2.5:** Domain Enums and Value Objects
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 0.5 day
+- Direction, IndexType, PropertyType, QueryOperator enums
+- 5 unit tests
+
+---
+
+### Epic 2: PostgreSQL Graph Storage (6 tasks, 6 days)
+
+**Task 2.6:** Entity Framework Core Models
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 1 day
+- EF Core entities: EntityRecord, RelationshipRecord, SchemaVersionRecord
+- JSONB columns for properties, GIN indexes
+
+**Task 2.7:** Graph DbContext Implementation
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 0.5 day
+- PostgreSQL-specific configuration, cascade deletes
+
+**Task 2.8:** Database Migrations
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 0.5 day
+- Initial migration with GIN indexes
+
+**Task 2.9:** Graph Repository Interface
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 0.5 day
+- Entity/relationship CRUD methods, batch operations
+
+**Task 2.10:** PostgreSQL Repository Implementation
+- **Priority:** 🔴 Critical | **Status:** ⏳ Not Started | **Effort:** 2 days
+- Efficient JSONB queries, transaction support
+- 20 integration tests
+
+**Task 2.11:** Graph Indexing Service
+- **Priority:** 🟢 Medium | **Status:** ⏳ Not Started | **Effort:** 1 day
+- Dynamic index creation, full-text search support
+- 10 unit tests
+
+---
+
+## 2.3 Phase 2: Query Engine (10 days)
+
+### Epic 3: Graph Query Engine (8 tasks)
+
+**Task 2.12-2.19:** Pattern matching, graph traversal (BFS, DFS, shortest path), query optimization, query service
+- 8 tasks, 7.5 days total
+- Includes pattern matcher (2 days), traversal algorithms (2.5 days), optimizer (1 day), query service (1 day)
+
+**Detailed task breakdown available in:** `docs/KNOWLEDGE_GRAPH_DESIGN.md`
+
+---
+
+## 2.4 Phase 3: REST API (7.5 days)
+
+### Epic 4: Knowledge Graph REST API (6 tasks)
+
+**Task 2.20-2.25:** Entities, Relationships, Queries, Schema, Visualization controllers, API startup config
+- 6 tasks, 7.5 days total
+- 25+ REST API endpoints
+- Authentication and authorization integration
+- OpenAPI documentation
+
+---
+
+## 2.5 Phase 4: HotSwap Integration (5 days)
+
+### Epic 5: HotSwap Integration (5 tasks)
+
+**Task 2.26-2.30:** Graph module descriptor, schema migration strategy, query algorithm hot-swap, partition management, integration testing
+- 5 tasks, 5 days total
+- Zero-downtime schema migrations
+- A/B testing for query algorithms
+- Automatic rollback on regression
+
+---
+
+## 2.6 Phase 5: Optimization & Polish (5 days)
+
+### Epic 6: Comprehensive Testing (3 tasks)
+### Epic 7: Performance Optimization (3 tasks)
+### Epic 8: Documentation & Examples (4 tasks)
+
+**Tasks 2.31-2.40:** Unit tests (100+ tests), integration tests, E2E tests, query caching, database optimization, batch processing, API docs, developer guide, examples
+- 10 tasks, 5 days total
+
+---
+
+## 2.7 Success Criteria
+
+**MVP (End of Phase 3):**
+- 80+ unit tests passing (90%+ coverage)
+- All CRUD operations working
+- Pattern matching and graph traversal implemented
+- REST API with 25+ endpoints
+- Sub-100ms simple query latency
+
+**Production-Ready (End of Phase 5):**
+- All MVP criteria met
+- HotSwap integration complete
+- 130+ comprehensive tests
+- Query result caching (>80% hit rate)
+- Zero-downtime schema migration demonstrated
+
+**Full task breakdown:** See `docs/KNOWLEDGE_GRAPH_DESIGN.md`
+
+---
+
+# 3. Build Server Initiative
+
+**Status:** Design Complete, Not Started (0% implemented)
+**Estimated Effort:** 153 hours (4 weeks)
+**Total Tasks:** 30 tasks across 5 phases
+
+**Design Document:** `docs/BUILD_SERVER_DESIGN.md`
+
+## 3.1 Overview
+
+This initiative implements a distributed .NET build server using the HotSwap.Distributed framework for orchestration, adding parallel builds, caching, and canary builds.
+
+**Key Features:**
+- Distributed builds across multiple agents
+- Build strategies: Incremental, Clean, Cached, Distributed, Canary
+- Git repository integration
+- NuGet package management
+- Artifact storage and signing
+- Real-time build progress tracking
+
+**Technology Stack:**
+- Reuses HotSwap infrastructure (telemetry, metrics)
+- Redis for build caching
+- PostgreSQL for build history
+- Docker for agent isolation
+
+---
+
+## 3.2 Phase 1: Foundation (Week 1, 38 hours)
+
+**Tasks 3.1-3.8:**
+- Project structure setup
+- Domain models (BuildJobDescriptor, BuildRequest, BuildResult)
+- Build agent capabilities detection
+- Agent pool infrastructure
+- Unit tests for domain models
+
+**Key Deliverables:**
+- Complete project structure
+- All domain models
+- Agent capability detection
+- 30+ unit tests
+
+---
+
+## 3.3 Phase 2: Core Build Logic (Week 2, 32 hours)
+
+**Tasks 3.9-3.14:**
+- Build agent core structure
+- Git integration (clone, authentication)
+- NuGet restore
+- dotnet build integration
+- dotnet test integration
+- Artifact packaging
+
+**Key Deliverables:**
+- Fully functional build agent
+- Git repository cloning
+- Full .NET build pipeline
+- Test execution
+- Artifact creation
+
+---
+
+## 3.4 Phase 3: Orchestration (Week 3, 42 hours)
+
+**Tasks 3.15-3.21:**
+- Build strategy interface
+- Incremental build strategy
+- Clean build strategy
+- Cached build strategy (Redis)
+- Build pipeline
+- Build orchestrator
+- Unit tests for strategies
+
+**Key Deliverables:**
+- 4 build strategies implemented
+- Build pipeline with stages
+- Complete orchestrator
+- 40+ unit tests
+
+---
+
+## 3.5 Phase 4: API Layer (Week 4, 20 hours)
+
+**Tasks 3.22-3.26:**
+- API models and validation
+- BuildsController (create, status, list, cancel, logs)
+- AgentsController (list, health, maintenance)
+- API startup configuration
+- Integration tests
+
+**Key Deliverables:**
+- REST API with 10+ endpoints
+- OpenAPI/Swagger documentation
+- Authentication integration
+- 20+ integration tests
+
+---
+
+## 3.6 Phase 5: Advanced Features (Weeks 5-6, 21 hours)
+
+**Tasks 3.27-3.30:**
+- Distributed build strategy (parallel builds)
+- Canary build strategy (safe production builds)
+- Build artifact storage (Azure Blob/S3)
+- Docker Compose deployment
+
+**Key Deliverables:**
+- Parallel distributed builds
+- Production-safe canary builds
+- Artifact storage and retrieval
+- Full Docker stack
+
+---
+
+## 3.7 Future Enhancements
+
+**Tasks 3.31-3.36 (Not in initial 4-week scope):**
+- Authentication & Authorization (16 hours)
+- Build Approval Workflow (12 hours)
+- Secret Management (8 hours)
+- Prometheus Metrics Export (8 hours)
+- WebSocket Real-Time Updates (12 hours)
+- Build History Analytics (16 hours)
+
+---
+
+## 3.8 Success Criteria
+
+**Week 2 Checkpoint:**
+- Build agent can clone repos and build .NET projects
+- Basic orchestration working
+
+**Week 4 Checkpoint:**
+- REST API functional
+- All 4 basic strategies working
+- Integration tests passing
+
+**Week 6 Checkpoint:**
+- Distributed and canary strategies working
+- Production-ready deployment
+- Full documentation
+
+**Full task breakdown:** See `docs/BUILD_SERVER_DESIGN.md` and original task list
+
+---
+
+# 4. Task Dependencies
+
+## 4.1 Core System Dependencies
 
 ```
-graph TD
-    A[JWT Auth] --> B[RBAC]
-    A --> C[Approval Workflow]
-    D[PostgreSQL] --> E[Audit Logs]
-    F[Integration Tests] --> G[CI/CD]
-    H[Helm Charts] --> I[K8s Deployment]
-    J[Service Discovery] --> K[Auto-scaling]
-    L[WebSocket] --> M[Real-time Dashboard]
+Authentication (Task 1) → RBAC, Approval Workflow (Task 2)
+PostgreSQL Setup → Audit Logs (Task 3)
+Integration Tests (Task 4) → CI/CD validation
+```
+
+## 4.2 Knowledge Graph Dependencies
+
+```
+Phase 1 (Foundation) → Phase 2 (Query Engine) → Phase 3 (API) → Phase 4 (HotSwap) → Phase 5 (Polish)
+
+Critical Path: Entity → Relationship → Schema → Repository → Query Service → API → Integration
+```
+
+## 4.3 Build Server Dependencies
+
+```
+Phase 1 (Foundation) → Phase 2 (Build Logic) → Phase 3 (Orchestration) → Phase 4 (API) → Phase 5 (Advanced)
+
+Critical Path: Project Setup → Agent → Git → Build → Orchestrator → API
 ```
 
 ---
 
-## References
+# 5. Getting Started
 
-- [README.md](README.md) - Project overview
-- [BUILD_STATUS.md](BUILD_STATUS.md) - Build validation
-- [TESTING.md](TESTING.md) - Testing guide
-- [SPEC_COMPLIANCE_REVIEW.md](SPEC_COMPLIANCE_REVIEW.md) - Compliance analysis
-- [PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md) - Status report
+## 5.1 For Core System Tasks
+1. Review `PROJECT_STATUS_REPORT.md` for current status
+2. Check `SPEC_COMPLIANCE_REVIEW.md` for compliance gaps
+3. Follow TDD workflow from `CLAUDE.md`
+4. Run pre-commit checklist before committing
+
+## 5.2 For Knowledge Graph Initiative
+1. Read `docs/KNOWLEDGE_GRAPH_DESIGN.md` for architecture
+2. Start with Phase 1, Task 2.1 (Entity Model)
+3. Follow dependency graph
+4. Create GitHub issues for each task
+
+## 5.3 For Build Server Initiative
+1. Read `docs/BUILD_SERVER_DESIGN.md` for architecture
+2. Start with Phase 1, Task 3.1 (Project Structure)
+3. Follow weekly milestones
+4. Reuse HotSwap infrastructure components
 
 ---
 
-**Last Updated:** 2025-11-15 (Sprint 1 Completed)
+# 6. References
+
+**Core Documentation:**
+- [CLAUDE.md](CLAUDE.md) - AI assistant guide, development workflows
+- [README.md](README.md) - Project overview and quick start
+- [Documentation Index](docs/README.md) - Complete documentation guide
+
+**Status & Compliance:**
+- [PROJECT_STATUS_REPORT.md](docs/PROJECT_STATUS_REPORT.md) - Current project status
+- [SPEC_COMPLIANCE_REVIEW.md](docs/SPEC_COMPLIANCE_REVIEW.md) - Specification compliance
+- [BUILD_STATUS.md](docs/BUILD_STATUS.md) - Build validation report
+- [TESTING.md](docs/TESTING.md) - Testing strategy and results
+
+**Design Documents:**
+- [Knowledge Graph Design](docs/KNOWLEDGE_GRAPH_DESIGN.md)
+- [Build Server Design](docs/BUILD_SERVER_DESIGN.md)
+- [Multi-Tenant System Plan](docs/MULTITENANT_WEBSITE_SYSTEM_PLAN.md)
+
+**Implementation Guides:**
+- [JWT Authentication Guide](docs/JWT_AUTHENTICATION_GUIDE.md)
+- [HTTPS Setup Guide](docs/HTTPS_SETUP_GUIDE.md)
+- [Approval Workflow Guide](docs/APPROVAL_WORKFLOW_GUIDE.md)
+- [Autonomous Agent Onboarding](docs/AUTONOMOUS_AGENT_ONBOARDING.md)
+
+---
+
+**Maintained By:** Development Team
+**Review Frequency:** Weekly
+**Last Updated:** 2025-11-18
 **Next Review:** Before Sprint 2 kickoff
