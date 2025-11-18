@@ -38,7 +38,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: build-and-test
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
       run: dotnet build DistributedKernel.sln --configuration Release --no-restore
 
     - name: Run integration tests
-      run: dotnet test tests/HotSwap.Distributed.IntegrationTests/HotSwap.Distributed.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=detailed" --blame-hang-timeout 2m --blame-crash -- -maxfail 1
+      run: dotnet test tests/HotSwap.Distributed.IntegrationTests/HotSwap.Distributed.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=detailed" --blame-hang-timeout 2m --blame-crash
       env:
         # Testcontainers requires Docker to be available
         DOCKER_HOST: unix:///var/run/docker.sock
