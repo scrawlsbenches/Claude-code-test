@@ -73,6 +73,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // Pipeline configuration
                 ["Pipeline:MaxConcurrentDeployments"] = "10",
                 ["Pipeline:DefaultTimeoutMinutes"] = "5",
+                ["Pipeline:ApprovalTimeoutHours"] = "0.0333", // 2 minutes for integration tests
 
                 // Reduce logging verbosity for integration tests
                 // Only log warnings and errors to avoid 27k+ log lines

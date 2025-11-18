@@ -63,8 +63,8 @@ public class ApiClientHelper
     }
 
     /// <summary>
-    /// Waits for a deployment to complete (succeed or fail).
-    /// Polls the API until the deployment is no longer in progress.
+    /// Waits for a deployment to complete (succeed or fail) or reach a decision point.
+    /// Polls the API until the deployment reaches a terminal or quasi-terminal state.
     /// </summary>
     /// <param name="executionId">The deployment execution ID</param>
     /// <param name="timeout">Maximum time to wait (default: 2 minutes)</param>
@@ -79,9 +79,11 @@ public class ApiClientHelper
         pollInterval ??= TimeSpan.FromSeconds(1);
 
         var startTime = DateTime.UtcNow;
+        var iterations = 0;
 
         while (DateTime.UtcNow - startTime < timeout)
         {
+            iterations++;
             var result = await GetDeploymentStatusAsync(executionId);
 
             if (result == null)
@@ -89,9 +91,21 @@ public class ApiClientHelper
                 throw new InvalidOperationException($"Deployment {executionId} not found");
             }
 
-            // Check if deployment is complete (Status indicates completion)
-            // Statuses: "Pending", "InProgress", "Succeeded", "Failed", "Cancelled"
-            if (result.Status == "Succeeded" || result.Status == "Failed" || result.Status == "Cancelled")
+            // Log progress every 10 iterations (10 seconds with 1s poll interval)
+            if (iterations % 10 == 0)
+            {
+                var elapsed = DateTime.UtcNow - startTime;
+                Console.WriteLine($"[Poll {iterations}] Deployment {executionId} status: {result.Status} (elapsed: {elapsed.TotalSeconds:F1}s)");
+            }
+
+            // Check if deployment reached a terminal or decision-point state
+            // Terminal states: "Succeeded", "Failed", "Cancelled"
+            // Decision-point states: "PendingApproval" (requires external action)
+            // In-progress states: "Running", "InProgress" (continue polling)
+            if (result.Status == "Succeeded" ||
+                result.Status == "Failed" ||
+                result.Status == "Cancelled" ||
+                result.Status == "PendingApproval")
             {
                 return result;
             }
