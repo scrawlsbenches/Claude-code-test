@@ -16,27 +16,20 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 [Collection("IntegrationTests")]
 public class MultiTenantIntegrationTests : IAsyncLifetime
 {
-    private readonly IntegrationTestFactory _factory;
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
+    private readonly SharedIntegrationTestFixture _fixture;
     private HttpClient? _client;
     private AuthHelper? _authHelper;
 
-    public MultiTenantIntegrationTests(
-        IntegrationTestFactory factory,
-        PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+    public MultiTenantIntegrationTests(SharedIntegrationTestFixture fixture)
     {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
-        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
+        _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
     }
 
     public async Task InitializeAsync()
     {
         // Factory is already initialized by collection fixture
         // Just create client for each test
-        _client = _factory.CreateClient();
+        _client = _fixture.Factory.CreateClient();
         _authHelper = new AuthHelper(_client);
 
         // Authenticate with admin role (required for tenant management)
@@ -427,7 +420,7 @@ public class MultiTenantIntegrationTests : IAsyncLifetime
     public async Task CreateTenant_WithDeployerRole_Returns403Forbidden()
     {
         // Arrange - Create deployer client
-        var deployerClient = _factory!.CreateClient();
+        var deployerClient = _fixture.Factory.CreateClient();
         var deployerAuthHelper = new AuthHelper(deployerClient);
         var deployerToken = await deployerAuthHelper.GetDeployerTokenAsync();
         deployerAuthHelper.AddAuthorizationHeader(deployerClient, deployerToken);
@@ -456,7 +449,7 @@ public class MultiTenantIntegrationTests : IAsyncLifetime
     public async Task ListTenants_WithoutAuthentication_Returns401Unauthorized()
     {
         // Arrange
-        var unauthClient = _factory!.CreateClient();
+        var unauthClient = _fixture.Factory.CreateClient();
 
         // Act
         var response = await unauthClient.GetAsync("/api/tenants");

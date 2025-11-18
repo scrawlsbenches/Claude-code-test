@@ -14,28 +14,21 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 [Collection("IntegrationTests")]
 public class RollbackScenarioIntegrationTests : IAsyncLifetime
 {
-    private readonly IntegrationTestFactory _factory;
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
+    private readonly SharedIntegrationTestFixture _fixture;
     private HttpClient? _client;
     private AuthHelper? _authHelper;
     private ApiClientHelper? _apiHelper;
 
-    public RollbackScenarioIntegrationTests(
-        IntegrationTestFactory factory,
-        PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+    public RollbackScenarioIntegrationTests(SharedIntegrationTestFixture fixture)
     {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
-        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
+        _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
     }
 
     public async Task InitializeAsync()
     {
         // Factory is already initialized by collection fixture
         // Just create client for each test
-        _client = _factory.CreateClient();
+        _client = _fixture.Factory.CreateClient();
         _authHelper = new AuthHelper(_client);
         _apiHelper = new ApiClientHelper(_client);
 
@@ -208,7 +201,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
     public async Task Rollback_WithoutAuthentication_Returns401Unauthorized()
     {
         // Arrange - Create an unauthenticated client
-        var unauthClient = _factory!.CreateClient();
+        var unauthClient = _fixture.Factory.CreateClient();
         var unauthApiHelper = new ApiClientHelper(unauthClient);
 
         // Act - Try to rollback without authentication
@@ -241,7 +234,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
         status.Status.Should().Be("Succeeded");
 
         // Create viewer client
-        var viewerClient = _factory!.CreateClient();
+        var viewerClient = _fixture.Factory.CreateClient();
         var viewerAuthHelper = new AuthHelper(viewerClient);
         var viewerToken = await viewerAuthHelper.GetViewerTokenAsync();
         viewerAuthHelper.AddAuthorizationHeader(viewerClient, viewerToken);

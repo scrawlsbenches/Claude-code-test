@@ -3,17 +3,14 @@ using Xunit;
 namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 
 /// <summary>
-/// Defines the "IntegrationTests" collection and its shared fixtures.
-/// All test classes decorated with [Collection("IntegrationTests")] will share these fixtures.
+/// Defines the "IntegrationTests" collection and its shared fixture.
+/// All test classes decorated with [Collection("IntegrationTests")] will share this fixture.
 /// This ensures containers and factory are created once per test run, not per test class.
 /// </summary>
 [CollectionDefinition("IntegrationTests")]
-public class IntegrationTestCollection :
-    ICollectionFixture<PostgreSqlContainerFixture>,
-    ICollectionFixture<RedisContainerFixture>,
-    ICollectionFixture<IntegrationTestFactory>
+public class IntegrationTestCollection : ICollectionFixture<SharedIntegrationTestFixture>
 {
     // This class is never instantiated.
-    // Its purpose is to define the collection and its fixtures.
-    // xUnit will inject these fixtures into test class constructors.
+    // Its purpose is to define the collection and its shared fixture.
+    // xUnit will inject the SharedIntegrationTestFixture into test class constructors.
 }

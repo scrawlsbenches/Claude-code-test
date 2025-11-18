@@ -14,28 +14,21 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 [Collection("IntegrationTests")]
 public class BasicIntegrationTests : IAsyncLifetime
 {
-    private readonly IntegrationTestFactory _factory;
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
+    private readonly SharedIntegrationTestFixture _fixture;
     private HttpClient? _client;
     private AuthHelper? _authHelper;
     private ApiClientHelper? _apiHelper;
 
-    public BasicIntegrationTests(
-        IntegrationTestFactory factory,
-        PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+    public BasicIntegrationTests(SharedIntegrationTestFixture fixture)
     {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
-        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
+        _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
     }
 
     public async Task InitializeAsync()
     {
         // Factory is already initialized by collection fixture
         // Just create client for each test
-        _client = _factory.CreateClient();
+        _client = _fixture.Factory.CreateClient();
         _authHelper = new AuthHelper(_client);
         _apiHelper = new ApiClientHelper(_client);
 

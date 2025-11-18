@@ -14,23 +14,16 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 [Collection("IntegrationTests")]
 public class ApprovalWorkflowIntegrationTests : IAsyncLifetime
 {
-    private readonly IntegrationTestFactory _factory;
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
+    private readonly SharedIntegrationTestFixture _fixture;
     private HttpClient? _client;
     private HttpClient? _adminClient;
     private AuthHelper? _authHelper;
     private ApiClientHelper? _apiHelper;
     private ApiClientHelper? _adminApiHelper;
 
-    public ApprovalWorkflowIntegrationTests(
-        IntegrationTestFactory factory,
-        PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+    public ApprovalWorkflowIntegrationTests(SharedIntegrationTestFixture fixture)
     {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
-        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
+        _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
     }
 
     public async Task InitializeAsync()
@@ -39,14 +32,14 @@ public class ApprovalWorkflowIntegrationTests : IAsyncLifetime
         // Just create clients for each test
 
         // Create deployer client (for creating deployments)
-        _client = _factory.CreateClient();
+        _client = _fixture.Factory.CreateClient();
         _authHelper = new AuthHelper(_client);
         var deployerToken = await _authHelper.GetDeployerTokenAsync();
         _authHelper.AddAuthorizationHeader(_client, deployerToken);
         _apiHelper = new ApiClientHelper(_client);
 
         // Create admin client (for approving/rejecting deployments)
-        _adminClient = _factory.CreateClient();
+        _adminClient = _fixture.Factory.CreateClient();
         var adminAuthHelper = new AuthHelper(_adminClient);
         var adminToken = await adminAuthHelper.GetAdminTokenAsync();
         adminAuthHelper.AddAuthorizationHeader(_adminClient, adminToken);
