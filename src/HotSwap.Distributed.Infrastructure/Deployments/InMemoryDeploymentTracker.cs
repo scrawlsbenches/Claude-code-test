@@ -43,16 +43,24 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
 
     public Task StoreResultAsync(Guid executionId, PipelineExecutionResult result)
     {
-        var key = ResultKeyPrefix + executionId;
-        var options = new MemoryCacheEntryOptions
+        try
         {
-            AbsoluteExpirationRelativeToNow = ResultExpiration,
-            Priority = CacheItemPriority.Normal
-        };
+            var key = ResultKeyPrefix + executionId;
+            var options = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = ResultExpiration,
+                Priority = CacheItemPriority.Normal
+            };
 
-        _cache.Set(key, result, options);
-        _resultIds.TryAdd(executionId, 0);
-        _logger.LogDebug("Stored deployment result for execution {ExecutionId}", executionId);
+            _cache.Set(key, result, options);
+            _resultIds.TryAdd(executionId, 0);
+            _logger.LogDebug("Stored deployment result for execution {ExecutionId}", executionId);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Cache already disposed (application shutting down) - ignore
+            _logger.LogDebug("Cache disposed while storing result for deployment {ExecutionId}", executionId);
+        }
 
         return Task.CompletedTask;
     }
@@ -66,26 +74,42 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
 
     public Task TrackInProgressAsync(Guid executionId, DeploymentRequest request)
     {
-        var key = InProgressKeyPrefix + executionId;
-        var options = new MemoryCacheEntryOptions
+        try
         {
-            AbsoluteExpirationRelativeToNow = InProgressExpiration,
-            Priority = CacheItemPriority.High // In-progress deployments should not be evicted
-        };
+            var key = InProgressKeyPrefix + executionId;
+            var options = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = InProgressExpiration,
+                Priority = CacheItemPriority.High // In-progress deployments should not be evicted
+            };
 
-        _cache.Set(key, request, options);
-        _inProgressIds.TryAdd(executionId, 0);
-        _logger.LogDebug("Tracking deployment {ExecutionId} as in-progress", executionId);
+            _cache.Set(key, request, options);
+            _inProgressIds.TryAdd(executionId, 0);
+            _logger.LogDebug("Tracking deployment {ExecutionId} as in-progress", executionId);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Cache already disposed (application shutting down) - ignore
+            _logger.LogDebug("Cache disposed while tracking deployment {ExecutionId}", executionId);
+        }
 
         return Task.CompletedTask;
     }
 
     public Task RemoveInProgressAsync(Guid executionId)
     {
-        var key = InProgressKeyPrefix + executionId;
-        _cache.Remove(key);
-        _inProgressIds.TryRemove(executionId, out _);
-        _logger.LogDebug("Removed in-progress tracking for deployment {ExecutionId}", executionId);
+        try
+        {
+            var key = InProgressKeyPrefix + executionId;
+            _cache.Remove(key);
+            _inProgressIds.TryRemove(executionId, out _);
+            _logger.LogDebug("Removed in-progress tracking for deployment {ExecutionId}", executionId);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Cache already disposed (application shutting down) - ignore
+            _logger.LogDebug("Cache disposed while removing in-progress deployment {ExecutionId}", executionId);
+        }
 
         return Task.CompletedTask;
     }
@@ -136,17 +160,25 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
 
     public Task UpdatePipelineStateAsync(Guid executionId, PipelineExecutionState state)
     {
-        var key = PipelineStateKeyPrefix + executionId;
-        var options = new MemoryCacheEntryOptions
+        try
         {
-            AbsoluteExpirationRelativeToNow = InProgressExpiration,
-            Priority = CacheItemPriority.High // Pipeline state should not be evicted
-        };
+            var key = PipelineStateKeyPrefix + executionId;
+            var options = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = InProgressExpiration,
+                Priority = CacheItemPriority.High // Pipeline state should not be evicted
+            };
 
-        state.LastUpdated = DateTime.UtcNow;
-        _cache.Set(key, state, options);
-        _logger.LogDebug("Updated pipeline state for execution {ExecutionId}: Status={Status}, Stage={Stage}",
-            executionId, state.Status, state.CurrentStage);
+            state.LastUpdated = DateTime.UtcNow;
+            _cache.Set(key, state, options);
+            _logger.LogDebug("Updated pipeline state for execution {ExecutionId}: Status={Status}, Stage={Stage}",
+                executionId, state.Status, state.CurrentStage);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Cache already disposed (application shutting down) - ignore
+            _logger.LogDebug("Cache disposed while updating pipeline state for deployment {ExecutionId}", executionId);
+        }
 
         return Task.CompletedTask;
     }
