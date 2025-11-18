@@ -12,41 +12,34 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 /// These tests verify the fundamental API functionality works end-to-end with real dependencies.
 /// </summary>
 [Collection("IntegrationTests")]
-public class BasicIntegrationTests : IClassFixture<PostgreSqlContainerFixture>, IClassFixture<RedisContainerFixture>, IAsyncLifetime
+public class BasicIntegrationTests : IAsyncLifetime
 {
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
-    private IntegrationTestFactory? _factory;
+    private readonly SharedIntegrationTestFixture _fixture;
     private HttpClient? _client;
     private AuthHelper? _authHelper;
     private ApiClientHelper? _apiHelper;
 
-    public BasicIntegrationTests(
-        PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+    public BasicIntegrationTests(SharedIntegrationTestFixture fixture)
     {
-        _postgreSqlFixture = postgreSqlFixture ?? throw new ArgumentNullException(nameof(postgreSqlFixture));
-        _redisFixture = redisFixture ?? throw new ArgumentNullException(nameof(redisFixture));
+        _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
     }
 
     public async Task InitializeAsync()
     {
-        // Create factory and client for each test
-        _factory = new IntegrationTestFactory(_postgreSqlFixture, _redisFixture);
-        await _factory.InitializeAsync();
-
-        _client = _factory.CreateClient();
+        // Factory is already initialized by collection fixture
+        // Just create client for each test
+        _client = _fixture.Factory.CreateClient();
         _authHelper = new AuthHelper(_client);
         _apiHelper = new ApiClientHelper(_client);
+
+        await Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
     {
         _client?.Dispose();
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        // Factory is disposed by collection fixture, not here
+        await Task.CompletedTask;
     }
 
     #region Health Check Tests

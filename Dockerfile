@@ -12,6 +12,7 @@ COPY ["src/HotSwap.KnowledgeGraph.Domain/HotSwap.KnowledgeGraph.Domain.csproj", 
 COPY ["src/HotSwap.KnowledgeGraph.Infrastructure/HotSwap.KnowledgeGraph.Infrastructure.csproj", "src/HotSwap.KnowledgeGraph.Infrastructure/"]
 COPY ["src/HotSwap.KnowledgeGraph.QueryEngine/HotSwap.KnowledgeGraph.QueryEngine.csproj", "src/HotSwap.KnowledgeGraph.QueryEngine/"]
 COPY ["tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj", "tests/HotSwap.Distributed.Tests/"]
+COPY ["tests/HotSwap.Distributed.IntegrationTests/HotSwap.Distributed.IntegrationTests.csproj", "tests/HotSwap.Distributed.IntegrationTests/"]
 COPY ["tests/HotSwap.KnowledgeGraph.Tests/HotSwap.KnowledgeGraph.Tests.csproj", "tests/HotSwap.KnowledgeGraph.Tests/"]
 COPY ["tests/HotSwap.Distributed.SmokeTests/HotSwap.Distributed.SmokeTests.csproj", "tests/HotSwap.Distributed.SmokeTests/"]
 COPY ["examples/ApiUsageExample/ApiUsageExample.csproj", "examples/ApiUsageExample/"]

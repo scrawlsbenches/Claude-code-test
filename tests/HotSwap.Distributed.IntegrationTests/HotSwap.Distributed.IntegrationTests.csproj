@@ -25,16 +25,12 @@
     <PackageReference Include="Moq" Version="4.20.70" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
 
-    <!-- Testcontainers for Docker-based testing -->
-    <PackageReference Include="Testcontainers" Version="3.10.0" />
-    <PackageReference Include="Testcontainers.PostgreSql" Version="3.10.0" />
-    <PackageReference Include="Testcontainers.Redis" Version="3.10.0" />
-
     <!-- WebApplicationFactory for API testing -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
 
-    <!-- Additional dependencies -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.1" />
+    <!-- In-memory alternatives (no Docker needed) -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
   </ItemGroup>
 

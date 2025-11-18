@@ -1,54 +1,50 @@
 using HotSwap.Distributed.Api;
+using HotSwap.Distributed.Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 
 /// <summary>
 /// Custom WebApplicationFactory for integration testing.
-/// Configures the API to use Testcontainers for dependencies.
+/// Uses in-memory alternatives (SQLite in-memory, MemoryDistributedCache) instead of Docker containers.
+/// This allows tests to run anywhere without Docker dependencies.
 /// </summary>
 public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainerFixture _postgreSqlFixture;
-    private readonly RedisContainerFixture _redisFixture;
+    private readonly SqliteConnection _sqliteConnection;
 
-    public IntegrationTestFactory(
-        PostgreSqlContainerFixture postgreSqlFixture,
-        RedisContainerFixture redisFixture)
+    public IntegrationTestFactory()
     {
-        _postgreSqlFixture = postgreSqlFixture;
-        _redisFixture = redisFixture;
+        // Create and open SQLite in-memory connection in constructor
+        // Must stay open for lifetime of tests or database will be destroyed
+        _sqliteConnection = new SqliteConnection("Data Source=:memory:");
+        _sqliteConnection.Open();
     }
 
     /// <summary>
-    /// Gets the PostgreSQL connection string from the test container.
+    /// Gets the SQLite in-memory connection string.
     /// </summary>
-    public string PostgreSqlConnectionString => _postgreSqlFixture.GetConnectionString();
+    public string PostgreSqlConnectionString => "Data Source=:memory:";
 
     /// <summary>
-    /// Gets the Redis connection string from the test container.
-    /// </summary>
-    public string RedisConnectionString => _redisFixture.GetConnectionString();
-
-    /// <summary>
-    /// Configures the test web host to use Testcontainers.
+    /// Configures the test web host to use in-memory alternatives.
     /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Override configuration to use test containers
+            // Override configuration to use in-memory alternatives
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                // Redis configuration for distributed locking
-                ["Redis:ConnectionString"] = RedisConnectionString,
-
-                // PostgreSQL configuration for audit logs
+                // SQLite in-memory configuration for audit logs
                 ["ConnectionStrings:PostgreSql"] = PostgreSqlConnectionString,
 
                 // JWT configuration for authentication (test key)
@@ -70,10 +66,15 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // CORS - allow test origins
                 ["Cors:AllowedOrigins:0"] = "http://localhost",
 
-                // Pipeline configuration
-                ["Pipeline:MaxConcurrentDeployments"] = "10",
-                ["Pipeline:DefaultTimeoutMinutes"] = "5",
-                ["Pipeline:ApprovalTimeoutHours"] = "1", // 1 hour for integration tests (vs 4 hours production)
+                // Pipeline configuration - use FAST timeouts for integration tests
+                ["Pipeline:MaxConcurrentPipelines"] = "10",
+                ["Pipeline:QaMaxConcurrentNodes"] = "4",
+                ["Pipeline:StagingSmokeTestTimeout"] = "00:00:10", // 10 seconds (vs 5 minutes production)
+                ["Pipeline:CanaryInitialPercentage"] = "10",
+                ["Pipeline:CanaryIncrementPercentage"] = "50", // Faster rollout: 50% increments vs 20% production
+                ["Pipeline:CanaryWaitDuration"] = "00:00:05", // 5 SECONDS (vs 15 MINUTES production) - CRITICAL
+                ["Pipeline:AutoRollbackOnFailure"] = "true",
+                ["Pipeline:ApprovalTimeoutHours"] = "1", // 1 hour for integration tests (vs 24 hours production)
 
                 // Reduce logging verbosity for integration tests
                 // Only log warnings and errors to avoid 27k+ log lines
@@ -94,29 +95,76 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
         builder.ConfigureTestServices(services =>
         {
-            // Additional service overrides for testing can go here
-            // For example, replace background services that might interfere with tests
+            // Replace PostgreSQL DbContext with SQLite in-memory
+            var dbContextDescriptor = services.FirstOrDefault(d =>
+                d.ServiceType == typeof(Microsoft.EntityFrameworkCore.DbContextOptions<HotSwap.Distributed.Infrastructure.Data.AuditLogDbContext>));
+            if (dbContextDescriptor != null)
+            {
+                services.Remove(dbContextDescriptor);
+            }
+
+            // Add SQLite in-memory DbContext
+            services.AddDbContext<HotSwap.Distributed.Infrastructure.Data.AuditLogDbContext>(options =>
+            {
+                options.UseSqlite(_sqliteConnection);
+            });
+
+            // Replace Redis with MemoryDistributedCache for in-memory distributed locking
+            // Remove any existing IConnectionMultiplexer registrations
+            var redisDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IConnectionMultiplexer));
+            if (redisDescriptor != null)
+            {
+                services.Remove(redisDescriptor);
+            }
+
+            // Remove any existing IDistributedCache registrations
+            var cacheDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Microsoft.Extensions.Caching.Distributed.IDistributedCache));
+            if (cacheDescriptor != null)
+            {
+                services.Remove(cacheDescriptor);
+            }
+
+            // Add in-memory distributed cache (no Redis needed)
+            services.AddDistributedMemoryCache();
+
+            // Replace RedisDistributedLock with InMemoryDistributedLock
+            var lockDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IDistributedLock));
+            if (lockDescriptor != null)
+            {
+                services.Remove(lockDescriptor);
+            }
+
+            // Add in-memory distributed lock (no Redis needed)
+            services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
         });
 
         builder.UseEnvironment("Development");
     }
 
     /// <summary>
-    /// Initializes the factory and ensures containers are ready.
+    /// Initializes the factory and ensures database schema is created.
     /// </summary>
     public async Task InitializeAsync()
     {
-        // Containers are already initialized by their fixtures
-        // This method is here for IAsyncLifetime compatibility
+        // Ensure database schema is created
+        using (var scope = Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<HotSwap.Distributed.Infrastructure.Data.AuditLogDbContext>();
+            await dbContext.Database.EnsureCreatedAsync();
+        }
+
         await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Disposes the factory (containers are disposed by their fixtures).
+    /// Disposes the factory and closes in-memory database connection.
     /// </summary>
     public new async Task DisposeAsync()
     {
-        // Containers are disposed by their fixtures
+        // Close and dispose SQLite connection
+        await _sqliteConnection.CloseAsync();
+        await _sqliteConnection.DisposeAsync();
+
         await base.DisposeAsync();
     }
 }
