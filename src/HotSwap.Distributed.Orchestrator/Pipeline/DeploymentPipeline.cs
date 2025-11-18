@@ -594,8 +594,8 @@ public class DeploymentPipeline : IDisposable
     {
         var stage = new PipelineStageResult
         {
-            StageName = $"Approval for {environment}",
-            Status = PipelineStageStatus.WaitingForApproval,
+            StageName = "Approval",
+            Status = PipelineStageStatus.Pending,
             StartTime = DateTime.UtcNow
         };
 
