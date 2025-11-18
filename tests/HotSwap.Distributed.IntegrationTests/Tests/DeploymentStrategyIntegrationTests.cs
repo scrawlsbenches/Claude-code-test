@@ -249,12 +249,14 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
 
         // Assert
         finalStatus.Status.Should().Be("Succeeded");
-        finalStatus.Stages.Should().Contain(s => s.Name == "Smoke Tests",
-            "Blue-Green deployment should include smoke tests stage");
 
-        var smokeTestStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Smoke Tests");
-        smokeTestStage.Should().NotBeNull();
-        smokeTestStage!.Status.Should().Be("Completed", "Smoke tests should pass before traffic switch");
+        // Blue-Green deployment includes validation stage (not "Smoke Tests" - that was renamed to "Validation")
+        finalStatus.Stages.Should().Contain(s => s.Name == "Validation",
+            "Blue-Green deployment should include validation stage");
+
+        var validationStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Validation");
+        validationStage.Should().NotBeNull();
+        validationStage!.Status.Should().Be("Succeeded", "Validation should pass before traffic switch");
     }
 
     #endregion
