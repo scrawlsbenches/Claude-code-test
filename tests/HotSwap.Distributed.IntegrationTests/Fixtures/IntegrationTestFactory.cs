@@ -66,10 +66,15 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // CORS - allow test origins
                 ["Cors:AllowedOrigins:0"] = "http://localhost",
 
-                // Pipeline configuration
-                ["Pipeline:MaxConcurrentDeployments"] = "10",
-                ["Pipeline:DefaultTimeoutMinutes"] = "5",
-                ["Pipeline:ApprovalTimeoutHours"] = "1", // 1 hour for integration tests (vs 4 hours production)
+                // Pipeline configuration - use FAST timeouts for integration tests
+                ["Pipeline:MaxConcurrentPipelines"] = "10",
+                ["Pipeline:QaMaxConcurrentNodes"] = "4",
+                ["Pipeline:StagingSmokeTestTimeout"] = "00:00:10", // 10 seconds (vs 5 minutes production)
+                ["Pipeline:CanaryInitialPercentage"] = "10",
+                ["Pipeline:CanaryIncrementPercentage"] = "50", // Faster rollout: 50% increments vs 20% production
+                ["Pipeline:CanaryWaitDuration"] = "00:00:05", // 5 SECONDS (vs 15 MINUTES production) - CRITICAL
+                ["Pipeline:AutoRollbackOnFailure"] = "true",
+                ["Pipeline:ApprovalTimeoutHours"] = "1", // 1 hour for integration tests (vs 24 hours production)
 
                 // Reduce logging verbosity for integration tests
                 // Only log warnings and errors to avoid 27k+ log lines
