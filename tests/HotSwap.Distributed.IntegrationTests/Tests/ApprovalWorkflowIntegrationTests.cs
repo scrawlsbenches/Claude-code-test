@@ -148,12 +148,12 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
         // Verify approval stage completed
         var approvalStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Approval");
         approvalStage.Should().NotBeNull();
-        approvalStage!.Status.Should().Be("Completed", "Approval stage should be completed");
+        approvalStage!.Status.Should().Be("Succeeded", "Approval stage should be completed");
 
         // Verify deployment stage executed
         var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
         deploymentStage.Should().NotBeNull();
-        deploymentStage!.Status.Should().Be("Completed", "Deployment should execute after approval");
+        deploymentStage!.Status.Should().Be("Succeeded", "Deployment should execute after approval");
     }
 
     /// <summary>
@@ -354,7 +354,7 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
         // Verify deployment executed directly
         var deploymentStage = finalStatus.Stages.FirstOrDefault(s => s.Name == "Deployment");
         deploymentStage.Should().NotBeNull();
-        deploymentStage!.Status.Should().Be("Completed");
+        deploymentStage!.Status.Should().Be("Succeeded");
     }
 
     #endregion

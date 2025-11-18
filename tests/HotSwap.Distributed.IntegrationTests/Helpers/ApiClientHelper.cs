@@ -122,18 +122,18 @@ public class ApiClientHelper
     /// <summary>
     /// Gets the list of all clusters.
     /// </summary>
-    public async Task<List<ClusterInfoResponse>> ListClustersAsync()
+    public async Task<List<ClusterSummary>> ListClustersAsync()
     {
         var response = await _client.GetAsync("/api/v1/clusters");
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        var clusters = JsonSerializer.Deserialize<List<ClusterInfoResponse>>(content, new JsonSerializerOptions
+        var clusters = JsonSerializer.Deserialize<List<ClusterSummary>>(content, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
-        return clusters ?? new List<ClusterInfoResponse>();
+        return clusters ?? new List<ClusterSummary>();
     }
 
     /// <summary>
