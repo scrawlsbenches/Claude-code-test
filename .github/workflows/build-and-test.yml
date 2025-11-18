@@ -55,7 +55,7 @@ jobs:
       run: dotnet build DistributedKernel.sln --configuration Release --no-restore
 
     - name: Run integration tests
-      run: dotnet test tests/HotSwap.Distributed.IntegrationTests/HotSwap.Distributed.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=detailed"
+      run: dotnet test tests/HotSwap.Distributed.IntegrationTests/HotSwap.Distributed.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=detailed" --blame-hang-timeout 2m --blame-crash
       env:
         # Testcontainers requires Docker to be available
         DOCKER_HOST: unix:///var/run/docker.sock

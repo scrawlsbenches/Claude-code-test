@@ -63,8 +63,8 @@ public class ApiClientHelper
     }
 
     /// <summary>
-    /// Waits for a deployment to complete (succeed or fail).
-    /// Polls the API until the deployment is no longer in progress.
+    /// Waits for a deployment to complete (succeed or fail) or reach a decision point.
+    /// Polls the API until the deployment reaches a terminal or quasi-terminal state.
     /// </summary>
     /// <param name="executionId">The deployment execution ID</param>
     /// <param name="timeout">Maximum time to wait (default: 2 minutes)</param>
@@ -89,9 +89,10 @@ public class ApiClientHelper
                 throw new InvalidOperationException($"Deployment {executionId} not found");
             }
 
-            // Check if deployment is complete (Status indicates completion)
-            // Statuses: "Pending", "InProgress", "Succeeded", "Failed", "Cancelled"
-            if (result.Status == "Succeeded" || result.Status == "Failed" || result.Status == "Cancelled")
+            // Check if deployment reached a terminal state
+            if (result.Status == "Succeeded" ||
+                result.Status == "Failed" ||
+                result.Status == "Cancelled")
             {
                 return result;
             }
@@ -122,18 +123,18 @@ public class ApiClientHelper
     /// <summary>
     /// Gets the list of all clusters.
     /// </summary>
-    public async Task<List<ClusterInfoResponse>> ListClustersAsync()
+    public async Task<List<ClusterSummary>> ListClustersAsync()
     {
         var response = await _client.GetAsync("/api/v1/clusters");
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        var clusters = JsonSerializer.Deserialize<List<ClusterInfoResponse>>(content, new JsonSerializerOptions
+        var clusters = JsonSerializer.Deserialize<List<ClusterSummary>>(content, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
-        return clusters ?? new List<ClusterInfoResponse>();
+        return clusters ?? new List<ClusterSummary>();
     }
 
     /// <summary>

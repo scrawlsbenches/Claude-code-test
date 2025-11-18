@@ -80,7 +80,7 @@ public class ConcurrentDeploymentIntegrationTests : IClassFixture<PostgreSqlCont
         var completionTasks = deploymentResponses
             .Select(response => _apiHelper!.WaitForDeploymentCompletionAsync(
                 response.ExecutionId.ToString(),
-                timeout: TimeSpan.FromMinutes(10)))
+                timeout: TimeSpan.FromMinutes(2)))
             .ToArray();
 
         var finalStatuses = await Task.WhenAll(completionTasks);
@@ -124,7 +124,7 @@ public class ConcurrentDeploymentIntegrationTests : IClassFixture<PostgreSqlCont
         var completionTasks = deploymentResponses
             .Select(response => _apiHelper!.WaitForDeploymentCompletionAsync(
                 response.ExecutionId.ToString(),
-                timeout: TimeSpan.FromMinutes(5)))
+                timeout: TimeSpan.FromSeconds(90)))
             .ToArray();
 
         var finalStatuses = await Task.WhenAll(completionTasks);
@@ -168,7 +168,7 @@ public class ConcurrentDeploymentIntegrationTests : IClassFixture<PostgreSqlCont
         var completionTasks = deploymentResponses
             .Select(response => _apiHelper!.WaitForDeploymentCompletionAsync(
                 response.ExecutionId.ToString(),
-                timeout: TimeSpan.FromMinutes(10)))
+                timeout: TimeSpan.FromMinutes(2)))
             .ToArray();
 
         var finalStatuses = await Task.WhenAll(completionTasks);
@@ -217,11 +217,11 @@ public class ConcurrentDeploymentIntegrationTests : IClassFixture<PostgreSqlCont
 
         var status1Task = _apiHelper.WaitForDeploymentCompletionAsync(
             responses[0].ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         var status2Task = _apiHelper.WaitForDeploymentCompletionAsync(
             responses[1].ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         var statuses = await Task.WhenAll(status1Task, status2Task);
 

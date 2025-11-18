@@ -117,7 +117,7 @@ public class RollbackScenarioIntegrationTests : IClassFixture<PostgreSqlContaine
         var deployment = await _apiHelper!.CreateDeploymentAsync(request);
         var status = await _apiHelper.WaitForDeploymentCompletionAsync(
             deployment.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         status.Status.Should().Be("Succeeded");
 
@@ -143,7 +143,7 @@ public class RollbackScenarioIntegrationTests : IClassFixture<PostgreSqlContaine
         var deployment = await _apiHelper!.CreateDeploymentAsync(request);
         var status = await _apiHelper.WaitForDeploymentCompletionAsync(
             deployment.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         status.Status.Should().Be("Succeeded");
 
