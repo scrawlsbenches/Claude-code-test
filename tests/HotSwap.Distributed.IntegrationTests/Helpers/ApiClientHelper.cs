@@ -79,11 +79,9 @@ public class ApiClientHelper
         pollInterval ??= TimeSpan.FromSeconds(1);
 
         var startTime = DateTime.UtcNow;
-        var iterations = 0;
 
         while (DateTime.UtcNow - startTime < timeout)
         {
-            iterations++;
             var result = await GetDeploymentStatusAsync(executionId);
 
             if (result == null)
@@ -91,21 +89,10 @@ public class ApiClientHelper
                 throw new InvalidOperationException($"Deployment {executionId} not found");
             }
 
-            // Log progress every 10 iterations (10 seconds with 1s poll interval)
-            if (iterations % 10 == 0)
-            {
-                var elapsed = DateTime.UtcNow - startTime;
-                Console.WriteLine($"[Poll {iterations}] Deployment {executionId} status: {result.Status} (elapsed: {elapsed.TotalSeconds:F1}s)");
-            }
-
-            // Check if deployment reached a terminal or decision-point state
-            // Terminal states: "Succeeded", "Failed", "Cancelled"
-            // Decision-point states: "PendingApproval" (requires external action)
-            // In-progress states: "Running", "InProgress" (continue polling)
+            // Check if deployment reached a terminal state
             if (result.Status == "Succeeded" ||
                 result.Status == "Failed" ||
-                result.Status == "Cancelled" ||
-                result.Status == "PendingApproval")
+                result.Status == "Cancelled")
             {
                 return result;
             }
