@@ -138,7 +138,7 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
         // Wait for deployment to complete after approval
         var finalStatus = await _apiHelper.WaitForDeploymentCompletionAsync(
             executionId,
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         // Assert - Deployment completes successfully
         finalStatus.Should().NotBeNull();
@@ -311,7 +311,7 @@ public class ApprovalWorkflowIntegrationTests : IClassFixture<PostgreSqlContaine
         // Wait for first deployment to complete
         var status1 = await _apiHelper.WaitForDeploymentCompletionAsync(
             deployment1.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         await Task.Delay(TimeSpan.FromSeconds(2));
         var status2 = await _apiHelper.GetDeploymentStatusAsync(deployment2.ExecutionId.ToString());

@@ -154,7 +154,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         var deploymentResponse = await _apiHelper!.CreateDeploymentAsync(request);
         var finalStatus = await _apiHelper.WaitForDeploymentCompletionAsync(
             deploymentResponse.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5)); // Rolling deployment takes longer
+            timeout: TimeSpan.FromSeconds(90)); // Rolling deployment takes longer
 
         // Assert
         deploymentResponse.Should().NotBeNull();
@@ -187,7 +187,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         var deploymentResponse = await _apiHelper!.CreateDeploymentAsync(request);
         var finalStatus = await _apiHelper.WaitForDeploymentCompletionAsync(
             deploymentResponse.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         // Assert
         finalStatus.Status.Should().Be("Succeeded");
@@ -222,7 +222,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         var deploymentResponse = await _apiHelper!.CreateDeploymentAsync(request);
         var finalStatus = await _apiHelper.WaitForDeploymentCompletionAsync(
             deploymentResponse.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         // Assert
         deploymentResponse.Should().NotBeNull();
@@ -254,7 +254,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         var deploymentResponse = await _apiHelper!.CreateDeploymentAsync(request);
         var finalStatus = await _apiHelper.WaitForDeploymentCompletionAsync(
             deploymentResponse.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(5));
+            timeout: TimeSpan.FromSeconds(90));
 
         // Assert
         finalStatus.Status.Should().Be("Succeeded");
@@ -288,7 +288,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         var deploymentResponse = await _apiHelper!.CreateDeploymentAsync(request);
         var finalStatus = await _apiHelper.WaitForDeploymentCompletionAsync(
             deploymentResponse.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(10)); // Canary deployment takes longest
+            timeout: TimeSpan.FromMinutes(2)); // Canary deployment takes longest
 
         // Assert
         deploymentResponse.Should().NotBeNull();
@@ -322,7 +322,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         var deploymentResponse = await _apiHelper!.CreateDeploymentAsync(request);
         var finalStatus = await _apiHelper.WaitForDeploymentCompletionAsync(
             deploymentResponse.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(10));
+            timeout: TimeSpan.FromMinutes(2));
 
         // Assert
         finalStatus.Status.Should().Be("Succeeded");
@@ -379,7 +379,7 @@ public class DeploymentStrategyIntegrationTests : IClassFixture<PostgreSqlContai
         var response = await _apiHelper!.CreateDeploymentAsync(request);
         var status = await _apiHelper.WaitForDeploymentCompletionAsync(
             response.ExecutionId.ToString(),
-            timeout: TimeSpan.FromMinutes(10));
+            timeout: TimeSpan.FromMinutes(2));
 
         var deploymentStage = status.Stages.FirstOrDefault(s => s.Name == $"Deploy to {environment}");
         return (environment, deploymentStage?.Strategy ?? "Unknown");
