@@ -11,7 +11,7 @@ namespace HotSwap.Distributed.Api.Controllers;
 /// Platform admin API for tenant management (requires Admin role).
 /// </summary>
 [ApiController]
-[Route("api/v1/admin/tenants")]
+[Route("api/tenants")]
 [Produces("application/json")]
 [Authorize(Roles = "Admin")]
 public class TenantsController : ControllerBase
@@ -134,7 +134,7 @@ public class TenantsController : ControllerBase
     /// <returns>List of tenants</returns>
     /// <response code="200">Tenants retrieved</response>
     [HttpGet]
-    [ProducesResponseType(typeof(List<TenantSummary>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<TenantResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ListTenants(
         [FromQuery] string? status,
         CancellationToken cancellationToken)
@@ -148,17 +148,9 @@ public class TenantsController : ControllerBase
 
         var tenants = await _tenantRepository.GetAllAsync(statusFilter, cancellationToken);
 
-        var summaries = tenants.Select(t => new TenantSummary
-        {
-            TenantId = t.TenantId,
-            Name = t.Name,
-            Subdomain = t.Subdomain,
-            Status = t.Status.ToString(),
-            Tier = t.Tier.ToString(),
-            CreatedAt = t.CreatedAt
-        }).ToList();
+        var responses = tenants.Select(t => MapToTenantResponse(t)).ToList();
 
-        return Ok(summaries);
+        return Ok(responses);
     }
 
     /// <summary>
@@ -215,21 +207,19 @@ public class TenantsController : ControllerBase
     /// Suspends a tenant.
     /// </summary>
     /// <param name="tenantId">Tenant ID</param>
-    /// <param name="reason">Suspension reason</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Success result</returns>
+    /// <returns>Tenant information</returns>
     /// <response code="200">Tenant suspended</response>
     /// <response code="404">Tenant not found</response>
     [HttpPost("{tenantId}/suspend")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(TenantResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SuspendTenant(
         Guid tenantId,
-        [FromBody] string reason,
         CancellationToken cancellationToken)
     {
         var success = await _provisioningService.SuspendTenantAsync(
-            tenantId, reason, cancellationToken);
+            tenantId, "Suspended by administrator", cancellationToken);
 
         if (!success)
         {
@@ -239,7 +229,8 @@ public class TenantsController : ControllerBase
             });
         }
 
-        return Ok(new { message = "Tenant suspended successfully" });
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId, cancellationToken);
+        return Ok(MapToTenantResponse(tenant!));
     }
 
     /// <summary>
@@ -247,11 +238,11 @@ public class TenantsController : ControllerBase
     /// </summary>
     /// <param name="tenantId">Tenant ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Success result</returns>
+    /// <returns>Tenant information</returns>
     /// <response code="200">Tenant activated</response>
     /// <response code="404">Tenant not found</response>
     [HttpPost("{tenantId}/activate")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(TenantResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ActivateTenant(
         Guid tenantId,
@@ -267,7 +258,46 @@ public class TenantsController : ControllerBase
             });
         }
 
-        return Ok(new { message = "Tenant activated successfully" });
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId, cancellationToken);
+        return Ok(MapToTenantResponse(tenant!));
+    }
+
+    /// <summary>
+    /// Updates a tenant's subscription tier.
+    /// </summary>
+    /// <param name="tenantId">Tenant ID</param>
+    /// <param name="request">Subscription update request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Updated tenant information</returns>
+    /// <response code="200">Subscription updated</response>
+    /// <response code="404">Tenant not found</response>
+    [HttpPut("{tenantId}/subscription")]
+    [ProducesResponseType(typeof(TenantResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateSubscription(
+        Guid tenantId,
+        [FromBody] UpdateSubscriptionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId, cancellationToken);
+
+        if (tenant == null)
+        {
+            return NotFound(new ErrorResponse
+            {
+                Error = $"Tenant {tenantId} not found"
+            });
+        }
+
+        // Update the tier
+        tenant.Tier = request.Tier;
+
+        // Update resource quota based on new tier
+        tenant.ResourceQuota = ResourceQuota.CreateDefault(request.Tier);
+
+        tenant = await _tenantRepository.UpdateAsync(tenant, cancellationToken);
+
+        return Ok(MapToTenantResponse(tenant));
     }
 
     /// <summary>

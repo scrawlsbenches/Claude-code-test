@@ -10,6 +10,7 @@ using HotSwap.Distributed.Infrastructure.Metrics;
 using HotSwap.Distributed.Infrastructure.Notifications;
 using HotSwap.Distributed.Infrastructure.Security;
 using HotSwap.Distributed.Infrastructure.Telemetry;
+using HotSwap.Distributed.Infrastructure.Tenants;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Services;
@@ -298,6 +299,10 @@ else
 
 // Register deployment tracking service
 builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
+
+// Register tenant services
+builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
+builder.Services.AddSingleton<ITenantProvisioningService, TenantProvisioningService>();
 
 // Register rate limit cleanup service
 builder.Services.AddHostedService<RateLimitCleanupService>();

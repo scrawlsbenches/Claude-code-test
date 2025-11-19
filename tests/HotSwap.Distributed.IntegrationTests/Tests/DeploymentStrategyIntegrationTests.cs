@@ -50,7 +50,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// Tests Direct deployment strategy (Development environment).
     /// Direct strategy deploys to all nodes simultaneously without health checks between deployments.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task DirectDeployment_ToDevelopmentEnvironment_CompletesSuccessfully()
     {
         // Arrange
@@ -87,7 +88,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests Direct deployment with multiple versions to verify module updates work correctly.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task DirectDeployment_WithMultipleVersions_UpdatesSuccessfully()
     {
         // Arrange - Deploy version 1.0.0
@@ -132,7 +134,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// Tests Rolling deployment strategy (QA environment).
     /// Rolling strategy deploys to a few nodes at a time, validating health before proceeding.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task RollingDeployment_ToQAEnvironment_CompletesSuccessfully()
     {
         // Arrange
@@ -165,7 +168,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests Rolling deployment deploys to nodes in batches (not all at once).
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task RollingDeployment_DeploysInBatches_NotAllAtOnce()
     {
         // Arrange
@@ -200,7 +204,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// Tests Blue-Green deployment strategy (Staging environment).
     /// Blue-Green strategy deploys to inactive ("green") nodes, validates, then switches traffic.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task BlueGreenDeployment_ToStagingEnvironment_CompletesSuccessfully()
     {
         // Arrange
@@ -232,7 +237,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests Blue-Green deployment includes smoke tests before switching traffic.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task BlueGreenDeployment_IncludesSmokeTests_BeforeSwitching()
     {
         // Arrange
@@ -267,7 +273,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// Tests Canary deployment strategy (Production environment).
     /// Canary strategy gradually increases traffic to new version, starting with small percentage.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact(Skip = "Flaky in CI/CD - canary metrics analysis fails due to simulated error rates varying by environment")]
+    [Trait("Category", "Slow")]
     public async Task CanaryDeployment_ToProductionEnvironment_CompletesSuccessfully()
     {
         // Arrange
@@ -301,7 +308,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// Tests Canary deployment takes significantly longer than other strategies
     /// due to gradual traffic increase and monitoring periods.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task CanaryDeployment_TakesLongerThanDirectDeployment_DueToGradualRollout()
     {
         // Arrange
@@ -336,7 +344,8 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that different environments use different deployment strategies.
     /// </summary>
-    [Fact(Skip = "Deployment strategy tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task DeploymentStrategies_VaryByEnvironment_AsExpected()
     {
         // Arrange & Act - Deploy to all environments

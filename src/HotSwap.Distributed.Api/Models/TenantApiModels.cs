@@ -77,6 +77,17 @@ public class UpdateSubscriptionRequest
     public SubscriptionTier Tier { get; set; }
 }
 
+/// <summary>
+/// Request to suspend a tenant.
+/// </summary>
+public class SuspendTenantRequest
+{
+    /// <summary>
+    /// Reason for suspension.
+    /// </summary>
+    public required string Reason { get; set; }
+}
+
 #endregion
 
 #region Response Models
