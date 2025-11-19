@@ -92,9 +92,9 @@ public class DeploymentsController : ControllerBase
                     deploymentRequest,
                     cancellationToken);
 
-                // Move from in-progress to completed
-                await _deploymentTracker.RemoveInProgressAsync(deploymentRequest.ExecutionId);
+                // Store result BEFORE removing in-progress to avoid race condition with rollback
                 await _deploymentTracker.StoreResultAsync(deploymentRequest.ExecutionId, result);
+                await _deploymentTracker.RemoveInProgressAsync(deploymentRequest.ExecutionId);
             }
             catch (Exception ex)
             {
@@ -250,7 +250,23 @@ public class DeploymentsController : ControllerBase
         _logger.LogInformation("Rolling back deployment {ExecutionId}", executionId);
 
         // Check if deployment exists (completed or in-progress)
-        var result = await _deploymentTracker.GetResultAsync(executionId);
+        // Retry logic to handle race condition where deployment just completed
+        PipelineExecutionResult? result = null;
+        for (int attempt = 1; attempt <= 3; attempt++)
+        {
+            result = await _deploymentTracker.GetResultAsync(executionId);
+            if (result != null)
+            {
+                break;
+            }
+
+            if (attempt < 3)
+            {
+                _logger.LogDebug("Deployment result not found on attempt {Attempt}, retrying in 100ms", attempt);
+                await Task.Delay(100, cancellationToken);
+            }
+        }
+
         var inProgress = await _deploymentTracker.GetInProgressAsync(executionId);
 
         if (result == null && inProgress == null)

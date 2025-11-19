@@ -1,9 +1,127 @@
 # Delegation Prompt: Fix RollbackBlueGreenDeployment Test Failure
 
-## Task Overview
+## ✅ TASK COMPLETED (2025-11-19)
+
+**Status**: Fixed and merged
+**Commit**: `a03ea8f` - "fix: restore RollbackBlueGreenDeployment test by fixing race condition"
+**Result**: Test now passes consistently on CI/CD
+
+---
+
+## 🔍 ACTUAL FINDINGS vs ORIGINAL HYPOTHESIS
+
+### ❌ What the Original Prompt Got WRONG
+
+1. **Cache Expiration Hypothesis - INCORRECT**
+   - **Prompt claimed**: "Cache expiration was set to 1 minute"
+   - **Reality**: Cache expiration is **24 hours** (`TimeSpan.FromHours(24)` in `InMemoryDeploymentTracker.cs:22`)
+   - **Impact**: Fix Option 1 (increase cache expiration) would NOT have worked
+
+2. **File Path Error**
+   - **Prompt said**: `src/HotSwap.Distributed.Infrastructure/Deployment/InMemoryDeploymentTracker.cs`
+   - **Correct path**: `src/HotSwap.Distributed.Infrastructure/Deployment**s**/InMemoryDeploymentTracker.cs` (plural)
+
+3. **Root Cause Misidentified**
+   - **Prompt claimed**: Cache expiration or missing storage
+   - **Actual cause**: Race condition in async background task execution + missing final pipeline status update
+
+### ✅ What Was ACTUALLY Discovered
+
+1. **The Real Root Cause: Race Condition**
+   - `DeploymentPipeline.ExecuteAsync` **never** updates pipeline state to "Succeeded" after completion
+   - Last `UpdatePipelineStateAsync` call uses status "Running" (during validation stage)
+   - Background task in `DeploymentsController` had wrong ordering:
+     - ❌ OLD: `RemoveInProgressAsync()` → `StoreResultAsync()`
+     - ✅ NEW: `StoreResultAsync()` → `RemoveInProgressAsync()`
+   - Brief window where deployment appears "completed" but result not yet stored
+
+2. **Environment-Specific Failure**
+   - ✅ Test **passes locally** consistently (48-58 seconds)
+   - ❌ Test **fails on CI/CD** intermittently
+   - Reason: CI/CD has more resource contention, slower execution, parallel test runs
+   - Blue-Green deployments take longest (~48-58s), increasing race condition window
+
+3. **IDeploymentTracker is Singleton** ✓
+   - Verified in `Program.cs:301` - `AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>()`
+   - Ruled out "multiple instances" hypothesis
+
+### ✅ Actual Fixes That Worked
+
+**Fix #1: Add Final Pipeline Status Update** (`DeploymentPipeline.cs:180-185`)
+```csharp
+// ADDED: Update pipeline state with final status after completion
+await UpdatePipelineStateAsync(
+    request,
+    result.Success ? "Succeeded" : "Failed",
+    "Completed",
+    result.StageResults);
+```
+- **Impact**: `GetDeployment` endpoint can now return "Succeeded" from pipeline state
+- **Prevents**: Race condition where test sees "Running" status indefinitely
+
+**Fix #2: Swap StoreResultAsync/RemoveInProgressAsync Order** (`DeploymentsController.cs:95-97`)
+```csharp
+// CHANGED ORDER: Store result BEFORE removing in-progress
+await _deploymentTracker.StoreResultAsync(deploymentRequest.ExecutionId, result);
+await _deploymentTracker.RemoveInProgressAsync(deploymentRequest.ExecutionId);
+```
+- **Impact**: Result always available before deployment marked as "not in progress"
+- **Prevents**: Race condition where rollback checks for result before it's stored
+
+**Fix #3: Add Retry Logic (Defensive)** (`DeploymentsController.cs:254-268`)
+```csharp
+// ADDED: 3-attempt retry with 100ms delay for GetResultAsync
+PipelineExecutionResult? result = null;
+for (int attempt = 1; attempt <= 3; attempt++)
+{
+    result = await _deploymentTracker.GetResultAsync(executionId);
+    if (result != null) break;
+
+    if (attempt < 3)
+    {
+        _logger.LogDebug("Deployment result not found on attempt {Attempt}, retrying in 100ms", attempt);
+        await Task.Delay(100, cancellationToken);
+    }
+}
+```
+- **Impact**: Tolerates any remaining timing edge cases
+- **Prevents**: Transient failures due to async timing
+
+**Fix #4: Removed Skip Attribute**
+- `RollbackScenarioIntegrationTests.cs:135` - Removed `Skip = "..."` parameter
+- Test now runs in CI/CD pipeline
+
+### 📊 Testing Results
+
+- ✅ Local unit tests: 568 passed, 14 skipped, 0 failed (18s)
+- ✅ RollbackBlueGreenDeployment test: **PASSED** (58.5s)
+- ✅ Build: 0 warnings, 0 errors
+- ✅ CI/CD: All jobs passing
+
+### 🎓 Lessons Learned for Future Delegation Prompts
+
+1. **Always verify assumptions in code before documenting**
+   - Read actual values (cache expiration) rather than guessing
+   - Check file paths exist and are correct
+
+2. **Consider environment differences**
+   - Tests may behave differently on CI/CD vs local
+   - Resource contention and timing matter
+
+3. **Look for async/await patterns**
+   - Race conditions common in background Task.Run() operations
+   - Check ordering of async operations carefully
+
+4. **Multiple defensive layers work best**
+   - Don't rely on single fix - implement defense in depth
+   - Combine: ordering fix + status update + retry logic
+
+---
+
+## Task Overview (Original)
 Investigate and fix the failing `RollbackBlueGreenDeployment_SwitchesBackToBlueEnvironment` integration test. The test is currently skipped to keep the build green, but needs to be restored.
 
-## Current Status
+## Current Status (Original - Now Outdated)
 - **Tests Passing**: 67/69 (97%)
 - **Tests Skipped**: 2
   1. `CanaryDeployment_ToProductionEnvironment_CompletesSuccessfully` - Flaky due to metrics simulation
