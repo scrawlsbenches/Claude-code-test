@@ -136,24 +136,26 @@ Integration tests verify complete workflows using in-memory alternatives (SQLite
 ```
 tests/HotSwap.Distributed.IntegrationTests/
 ├── Fixtures/
-│   ├── PostgreSqlContainerFixture.cs   # PostgreSQL 16 Testcontainer
-│   ├── RedisContainerFixture.cs        # Redis 7 Testcontainer
-│   └── IntegrationTestFactory.cs       # Custom WebApplicationFactory
+│   ├── SharedIntegrationTestFixture.cs    # Shared test fixture (collection-level)
+│   ├── IntegrationTestFactory.cs          # WebApplicationFactory with in-memory deps
+│   ├── IntegrationTestCollection.cs       # xUnit collection definition
+│   └── InMemoryDistributedLock.cs         # In-memory distributed lock implementation
 ├── Helpers/
-│   ├── AuthHelper.cs                   # JWT token management
-│   ├── ApiClientHelper.cs              # API operation helpers
-│   └── TestDataBuilder.cs              # Test data creation
+│   ├── AuthHelper.cs                      # JWT token management
+│   ├── ApiClientHelper.cs                 # API operation helpers
+│   ├── TestDataBuilder.cs                 # Test data creation
+│   └── DeterministicMetricsProvider.cs    # Deterministic metrics for canary tests
 └── Tests/
-    ├── BasicIntegrationTests.cs                    # 9 tests - Health, auth, clusters
-    ├── DeploymentStrategyIntegrationTests.cs       # 9 tests - All 4 strategies
-    ├── ApprovalWorkflowIntegrationTests.cs         # 10 tests - Approve/reject
-    ├── RollbackScenarioIntegrationTests.cs         # 10 tests - Rollback workflows
-    ├── ConcurrentDeploymentIntegrationTests.cs     # 8 tests - Concurrency & stress
-    ├── MessagingIntegrationTests.cs                # 19 tests - Message queue system
-    └── MultiTenantIntegrationTests.cs              # 17 tests - Multi-tenant features
+    ├── BasicIntegrationTests.cs                    # Health, auth, clusters
+    ├── DeploymentStrategyIntegrationTests.cs       # All 4 deployment strategies (Direct, Rolling, BlueGreen, Canary)
+    ├── ApprovalWorkflowIntegrationTests.cs         # Approve/reject workflows
+    ├── RollbackScenarioIntegrationTests.cs         # Rollback scenarios
+    ├── ConcurrentDeploymentIntegrationTests.cs     # Concurrency & stress testing
+    ├── MessagingIntegrationTests.cs                # Message queue system
+    └── MultiTenantIntegrationTests.cs              # Multi-tenant features
 ```
 
-**Total**: 82 integration tests across 6 test files
+**Total**: 69 integration tests across 7 test files (all passing, 0 flaky)
 
 #### Prerequisites
 
@@ -190,7 +192,7 @@ Passed!  - Failed:     0, Passed:    69, Skipped:     0, Total:    69, Duration:
 
 #### Integration Test Details
 
-##### 1. BasicIntegrationTests.cs (9 tests)
+##### 1. BasicIntegrationTests.cs
 
 Tests fundamental API functionality:
 - Health check endpoint returns 200 OK
@@ -203,7 +205,7 @@ Tests fundamental API functionality:
 dotnet test --filter "FullyQualifiedName~BasicIntegrationTests"
 ```
 
-##### 2. DeploymentStrategyIntegrationTests.cs (9 tests)
+##### 2. DeploymentStrategyIntegrationTests.cs
 
 Tests all 4 deployment strategies based on target environment:
 - **Direct Strategy** (Development) - Deploys to all nodes simultaneously
@@ -221,7 +223,7 @@ Each strategy test verifies:
 dotnet test --filter "FullyQualifiedName~DeploymentStrategyIntegrationTests"
 ```
 
-##### 3. ApprovalWorkflowIntegrationTests.cs (10 tests)
+##### 3. ApprovalWorkflowIntegrationTests.cs
 
 Tests approval/rejection workflows for production deployments:
 - Deployment requiring approval creates pending approval request
@@ -235,7 +237,7 @@ Tests approval/rejection workflows for production deployments:
 dotnet test --filter "FullyQualifiedName~ApprovalWorkflowIntegrationTests"
 ```
 
-##### 4. RollbackScenarioIntegrationTests.cs (10 tests)
+##### 4. RollbackScenarioIntegrationTests.cs
 
 Tests rollback functionality for failed/unwanted deployments:
 - Rolling back successful deployment restores previous version
@@ -249,7 +251,7 @@ Tests rollback functionality for failed/unwanted deployments:
 dotnet test --filter "FullyQualifiedName~RollbackScenarioIntegrationTests"
 ```
 
-##### 5. ConcurrentDeploymentIntegrationTests.cs (8 tests)
+##### 5. ConcurrentDeploymentIntegrationTests.cs
 
 Tests system behavior under concurrent load:
 - **Concurrent to different environments** - All succeed independently
@@ -264,7 +266,7 @@ Tests system behavior under concurrent load:
 dotnet test --filter "FullyQualifiedName~ConcurrentDeploymentIntegrationTests"
 ```
 
-##### 6. MessagingIntegrationTests.cs (19 tests)
+##### 6. MessagingIntegrationTests.cs
 
 Tests messaging system (publish/consume/acknowledge):
 - Message lifecycle (publish → retrieve → acknowledge → delete)
@@ -281,16 +283,16 @@ Tests messaging system (publish/consume/acknowledge):
 dotnet test --filter "FullyQualifiedName~MessagingIntegrationTests"
 ```
 
-##### 7. MultiTenantIntegrationTests.cs (17 tests)
+##### 7. MultiTenantIntegrationTests.cs
 
 Tests multi-tenant system features:
-- **Tenant creation** (3 tests) - Valid data, validation, multiple tenants
-- **Tenant retrieval** (3 tests) - By ID, non-existent (404), list all
-- **Tenant updates** (1 test) - Update name, contact, metadata
-- **Subscription management** (2 tests) - Upgrade/downgrade tiers
-- **Tenant suspension** (2 tests) - Suspend and reactivate
-- **Authorization** (2 tests) - Admin-only operations, require auth
-- **Tenant isolation** (1 test) - Unique domains and IDs
+- **Tenant creation** - Valid data, validation, multiple tenants
+- **Tenant retrieval** - By ID, non-existent (404), list all
+- **Tenant updates** - Update name, contact, metadata
+- **Subscription management** - Upgrade/downgrade tiers
+- **Tenant suspension** - Suspend and reactivate
+- **Authorization** - Admin-only operations, require auth
+- **Tenant isolation** - Unique domains and IDs
 
 ```bash
 dotnet test --filter "FullyQualifiedName~MultiTenantIntegrationTests"
