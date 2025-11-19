@@ -1,7 +1,7 @@
 # Distributed Kernel Orchestration System
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-80%2F80%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-582%20total%20(568%20passing%2C%2014%20skipped)-brightgreen)]()
 [![Coverage](https://img.shields.io/badge/coverage-85%25+-brightgreen)]()
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
@@ -197,16 +197,16 @@ Claude-code-test/
 ## Testing
 
 **Test Coverage:**
-- **Unit Tests**: 80 tests across 6 test files (Sprint 1: +27 tests)
-- **Critical Path Tests**: 80/80 passing (100%)
+- **Unit Tests**: 582 tests (568 passing, 14 skipped, 0 failed)
+- **Critical Path Tests**: 568/568 passing (100%)
 - **Code Coverage**: 85%+ on critical functionality
 - **Smoke Tests**: 6 API validation tests
-- **Test Duration**: ~10 seconds (full suite)
+- **Test Duration**: ~18 seconds (full suite)
 
 **Run Tests:**
 ```bash
 # Unit tests (requires .NET 8 SDK)
-dotnet test                    # 80 tests, ~10s
+dotnet test                    # 582 tests, ~18s
 
 # Smoke tests (requires API running)
 ./run-smoke-tests.sh           # 6 tests, ~8s
