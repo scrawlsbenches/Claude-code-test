@@ -177,6 +177,13 @@ public class DeploymentPipeline : IDisposable
                 : "Pipeline failed at Validation stage";
             result.EndTime = DateTime.UtcNow;
 
+            // Update pipeline state with final status (Succeeded or Failed)
+            await UpdatePipelineStateAsync(
+                request,
+                result.Success ? "Succeeded" : "Failed",
+                "Completed",
+                result.StageResults);
+
             _telemetry.RecordDeploymentSuccess(activity, new DeploymentResult
             {
                 Success = result.Success,
