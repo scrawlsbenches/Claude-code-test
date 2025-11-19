@@ -3205,7 +3205,7 @@ docker-compose --version
 ## Changelog
 
 ### 2025-11-19 (Claude Skills Documentation and Integration)
-- **Created SKILLS.md** (~500 lines)
+- **Created SKILLS.md** (~970 lines)
   - Comprehensive documentation for all 7 Claude Skills
   - Quick reference table by category
   - Decision tree for skill selection
