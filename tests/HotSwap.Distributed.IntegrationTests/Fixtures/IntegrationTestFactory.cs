@@ -1,5 +1,6 @@
 using HotSwap.Distributed.Api;
 using HotSwap.Distributed.Infrastructure.Interfaces;
+using HotSwap.Distributed.IntegrationTests.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -136,6 +137,17 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
             // Add in-memory distributed lock (no Redis needed)
             services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
+
+            // Replace InMemoryMetricsProvider with DeterministicMetricsProvider
+            // This ensures metrics behave consistently in local dev and CI/CD environments
+            var metricsProviderDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IMetricsProvider));
+            if (metricsProviderDescriptor != null)
+            {
+                services.Remove(metricsProviderDescriptor);
+            }
+
+            // Add deterministic metrics provider for consistent test behavior
+            services.AddSingleton<IMetricsProvider, DeterministicMetricsProvider>();
         });
 
         builder.UseEnvironment("Development");
