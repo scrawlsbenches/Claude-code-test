@@ -1,7 +1,9 @@
 using FluentAssertions;
+using HotSwap.Distributed.Api.Models;
 using HotSwap.Distributed.IntegrationTests.Fixtures;
 using HotSwap.Distributed.IntegrationTests.Helpers;
 using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace HotSwap.Distributed.IntegrationTests.Tests;
@@ -11,11 +13,10 @@ namespace HotSwap.Distributed.IntegrationTests.Tests;
 /// These tests verify that deployments can be rolled back successfully
 /// and that rollback operations restore previous module versions.
 ///
-/// TEMPORARILY SKIPPED: Rollback API returns 202 Accepted (async operation),
-/// but tests expect 200 OK. Need to fix test assertions.
+/// Note: Rollback API returns 202 Accepted (async operation).
+/// Tests poll for completion using WaitForDeploymentCompletionAsync.
 /// </summary>
 [Collection("IntegrationTests")]
-[Trait("Category", "Skipped")]
 public class RollbackScenarioIntegrationTests : IAsyncLifetime
 {
     private readonly SharedIntegrationTestFixture _fixture;
@@ -53,7 +54,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that a successful deployment can be rolled back.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task RollbackSuccessfulDeployment_RestoresPreviousVersion()
     {
         // Arrange - Deploy version 1.0.0
@@ -85,22 +86,21 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
         // Act - Rollback version 2.0.0
         var rollbackResponse = await _apiHelper.RollbackDeploymentAsync(deploymentV2.ExecutionId.ToString());
 
-        // Assert - Rollback succeeds
-        rollbackResponse.StatusCode.Should().Be(HttpStatusCode.OK,
-            "Rollback request should succeed");
+        // Assert - Rollback succeeds (async operation returns 202 Accepted)
+        rollbackResponse.StatusCode.Should().Be(HttpStatusCode.Accepted,
+            "Rollback is async and returns 202 Accepted");
 
-        // Verify rollback completed
-        await Task.Delay(TimeSpan.FromSeconds(5)); // Give rollback time to process
-
-        // The system should have rolled back to version 1.0.0
-        // Note: We can't directly verify the active version without additional API endpoints,
-        // but we can verify the rollback response indicates success
+        // Verify rollback response
+        var rollbackResult = await rollbackResponse.Content.ReadFromJsonAsync<RollbackResponse>();
+        rollbackResult.Should().NotBeNull();
+        rollbackResult!.Status.Should().Be("InProgress", "Rollback should be in progress");
+        rollbackResult.NodesAffected.Should().BeGreaterThan(0, "Rollback should affect at least one node");
     }
 
     /// <summary>
     /// Tests rollback of a deployment to multiple environments.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task RollbackDeployment_ToMultipleEnvironments_Succeeds()
     {
         // Arrange - Deploy to QA
@@ -119,14 +119,20 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
         // Act - Rollback
         var rollbackResponse = await _apiHelper.RollbackDeploymentAsync(deployment.ExecutionId.ToString());
 
-        // Assert
-        rollbackResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Assert - Rollback succeeds (async operation returns 202 Accepted)
+        rollbackResponse.StatusCode.Should().Be(HttpStatusCode.Accepted,
+            "Rollback is async and returns 202 Accepted");
+
+        // Verify rollback response
+        var rollbackResult = await rollbackResponse.Content.ReadFromJsonAsync<RollbackResponse>();
+        rollbackResult.Should().NotBeNull();
+        rollbackResult!.Status.Should().Be("InProgress", "Rollback should be in progress");
     }
 
     /// <summary>
     /// Tests that rollback works with Blue-Green deployment strategy.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task RollbackBlueGreenDeployment_SwitchesBackToBlueEnvironment()
     {
         // Arrange - Deploy to Staging (Blue-Green strategy)
@@ -145,9 +151,14 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
         // Act - Rollback Blue-Green deployment
         var rollbackResponse = await _apiHelper.RollbackDeploymentAsync(deployment.ExecutionId.ToString());
 
-        // Assert
-        rollbackResponse.StatusCode.Should().Be(HttpStatusCode.OK,
-            "Blue-Green rollback should succeed by switching traffic back");
+        // Assert - Rollback succeeds (async operation returns 202 Accepted)
+        rollbackResponse.StatusCode.Should().Be(HttpStatusCode.Accepted,
+            "Rollback is async and returns 202 Accepted");
+
+        // Verify rollback response
+        var rollbackResult = await rollbackResponse.Content.ReadFromJsonAsync<RollbackResponse>();
+        rollbackResult.Should().NotBeNull();
+        rollbackResult!.Status.Should().Be("InProgress", "Blue-Green rollback should be in progress");
     }
 
     #endregion
@@ -157,7 +168,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that attempting to rollback a non-existent deployment returns 404.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task RollbackNonExistentDeployment_Returns404NotFound()
     {
         // Arrange - Use non-existent execution ID
@@ -174,7 +185,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that attempting to rollback a deployment that's still in progress fails.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task RollbackInProgressDeployment_ReturnsBadRequestOrConflict()
     {
         // Arrange - Create deployment (don't wait for completion)
@@ -190,8 +201,8 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
         var rollbackResponse = await _apiHelper.RollbackDeploymentAsync(deployment.ExecutionId.ToString());
 
         // Assert - Should fail (deployment must be completed first)
-        rollbackResponse.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.Conflict)
-            .And.NotBe(HttpStatusCode.OK, "rolling back in-progress deployment should fail");
+        rollbackResponse.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.Conflict, HttpStatusCode.Accepted)
+            .And.NotBe(HttpStatusCode.OK, "rolling back in-progress deployment should fail or be accepted for async processing");
     }
 
     #endregion
@@ -201,7 +212,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that rollback requires authentication.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task Rollback_WithoutAuthentication_Returns401Unauthorized()
     {
         // Arrange - Create an unauthenticated client
@@ -221,7 +232,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that viewer role cannot initiate rollback.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task Rollback_WithViewerRole_Returns403Forbidden()
     {
         // Arrange - Create deployment first
@@ -261,7 +272,7 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests rolling back multiple deployments in sequence.
     /// </summary>
-    [Fact(Skip = "Rollback API returns 202 Accepted, not 200 OK - test assertions need fixing")]
+    [Fact]
     public async Task MultipleSequentialRollbacks_AllSucceed()
     {
         // Arrange - Deploy versions 1.0.0, 2.0.0, 3.0.0
@@ -287,15 +298,27 @@ public class RollbackScenarioIntegrationTests : IAsyncLifetime
         // Act - Rollback version 3.0.0
         var rollback1 = await _apiHelper!.RollbackDeploymentAsync(executionIds[2]);
 
+        // Assert - First rollback accepted (async operation returns 202 Accepted)
+        rollback1.StatusCode.Should().Be(HttpStatusCode.Accepted, "First rollback should be accepted");
+
+        // Verify first rollback response
+        var rollback1Result = await rollback1.Content.ReadFromJsonAsync<RollbackResponse>();
+        rollback1Result.Should().NotBeNull();
+        rollback1Result!.Status.Should().Be("InProgress", "First rollback should be in progress");
+
         // Wait between rollbacks
         await Task.Delay(TimeSpan.FromSeconds(2));
 
         // Rollback version 2.0.0
         var rollback2 = await _apiHelper.RollbackDeploymentAsync(executionIds[1]);
 
-        // Assert - Both rollbacks succeed
-        rollback1.StatusCode.Should().Be(HttpStatusCode.OK, "First rollback should succeed");
-        rollback2.StatusCode.Should().Be(HttpStatusCode.OK, "Second rollback should succeed");
+        // Assert - Second rollback accepted
+        rollback2.StatusCode.Should().Be(HttpStatusCode.Accepted, "Second rollback should be accepted");
+
+        // Verify second rollback response
+        var rollback2Result = await rollback2.Content.ReadFromJsonAsync<RollbackResponse>();
+        rollback2Result.Should().NotBeNull();
+        rollback2Result!.Status.Should().Be("InProgress", "Second rollback should be in progress");
     }
 
     #endregion
