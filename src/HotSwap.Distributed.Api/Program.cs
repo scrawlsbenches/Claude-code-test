@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -125,6 +126,20 @@ builder.Services.AddOpenTelemetry()
         {
             // Jaeger configuration would go here
         }
+    })
+    .WithMetrics(metricsProviderBuilder =>
+    {
+        metricsProviderBuilder
+            .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                .AddService(TelemetryProvider.ServiceName, serviceVersion: TelemetryProvider.ServiceVersion))
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddProcessInstrumentation()
+            // Add custom deployment metrics
+            .AddMeter(DeploymentMetrics.MeterName)
+            // Add Prometheus exporter for /metrics endpoint
+            .AddPrometheusExporter();
     });
 
 // Register JWT configuration
@@ -222,6 +237,7 @@ builder.Services.AddHsts(options =>
 // Register infrastructure services
 builder.Services.AddSingleton<TelemetryProvider>();
 builder.Services.AddSingleton<IMetricsProvider, InMemoryMetricsProvider>();
+builder.Services.AddSingleton<DeploymentMetrics>();
 builder.Services.AddSingleton<IModuleVerifier>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<ModuleVerifier>>();
@@ -418,22 +434,26 @@ if (!app.Environment.IsProduction())
     });
 }
 
-// 5. HSTS (HTTP Strict Transport Security) - only in production
+// 5. Prometheus metrics endpoint (before rate limiting)
+app.MapPrometheusScrapingEndpoint();
+Log.Information("Prometheus metrics endpoint enabled at /metrics");
+
+// 6. HSTS (HTTP Strict Transport Security) - only in production
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
 
-// 6. HTTPS redirection - only in production (allows HTTP for testing/CI/CD)
+// 7. HTTPS redirection - only in production (allows HTTP for testing/CI/CD)
 if (app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
 }
 
-// 7. CORS
+// 8. CORS
 app.UseCors();
 
-// 8. Rate limiting (after CORS, before authentication)
+// 9. Rate limiting (after CORS, before authentication)
 app.UseMiddleware<RateLimitingMiddleware>();
 
 // 9. Authentication & Authorization

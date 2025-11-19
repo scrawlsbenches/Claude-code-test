@@ -299,4 +299,162 @@ public class InMemoryUserRepositoryTests
         user!.LastLoginAt.Should().NotBeNull();
         user.LastLoginAt.Should().BeOnOrAfter(beforeLogin);
     }
+
+    #region Account Lockout Tests
+
+    [Fact]
+    public async Task ValidateCredentialsAsync_WithFailedAttempts_ShouldIncrementCounter()
+    {
+        // Arrange
+        var repository = new InMemoryUserRepository(_loggerMock.Object);
+
+        // Act
+        await repository.ValidateCredentialsAsync("admin", "WrongPassword1");
+        await repository.ValidateCredentialsAsync("admin", "WrongPassword2");
+        await repository.ValidateCredentialsAsync("admin", "WrongPassword3");
+
+        var user = await repository.FindByUsernameAsync("admin");
+
+        // Assert
+        user.Should().NotBeNull();
+        user!.FailedLoginAttempts.Should().Be(3);
+        user.LockoutEnd.Should().BeNull("account should not be locked yet (needs 5 failed attempts)");
+    }
+
+    [Fact]
+    public async Task ValidateCredentialsAsync_AfterFiveFailedAttempts_ShouldLockAccount()
+    {
+        // Arrange
+        var repository = new InMemoryUserRepository(_loggerMock.Object);
+        var beforeLockout = DateTime.UtcNow;
+
+        // Act - Attempt 5 failed logins
+        for (int i = 0; i < 5; i++)
+        {
+            await repository.ValidateCredentialsAsync("admin", "WrongPassword");
+        }
+
+        var user = await repository.FindByUsernameAsync("admin");
+
+        // Assert
+        user.Should().NotBeNull();
+        user!.FailedLoginAttempts.Should().Be(5);
+        user.LockoutEnd.Should().NotBeNull();
+        user.LockoutEnd.Should().BeOnOrAfter(beforeLockout.AddMinutes(15).AddSeconds(-1));
+        user.IsLockedOut().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ValidateCredentialsAsync_WhenLockedOut_ShouldReturnNull()
+    {
+        // Arrange
+        var repository = new InMemoryUserRepository(_loggerMock.Object);
+
+        // Lock the account by failing 5 times
+        for (int i = 0; i < 5; i++)
+        {
+            await repository.ValidateCredentialsAsync("admin", "WrongPassword");
+        }
+
+        // Act - Try with correct password while locked out
+        var result = await repository.ValidateCredentialsAsync("admin", "Admin123!");
+
+        // Assert
+        result.Should().BeNull("account is locked out");
+    }
+
+    [Fact]
+    public async Task ValidateCredentialsAsync_SuccessfulLogin_ShouldResetFailedAttempts()
+    {
+        // Arrange
+        var repository = new InMemoryUserRepository(_loggerMock.Object);
+
+        // Fail 3 times
+        for (int i = 0; i < 3; i++)
+        {
+            await repository.ValidateCredentialsAsync("admin", "WrongPassword");
+        }
+
+        // Act - Successful login
+        var result = await repository.ValidateCredentialsAsync("admin", "Admin123!");
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.FailedLoginAttempts.Should().Be(0, "successful login should reset counter");
+        result.LockoutEnd.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task IsLockedOut_WithExpiredLockout_ShouldReturnFalse()
+    {
+        // Arrange
+        var user = new User
+        {
+            Username = "testuser",
+            LockoutEnd = DateTime.UtcNow.AddMinutes(-1) // Expired 1 minute ago
+        };
+
+        // Act
+        var isLockedOut = user.IsLockedOut();
+
+        // Assert
+        isLockedOut.Should().BeFalse("lockout has expired");
+    }
+
+    [Fact]
+    public async Task IsLockedOut_WithActiveLockout_ShouldReturnTrue()
+    {
+        // Arrange
+        var user = new User
+        {
+            Username = "testuser",
+            LockoutEnd = DateTime.UtcNow.AddMinutes(10) // Expires in 10 minutes
+        };
+
+        // Act
+        var isLockedOut = user.IsLockedOut();
+
+        // Assert
+        isLockedOut.Should().BeTrue("lockout is still active");
+    }
+
+    [Fact]
+    public async Task IsLockedOut_WithNoLockout_ShouldReturnFalse()
+    {
+        // Arrange
+        var user = new User
+        {
+            Username = "testuser",
+            LockoutEnd = null
+        };
+
+        // Act
+        var isLockedOut = user.IsLockedOut();
+
+        // Assert
+        isLockedOut.Should().BeFalse("no lockout set");
+    }
+
+    [Fact]
+    public async Task ValidateCredentialsAsync_AfterLockoutExpires_ShouldAllowLogin()
+    {
+        // Arrange
+        var repository = new InMemoryUserRepository(_loggerMock.Object);
+        var user = await repository.FindByUsernameAsync("admin");
+
+        // Manually set an expired lockout
+        user!.LockoutEnd = DateTime.UtcNow.AddMinutes(-1); // Expired 1 minute ago
+        user.FailedLoginAttempts = 5;
+        await repository.UpdateAsync(user);
+
+        // Act - Try to login with correct password
+        var result = await repository.ValidateCredentialsAsync("admin", "Admin123!");
+
+        // Assert
+        result.Should().NotBeNull("lockout has expired");
+        result!.FailedLoginAttempts.Should().Be(0, "successful login resets counter");
+        result.LockoutEnd.Should().BeNull("successful login clears lockout");
+    }
+
+    #endregion
 }
