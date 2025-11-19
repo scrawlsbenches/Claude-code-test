@@ -271,7 +271,7 @@ chmod +x .git/hooks/pre-commit
 
 ### Claude Skills
 
-**[SKILLS.md](SKILLS.md)** - 7 automated workflow skills for AI-assisted development (~2,800 lines)
+**[SKILLS.md](SKILLS.md)** - 8 automated workflow skills for AI-assisted development (~3,700 lines)
 
 This project includes specialized Claude Skills that automate complex development workflows, enforce best practices, and prevent common errors. These skills guide AI assistants through systematic processes for setup, testing, validation, and maintenance.
 
@@ -279,6 +279,7 @@ This project includes specialized Claude Skills that automate complex developmen
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
+| **sprint-planner** | Sprint planning & task delegation | Every 1-2 weeks, major releases |
 | **dotnet-setup** | Automate .NET SDK installation | New session setup |
 | **tdd-helper** | Guide Red-Green-Refactor TDD workflow | ANY code changes (mandatory) |
 | **precommit-check** | Validate before commits | Before EVERY commit (mandatory) |

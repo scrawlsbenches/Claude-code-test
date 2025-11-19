@@ -8,12 +8,13 @@ This document describes all available Claude Skills for this .NET distributed sy
 
 1. [Overview](#overview)
 2. [Quick Reference](#quick-reference)
-3. [Core Development Skills](#core-development-skills)
-4. [Quality & Testing Skills](#quality--testing-skills)
-5. [Documentation & Infrastructure Skills](#documentation--infrastructure-skills)
-6. [Typical Workflows](#typical-workflows)
-7. [How to Use Skills](#how-to-use-skills)
-8. [Creating New Skills](#creating-new-skills)
+3. [Project Management Skills](#project-management-skills)
+4. [Core Development Skills](#core-development-skills)
+5. [Quality & Testing Skills](#quality--testing-skills)
+6. [Documentation & Infrastructure Skills](#documentation--infrastructure-skills)
+7. [Typical Workflows](#typical-workflows)
+8. [How to Use Skills](#how-to-use-skills)
+9. [Creating New Skills](#creating-new-skills)
 
 ---
 
@@ -40,6 +41,8 @@ Claude Skills are markdown-based instruction sets that guide AI assistants throu
 
 | Skill | Size | When to Use | Frequency |
 |-------|------|-------------|-----------|
+| **Project Management** ||||
+| [sprint-planner](#sprint-planner) | 23K | Sprint planning, task delegation | Every 1-2 weeks |
 | **Core Development** ||||
 | [dotnet-setup](#dotnet-setup) | 2.6K | New session, .NET SDK missing | Per session |
 | [tdd-helper](#tdd-helper) | 10K | Any code changes | Daily |
@@ -51,11 +54,14 @@ Claude Skills are markdown-based instruction sets that guide AI assistants throu
 | [doc-sync-check](#doc-sync-check) | 14K | Before commits, monthly audits | Daily/Monthly |
 | [docker-helper](#docker-helper) | 18K | Docker changes, maintenance | As needed |
 
-**Total:** 7 skills, ~2,800 lines of comprehensive guidance
+**Total:** 8 skills, ~2,900 lines of comprehensive guidance
 
 ### Decision Tree: Which Skill to Use?
 
 ```
+Planning new sprint?
+  └─> /sprint-planner
+
 Starting new session?
   └─> /dotnet-setup
 
@@ -75,11 +81,143 @@ About to commit?
 Updating Docker?
   └─> /docker-helper
 
+Need to delegate work?
+  └─> /sprint-planner
+
 Monthly maintenance?
   ├─> /test-coverage-analyzer
   ├─> /doc-sync-check
   └─> /docker-helper
 ```
+
+---
+
+## Project Management Skills
+
+### sprint-planner
+
+**File:** `.claude/skills/sprint-planner.md`
+**Size:** 23K
+**Purpose:** Systematic sprint planning with task analysis, effort estimation, dependency mapping, and workload balancing
+
+#### When to Use
+- Starting a new sprint (every 1-2 weeks)
+- Planning major features or releases
+- Delegating work across multiple developers or AI agents
+- Balancing workload and identifying bottlenecks
+- Setting sprint goals with measurable success criteria
+
+#### What It Does
+Provides a comprehensive 7-phase sprint planning process:
+
+**Phase 1: Task Discovery & Inventory**
+- Identifies all tasks for upcoming sprint
+- Documents current project state (tests, builds, metrics)
+- Categorizes tasks by status, priority, and type
+
+**Phase 2: Effort Estimation & Complexity Analysis**
+- T-shirt sizing (XS to XXL)
+- Fibonacci point estimation
+- Complexity factor adjustment (+25% to +100%)
+- Uncertainty buffers
+
+**Phase 3: Dependency Mapping & Critical Path**
+- Identifies hard dependencies (blocking)
+- Identifies soft dependencies (helpful)
+- Creates Mermaid dependency diagrams
+- Calculates critical path for time optimization
+
+**Phase 4: Domain Grouping & Theme Identification**
+- Groups tasks by domain (Security, Testing, Platform, Features, Operations)
+- Identifies cross-domain collaboration needs
+- Creates thematic sprint clusters
+
+**Phase 5: Workload Balancing & Team Assignment**
+- Calculates available team capacity
+- Assesses team skill matrix
+- Balances effort across team members (±10% variance)
+- Respects dependencies and critical path
+
+**Phase 6: Sprint Goals & Success Metrics**
+- Defines SMART goals (Specific, Measurable, Achievable, Relevant, Time-bound)
+- Sets primary, secondary, and stretch goals
+- Establishes quantifiable success criteria
+
+**Phase 7: Risk Analysis & Mitigation**
+- Identifies technical, resource, scope, and dependency risks
+- Assesses impact and probability
+- Plans mitigation strategies
+- Defines contingency plans
+
+#### Expected Duration
+- Full sprint planning: 45-90 minutes
+- Creates comprehensive plan preventing days/weeks of wasted effort
+
+#### Success Criteria
+- ✅ Balanced task assignments (±10% variance)
+- ✅ Clear sprint goals with measurable criteria
+- ✅ Dependency graph showing execution order
+- ✅ Risk analysis with mitigation plans
+- ✅ Daily/weekly milestones defined
+- ✅ Team capacity not over-committed
+
+#### Key Features
+- **Workload Balance Algorithm** - Distributes tasks evenly across N team members
+- **Critical Path Analysis** - Identifies longest dependency chain
+- **Risk Matrix** - Prioritizes risks by impact × probability
+- **SMART Goals** - Ensures measurable success criteria
+- **Dependency Diagrams** - Visualizes task relationships with Mermaid
+- **Capacity Planning** - Accounts for meetings, overhead, interruptions
+
+#### Real-World Example
+See [TASK_DELEGATION_ANALYSIS.md](../TASK_DELEGATION_ANALYSIS.md) for a complete example where this skill was used to split 17 tasks into 3 balanced workstreams (8-10 days each) for parallel execution.
+
+#### Output
+Generates a comprehensive sprint plan document including:
+- Executive summary with sprint goals
+- Task assignments per team member (balanced effort)
+- Dependency graph (Mermaid diagram)
+- Risk analysis with mitigation strategies
+- Daily/weekly milestones
+- Success criteria checklist
+
+#### Integration with Other Skills
+- **Before Sprint:** Use this skill to plan
+- **During Sprint:** Use /tdd-helper, /precommit-check for each task
+- **After Sprint:** Review plan vs actual for velocity tracking
+
+#### Common Use Cases
+1. **Regular Sprint Planning** - Every 1-2 weeks
+2. **Multi-Team Delegation** - Split work across 3+ developers
+3. **Major Release Planning** - Quarterly planning cycles
+4. **Capacity Analysis** - Prevent over-commitment
+5. **Bottleneck Identification** - Find critical path blockers
+
+#### Usage
+```bash
+# Via slash command (if configured)
+/sprint-planner
+
+# Follow the 7-phase process:
+# Phase 1: Discover tasks from TASK_LIST.md
+# Phase 2: Estimate effort (T-shirt sizes or Fibonacci points)
+# Phase 3: Map dependencies and create graph
+# Phase 4: Group tasks by domain/theme
+# Phase 5: Balance workload across team
+# Phase 6: Define SMART sprint goals
+# Phase 7: Identify and mitigate risks
+```
+
+#### Metrics Tracked
+- **Velocity:** Story points completed per sprint
+- **Estimation Accuracy:** Estimated vs actual effort
+- **Quality:** Bugs introduced, test coverage maintained
+- **Predictability:** Sprint goals achieved percentage
+
+#### Advanced Features
+- **Multi-Team Coordination** - Track inter-team dependencies
+- **Shared Resource Management** - Schedule staging environments, load balancers
+- **Continuous Improvement** - Track metrics over time for better estimates
 
 ---
 
