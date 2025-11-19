@@ -1,7 +1,7 @@
 # Distributed Kernel Orchestration System
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-80%2F80%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-582%20total%20(568%20passing%2C%2014%20skipped)-brightgreen)]()
 [![Coverage](https://img.shields.io/badge/coverage-85%25+-brightgreen)]()
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
@@ -197,19 +197,21 @@ Claude-code-test/
 ## Testing
 
 **Test Coverage:**
-- **Unit Tests**: 80 tests across 6 test files (Sprint 1: +27 tests)
-- **Critical Path Tests**: 80/80 passing (100%)
+- **Total Tests**: 582 tests (568 passing, 14 skipped, 0 failed)
+- **Unit Tests**:
+  - HotSwap.Distributed.Tests: Core orchestration, deployment strategies, JWT auth, messaging
+  - HotSwap.KnowledgeGraph.Tests: 87 tests (all passing)
+- **Integration Tests**: API endpoints, deployment workflows, approval system
 - **Code Coverage**: 85%+ on critical functionality
-- **Smoke Tests**: 6 API validation tests
-- **Test Duration**: ~10 seconds (full suite)
+- **Test Duration**: Unit tests ~10s, full suite ~5-10min (includes slow integration tests)
 
 **Run Tests:**
 ```bash
-# Unit tests (requires .NET 8 SDK)
-dotnet test                    # 80 tests, ~10s
+# All tests (requires .NET 8 SDK)
+dotnet test                    # 582 tests (568 passing, 14 skipped)
 
-# Smoke tests (requires API running)
-./run-smoke-tests.sh           # 6 tests, ~8s
+# Unit tests only (fast)
+dotnet test tests/HotSwap.Distributed.Tests tests/HotSwap.KnowledgeGraph.Tests  # ~10s
 
 # Critical path validation
 ./test-critical-paths.sh
@@ -318,4 +320,4 @@ MIT License - See [LICENSE](LICENSE) for details
 
 **Repository:** [scrawlsbenches/Claude-code-test](https://github.com/scrawlsbenches/Claude-code-test)
 **Status:** Production Ready (97% Specification Compliance - Sprint 1 Complete)
-**Last Updated:** November 16, 2025
+**Last Updated:** November 19, 2025
