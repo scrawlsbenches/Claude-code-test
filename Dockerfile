@@ -30,7 +30,9 @@ RUN dotnet build "HotSwap.Distributed.Api.csproj" -c Release -o /app/build
 # Test stage
 FROM build AS test
 WORKDIR /src
-RUN dotnet test "DistributedKernel.sln" --configuration Release --no-restore --verbosity normal
+# Exclude slow integration tests (Category=Slow) to keep Docker build time under 10 minutes
+# Slow tests are run separately in the integration-tests GitHub Actions job
+RUN dotnet test "DistributedKernel.sln" --configuration Release --no-restore --verbosity normal --filter "Category!=Slow"
 
 # Publish
 FROM build AS publish
