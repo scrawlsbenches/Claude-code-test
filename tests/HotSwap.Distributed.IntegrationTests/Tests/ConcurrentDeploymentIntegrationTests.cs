@@ -49,7 +49,8 @@ public class ConcurrentDeploymentIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that multiple deployments to different environments can run concurrently.
     /// </summary>
-    [Fact(Skip = "Concurrent deployment tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task ConcurrentDeployments_ToDifferentEnvironments_AllSucceed()
     {
         // Arrange - Create deployment requests for different environments
@@ -92,7 +93,8 @@ public class ConcurrentDeploymentIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that multiple deployments of different modules to the same environment can run concurrently.
     /// </summary>
-    [Fact(Skip = "Concurrent deployment tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task ConcurrentDeployments_DifferentModulesSameEnvironment_AllSucceed()
     {
         // Arrange - Create deployment requests for different modules to Development
@@ -135,7 +137,8 @@ public class ConcurrentDeploymentIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that concurrent deployments respect pipeline concurrency limits.
     /// </summary>
-    [Fact(Skip = "Concurrent deployment tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task ConcurrentDeployments_RespectsConcurrencyLimits()
     {
         // Arrange - Create many deployment requests (more than max concurrent pipelines)
@@ -184,7 +187,8 @@ public class ConcurrentDeploymentIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that concurrent deployments maintain proper isolation and don't interfere with each other.
     /// </summary>
-    [Fact(Skip = "Concurrent deployment tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task ConcurrentDeployments_MaintainIsolation_NoDataLeakage()
     {
         // Arrange - Create deployments with different metadata
@@ -235,7 +239,8 @@ public class ConcurrentDeploymentIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that deployment creation and status queries can happen concurrently without errors.
     /// </summary>
-    [Fact(Skip = "Concurrent deployment tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task ConcurrentDeploymentCreationAndStatusQueries_NoConflicts()
     {
         // Arrange - Create a deployment
@@ -280,7 +285,8 @@ public class ConcurrentDeploymentIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests system behavior under high concurrent load.
     /// </summary>
-    [Fact(Skip = "Concurrent deployment tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task HighConcurrency_20SimultaneousDeployments_SystemRemainStable()
     {
         // Arrange - Create many concurrent deployment requests
@@ -324,7 +330,8 @@ public class ConcurrentDeploymentIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests that concurrent approval/rejection requests are handled correctly.
     /// </summary>
-    [Fact(Skip = "Concurrent deployment tests too slow - need optimization")]
+    [Fact]
+    [Trait("Category", "Slow")]
     public async Task ConcurrentApprovals_MultiplePendingDeployments_HandledCorrectly()
     {
         // Arrange - Create multiple deployments requiring approval
