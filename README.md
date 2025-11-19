@@ -1,7 +1,7 @@
 # Distributed Kernel Orchestration System
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-80%2F80%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-582%20total%20(568%20passing%2C%2014%20skipped)-brightgreen)]()
 [![Coverage](https://img.shields.io/badge/coverage-85%25+-brightgreen)]()
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
@@ -197,16 +197,16 @@ Claude-code-test/
 ## Testing
 
 **Test Coverage:**
-- **Unit Tests**: 80 tests across 6 test files (Sprint 1: +27 tests)
-- **Critical Path Tests**: 80/80 passing (100%)
+- **Unit Tests**: 582 tests (568 passing, 14 skipped, 0 failed)
+- **Critical Path Tests**: 568/568 passing (100%)
 - **Code Coverage**: 85%+ on critical functionality
 - **Smoke Tests**: 6 API validation tests
-- **Test Duration**: ~10 seconds (full suite)
+- **Test Duration**: ~18 seconds (full suite)
 
 **Run Tests:**
 ```bash
 # Unit tests (requires .NET 8 SDK)
-dotnet test                    # 80 tests, ~10s
+dotnet test                    # 582 tests, ~18s
 
 # Smoke tests (requires API running)
 ./run-smoke-tests.sh           # 6 tests, ~8s
@@ -269,6 +269,44 @@ cp hooks/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
 
+### Claude Skills
+
+**[SKILLS.md](SKILLS.md)** - 7 automated workflow skills for AI-assisted development (~2,800 lines)
+
+This project includes specialized Claude Skills that automate complex development workflows, enforce best practices, and prevent common errors. These skills guide AI assistants through systematic processes for setup, testing, validation, and maintenance.
+
+**Available Skills:**
+
+| Skill | Purpose | When to Use |
+|-------|---------|-------------|
+| **dotnet-setup** | Automate .NET SDK installation | New session setup |
+| **tdd-helper** | Guide Red-Green-Refactor TDD workflow | ANY code changes (mandatory) |
+| **precommit-check** | Validate before commits | Before EVERY commit (mandatory) |
+| **test-coverage-analyzer** | Maintain 85%+ coverage target | After features, weekly audits |
+| **race-condition-debugger** | Debug async/await issues | Intermittent test failures |
+| **doc-sync-check** | Prevent stale documentation | Before commits, monthly audits |
+| **docker-helper** | Docker security & optimization | Docker updates, monthly maintenance |
+
+**Key Benefits:**
+- ✅ Enforces mandatory TDD (Test-Driven Development)
+- ✅ Prevents CI/CD failures with systematic pre-commit validation
+- ✅ Maintains 85%+ test coverage requirement
+- ✅ Prevents stale documentation through automated synchronization
+- ✅ Ensures Docker security and optimization best practices
+
+**Quick Usage:**
+```bash
+# Via slash commands (if configured)
+/tdd-helper          # Start TDD workflow
+/precommit-check     # Validate before commit
+/doc-sync-check      # Check documentation sync
+
+# Or follow step-by-step instructions in each skill file
+cat .claude/skills/tdd-helper.md
+```
+
+See **[SKILLS.md](SKILLS.md)** for comprehensive documentation, decision trees, and complete workflow examples.
+
 ## Security
 
 **Implemented Security Features:**
@@ -318,4 +356,4 @@ MIT License - See [LICENSE](LICENSE) for details
 
 **Repository:** [scrawlsbenches/Claude-code-test](https://github.com/scrawlsbenches/Claude-code-test)
 **Status:** Production Ready (97% Specification Compliance - Sprint 1 Complete)
-**Last Updated:** November 16, 2025
+**Last Updated:** November 19, 2025
