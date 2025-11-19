@@ -51,7 +51,7 @@ Claude Skills are markdown-based instruction sets that guide AI assistants throu
 | [doc-sync-check](#doc-sync-check) | 14K | Before commits, monthly audits | Daily/Monthly |
 | [docker-helper](#docker-helper) | 18K | Docker changes, maintenance | As needed |
 
-**Total:** 7 skills, ~71K lines of comprehensive guidance
+**Total:** 7 skills, ~2,800 lines of comprehensive guidance
 
 ### Decision Tree: Which Skill to Use?
 
@@ -913,9 +913,9 @@ Based on: [CLAUDE.md sections]
 | Metric | Value |
 |--------|-------|
 | Total Skills | 7 |
-| Total Lines | ~71,000 |
+| Total Lines | ~2,800 |
 | Categories | 3 |
-| Average Skill Size | ~10K lines |
+| Average Skill Size | ~400 lines |
 | Creation Date | 2025-11-19 |
 
 **Coverage**:

@@ -37,7 +37,7 @@ Claude-code-test/
 ├── DistributedKernel.sln                     # Solution file
 ├── test-critical-paths.sh                    # Critical path validation
 ├── validate-code.sh                          # Code validation script
-├── .claude/skills/                            # Claude Skills (7 skills, ~71K lines)
+├── .claude/skills/                            # Claude Skills (7 skills, ~2,800 lines)
 │   ├── dotnet-setup.md                       # .NET SDK setup automation
 │   ├── tdd-helper.md                         # TDD workflow guidance
 │   ├── precommit-check.md                    # Pre-commit validation
@@ -3213,7 +3213,7 @@ docker-compose --version
   - Typical workflows (daily development, feature completion, bug fix, Docker update, monthly maintenance)
   - How to use skills (slash commands, Claude Code tool, manual execution)
   - Creating new skills (template and best practices)
-  - Statistics: 7 skills, ~71K lines total
+  - Statistics: 7 skills, ~2,800 lines total
 - **Updated CLAUDE.md to reference skills** (~10 locations)
   - Added .claude/skills/ directory to Project Structure
   - Added SKILLS.md to file list
@@ -3231,7 +3231,7 @@ docker-compose --version
   - Skills are now fully documented and discoverable
   - Clear guidance on which skill to use for each task
   - Integrated into existing workflows throughout CLAUDE.md
-  - Provides ~71K lines of automated workflow guidance
+  - Provides ~2,800 lines of automated workflow guidance
   - Reduces cognitive load by automating complex tasks
 
 ### 2025-11-17 (Docker Documentation and Maintenance Guidelines)
