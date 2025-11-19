@@ -168,14 +168,46 @@ public class InMemoryUserRepository : IUserRepository
             return null;
         }
 
-        // Verify password using BCrypt
-        if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        // Check if account is locked out
+        if (user.IsLockedOut())
         {
-            _logger.LogWarning("Authentication failed: invalid password - {Username}", username);
+            var lockoutRemaining = user.LockoutEnd!.Value - DateTime.UtcNow;
+            _logger.LogWarning("Authentication failed: account locked out for {Username}. Lockout expires in {Minutes} minutes",
+                username, Math.Ceiling(lockoutRemaining.TotalMinutes));
             return null;
         }
 
-        // Update last login time
+        // Clear expired lockout
+        if (user.LockoutEnd != null && user.LockoutEnd.Value <= DateTime.UtcNow)
+        {
+            user.LockoutEnd = null;
+            user.FailedLoginAttempts = 0;
+            _logger.LogInformation("Account lockout expired and cleared for user: {Username}", username);
+        }
+
+        // Verify password using BCrypt
+        if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        {
+            // Increment failed login attempts
+            user.FailedLoginAttempts++;
+            _logger.LogWarning("Authentication failed: invalid password - {Username}. Failed attempts: {FailedAttempts}",
+                username, user.FailedLoginAttempts);
+
+            // Lock account after 5 failed attempts
+            const int maxFailedAttempts = 5;
+            if (user.FailedLoginAttempts >= maxFailedAttempts)
+            {
+                user.LockoutEnd = DateTime.UtcNow.AddMinutes(15);
+                _logger.LogWarning("Account locked out for user: {Username}. Too many failed login attempts ({Attempts}). Lockout expires at {LockoutEnd}",
+                    username, user.FailedLoginAttempts, user.LockoutEnd);
+            }
+
+            return null;
+        }
+
+        // Successful login - reset failed attempts and update last login time
+        user.FailedLoginAttempts = 0;
+        user.LockoutEnd = null;
         user.LastLoginAt = DateTime.UtcNow;
 
         _logger.LogInformation("User authenticated successfully: {Username} (ID: {UserId})",

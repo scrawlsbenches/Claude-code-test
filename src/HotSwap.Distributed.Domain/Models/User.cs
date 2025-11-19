@@ -53,6 +53,36 @@ public class User
     public DateTime? LastLoginAt { get; set; }
 
     /// <summary>
+    /// Number of consecutive failed login attempts.
+    /// Reset to 0 after successful login.
+    /// </summary>
+    public int FailedLoginAttempts { get; set; } = 0;
+
+    /// <summary>
+    /// Date and time when the account lockout expires.
+    /// Null if account is not locked out.
+    /// </summary>
+    public DateTime? LockoutEnd { get; set; }
+
+    /// <summary>
+    /// Checks if the user account is currently locked out.
+    /// </summary>
+    public bool IsLockedOut()
+    {
+        if (LockoutEnd == null)
+            return false;
+
+        // If lockout period has expired, account is no longer locked
+        if (LockoutEnd.Value <= DateTime.UtcNow)
+        {
+            // Auto-unlock expired lockouts
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Checks if the user has a specific role.
     /// </summary>
     public bool HasRole(UserRole role) => Roles.Contains(role);
