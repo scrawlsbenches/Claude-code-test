@@ -15,7 +15,7 @@ This document provides comprehensive guidance for AI assistants working with thi
 **Status**: Production Ready (95% Specification Compliance)
 **Build Status**: ✅ Passing (582 tests: 568 passing, 14 skipped)
 **Test Coverage**: 85%+
-**Last Updated**: November 17, 2025
+**Last Updated**: November 19, 2025
 
 ### Project Structure
 
@@ -37,7 +37,16 @@ Claude-code-test/
 ├── DistributedKernel.sln                     # Solution file
 ├── test-critical-paths.sh                    # Critical path validation
 ├── validate-code.sh                          # Code validation script
+├── .claude/skills/                            # Claude Skills (7 skills, ~2,800 lines)
+│   ├── dotnet-setup.md                       # .NET SDK setup automation
+│   ├── tdd-helper.md                         # TDD workflow guidance
+│   ├── precommit-check.md                    # Pre-commit validation
+│   ├── test-coverage-analyzer.md             # Coverage analysis
+│   ├── race-condition-debugger.md            # Async debugging
+│   ├── doc-sync-check.md                     # Documentation sync validation
+│   └── docker-helper.md                      # Docker configuration management
 ├── CLAUDE.md                                 # This file (AI assistant guide)
+├── SKILLS.md                                 # Claude Skills documentation
 ├── TASK_LIST.md                              # Comprehensive task roadmap (20+ tasks)
 ├── ENHANCEMENTS.md                           # Recent enhancements documentation
 ├── README.md                                 # Project overview
@@ -103,6 +112,7 @@ Claude-code-test/
 | Run all tests | `dotnet test` | [Running Tests](#running-tests) |
 | Run API locally | `dotnet run --project src/HotSwap.Distributed.Api/` | [Running](#running-the-application) |
 | Pre-commit check | `dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test` | [Pre-Commit](#️-critical-pre-commit-checklist) |
+| **Use Claude Skills** | `/tdd-helper`, `/precommit-check`, `/doc-sync-check`, etc. | **[SKILLS.md](SKILLS.md)** ⭐ |
 | Create feature branch | `git checkout -b claude/feature-name-sessionid` | [Git Workflow](#git-workflow) |
 | Push changes | `git push -u origin claude/branch-name` | [Git Push](#git-push-requirements) |
 
@@ -136,43 +146,44 @@ Claude-code-test/
 
 ### Getting Started (Essential Reading)
 1. [Quick Reference](#quick-reference) ⭐⭐⭐ - Start here!
-2. [Repository Overview](#repository-overview)
-3. [Technology Stack](#technology-stack)
-4. [Development Environment Setup](#development-environment-setup) ⭐⭐
-5. [First Time Build and Test](#first-time-build-and-test)
+2. [Claude Skills (SKILLS.md)](SKILLS.md) ⭐⭐ - 7 automated workflows
+3. [Repository Overview](#repository-overview)
+4. [Technology Stack](#technology-stack)
+5. [Development Environment Setup](#development-environment-setup) ⭐⭐
+6. [First Time Build and Test](#first-time-build-and-test)
 
 ### Daily Development Workflows
-6. [Pre-Commit Checklist](#️-critical-pre-commit-checklist) ⭐⭐⭐ - Run before EVERY commit
-7. [Test-Driven Development (TDD)](#test-driven-development-tdd-workflow) ⭐⭐
-8. [Git Workflow](#git-workflow) ⭐
-9. [Building the Project](#building-the-project)
-10. [Running Tests](#running-tests) ⭐
-11. [Running the Application](#running-the-application)
-12. [Docker Development and Maintenance](#docker-development-and-maintenance) ⭐ - Maintain Dockerfile and docker-compose.yml
+7. [Pre-Commit Checklist](#️-critical-pre-commit-checklist) ⭐⭐⭐ - Run before EVERY commit
+8. [Test-Driven Development (TDD)](#test-driven-development-tdd-workflow) ⭐⭐
+9. [Git Workflow](#git-workflow) ⭐
+10. [Building the Project](#building-the-project)
+11. [Running Tests](#running-tests) ⭐
+12. [Running the Application](#running-the-application)
+13. [Docker Development and Maintenance](#docker-development-and-maintenance) ⭐ - Maintain Dockerfile and docker-compose.yml
 
 ### Standards and Best Practices
-13. [.NET Development Conventions](#net-development-conventions)
-14. [Code Generation Standards](#code-generation-standards)
-15. [Testing Requirements](#testing-requirements) ⭐
-16. [Security Best Practices](#security-best-practices)
-17. [Documentation Standards](#documentation-standards)
-18. [Task Management with TASK_LIST.md](#working-with-task_listmd)
+14. [.NET Development Conventions](#net-development-conventions)
+15. [Code Generation Standards](#code-generation-standards)
+16. [Testing Requirements](#testing-requirements) ⭐
+17. [Security Best Practices](#security-best-practices)
+18. [Documentation Standards](#documentation-standards)
+19. [Task Management with TASK_LIST.md](#working-with-task_listmd)
 
 ### AI Assistant Guidelines
-19. [AI Assistant Critical Rules](#ai-assistant-guidelines) ⭐⭐⭐
-20. [Initial Analysis Checklist](#initial-analysis-checklist)
-21. [Error Handling](#error-handling)
+20. [AI Assistant Critical Rules](#ai-assistant-guidelines) ⭐⭐⭐
+21. [Initial Analysis Checklist](#initial-analysis-checklist)
+22. [Error Handling](#error-handling)
 
 ### Reference Materials
-22. [Common .NET Commands](#common-net-commands-reference)
-23. [Troubleshooting](#troubleshooting-common-issues)
-24. [Resources](#resources)
-25. [Quality Standards](#quality-standards)
+23. [Common .NET Commands](#common-net-commands-reference)
+24. [Troubleshooting](#troubleshooting-common-issues)
+25. [Resources](#resources)
+26. [Quality Standards](#quality-standards)
 
 ### Edge Cases and Advanced Topics
-26. [No .NET SDK Checklist](#-alternative-no-net-sdk-checklist) - For restricted environments
-27. [Avoiding Stale Documentation](#avoiding-stale-documentation) - Maintenance guide
-28. [Changelog](#changelog) - Document history
+27. [No .NET SDK Checklist](#-alternative-no-net-sdk-checklist) - For restricted environments
+28. [Avoiding Stale Documentation](#avoiding-stale-documentation) - Maintenance guide
+29. [Changelog](#changelog) - Document history
 
 **Priority Legend:**
 - ⭐⭐⭐ **CRITICAL** - Must read before making any changes
@@ -180,6 +191,8 @@ Claude-code-test/
 - ⭐ **Helpful** - Reference as needed
 
 ## Development Environment Setup
+
+**💡 TIP:** Use the `/dotnet-setup` skill to automate environment setup. See [SKILLS.md](SKILLS.md#dotnet-setup) for details.
 
 This section provides comprehensive instructions for setting up your development environment to work with this project.
 
@@ -586,6 +599,8 @@ dotnet run -- http://your-api:5000
 ```
 
 ### Docker Development and Maintenance
+
+**💡 TIP:** Use the `/docker-helper` skill to automate Docker validation and optimization. See [SKILLS.md](SKILLS.md#docker-helper) for details.
 
 This section provides comprehensive guidance for maintaining Docker configuration files (Dockerfile and docker-compose.yml) to ensure containerized deployments remain secure, optimized, and up-to-date.
 
@@ -1125,6 +1140,8 @@ Follow conventional commits:
 - `chore:` - Maintenance tasks
 
 ### ⚠️ CRITICAL: Pre-Commit Checklist
+
+**💡 TIP:** Use the `/precommit-check` skill to automate validation. See [SKILLS.md](SKILLS.md#precommit-check) for details.
 
 **NEVER commit code without completing ALL steps below.** This prevents CI/CD failures and ensures code quality.
 
@@ -1671,6 +1688,8 @@ After verifying .NET SDK:
 
 ### Test-Driven Development (TDD) Workflow
 
+**💡 TIP:** Use the `/tdd-helper` skill for guided Red-Green-Refactor workflow. See [SKILLS.md](SKILLS.md#tdd-helper) for details.
+
 **⚠️ MANDATORY**: All coding tasks MUST follow Test-Driven Development (TDD) principles. This is not optional.
 
 #### Why TDD is Mandatory
@@ -1983,6 +2002,8 @@ Before marking any coding task as complete:
 - **Sanitize output** to prevent XSS
 
 ### Testing Requirements
+
+**💡 TIP:** Use the `/test-coverage-analyzer` skill to maintain 85%+ coverage. See [SKILLS.md](SKILLS.md#test-coverage-analyzer) for details.
 
 **⚠️ MANDATORY: Follow Test-Driven Development (TDD) for ALL code changes**
 
@@ -2310,6 +2331,8 @@ public async Task<string?> AuthenticateAsync(string username, string password)
 ```
 
 ### Avoiding Stale Documentation
+
+**💡 TIP:** Use the `/doc-sync-check` skill to validate documentation synchronization. See [SKILLS.md](SKILLS.md#doc-sync-check) for details.
 
 **⚠️ CRITICAL**: Stale documentation is worse than no documentation. Outdated docs mislead developers, waste time, and cause bugs. Follow these practices to keep documentation current.
 
@@ -3180,6 +3203,36 @@ docker-compose --version
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-19 (Claude Skills Documentation and Integration)
+- **Created SKILLS.md** (~970 lines)
+  - Comprehensive documentation for all 7 Claude Skills
+  - Quick reference table by category
+  - Decision tree for skill selection
+  - Detailed descriptions for each skill (dotnet-setup, tdd-helper, precommit-check, test-coverage-analyzer, race-condition-debugger, doc-sync-check, docker-helper)
+  - Typical workflows (daily development, feature completion, bug fix, Docker update, monthly maintenance)
+  - How to use skills (slash commands, Claude Code tool, manual execution)
+  - Creating new skills (template and best practices)
+  - Statistics: 7 skills, ~2,800 lines total
+- **Updated CLAUDE.md to reference skills** (~10 locations)
+  - Added .claude/skills/ directory to Project Structure
+  - Added SKILLS.md to file list
+  - Added "Use Claude Skills" row to Quick Reference table
+  - Added SKILLS.md to Table of Contents (Getting Started section)
+  - Renumbered all subsequent ToC sections (7-29 instead of 6-28)
+  - Added skill tips to 6 key sections:
+    - Development Environment Setup: `/dotnet-setup` skill
+    - TDD Workflow: `/tdd-helper` skill
+    - Pre-Commit Checklist: `/precommit-check` skill
+    - Testing Requirements: `/test-coverage-analyzer` skill
+    - Avoiding Stale Documentation: `/doc-sync-check` skill
+    - Docker Development and Maintenance: `/docker-helper` skill
+- **Impact**:
+  - Skills are now fully documented and discoverable
+  - Clear guidance on which skill to use for each task
+  - Integrated into existing workflows throughout CLAUDE.md
+  - Provides ~2,800 lines of automated workflow guidance
+  - Reduces cognitive load by automating complex tasks
 
 ### 2025-11-17 (Docker Documentation and Maintenance Guidelines)
 - **Added comprehensive Docker Development and Maintenance section** (~335 lines)

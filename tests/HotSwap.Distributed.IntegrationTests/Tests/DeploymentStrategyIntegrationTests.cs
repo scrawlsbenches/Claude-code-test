@@ -273,7 +273,7 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
     /// Tests Canary deployment strategy (Production environment).
     /// Canary strategy gradually increases traffic to new version, starting with small percentage.
     /// </summary>
-    [Fact(Skip = "Flaky in CI/CD - canary metrics analysis fails due to simulated error rates varying by environment")]
+    [Fact]
     [Trait("Category", "Slow")]
     public async Task CanaryDeployment_ToProductionEnvironment_CompletesSuccessfully()
     {

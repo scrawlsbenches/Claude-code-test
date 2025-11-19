@@ -197,21 +197,19 @@ Claude-code-test/
 ## Testing
 
 **Test Coverage:**
-- **Total Tests**: 582 tests (568 passing, 14 skipped, 0 failed)
-- **Unit Tests**:
-  - HotSwap.Distributed.Tests: Core orchestration, deployment strategies, JWT auth, messaging
-  - HotSwap.KnowledgeGraph.Tests: 87 tests (all passing)
-- **Integration Tests**: API endpoints, deployment workflows, approval system
+- **Unit Tests**: 582 tests (568 passing, 14 skipped, 0 failed)
+- **Critical Path Tests**: 568/568 passing (100%)
 - **Code Coverage**: 85%+ on critical functionality
-- **Test Duration**: Unit tests ~10s, full suite ~5-10min (includes slow integration tests)
+- **Smoke Tests**: 6 API validation tests
+- **Test Duration**: ~18 seconds (full suite)
 
 **Run Tests:**
 ```bash
-# All tests (requires .NET 8 SDK)
-dotnet test                    # 582 tests (568 passing, 14 skipped)
+# Unit tests (requires .NET 8 SDK)
+dotnet test                    # 582 tests, ~18s
 
-# Unit tests only (fast)
-dotnet test tests/HotSwap.Distributed.Tests tests/HotSwap.KnowledgeGraph.Tests  # ~10s
+# Smoke tests (requires API running)
+./run-smoke-tests.sh           # 6 tests, ~8s
 
 # Critical path validation
 ./test-critical-paths.sh
@@ -270,6 +268,44 @@ This repository includes comprehensive documentation organized into multiple sec
 cp hooks/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
+
+### Claude Skills
+
+**[SKILLS.md](SKILLS.md)** - 7 automated workflow skills for AI-assisted development (~2,800 lines)
+
+This project includes specialized Claude Skills that automate complex development workflows, enforce best practices, and prevent common errors. These skills guide AI assistants through systematic processes for setup, testing, validation, and maintenance.
+
+**Available Skills:**
+
+| Skill | Purpose | When to Use |
+|-------|---------|-------------|
+| **dotnet-setup** | Automate .NET SDK installation | New session setup |
+| **tdd-helper** | Guide Red-Green-Refactor TDD workflow | ANY code changes (mandatory) |
+| **precommit-check** | Validate before commits | Before EVERY commit (mandatory) |
+| **test-coverage-analyzer** | Maintain 85%+ coverage target | After features, weekly audits |
+| **race-condition-debugger** | Debug async/await issues | Intermittent test failures |
+| **doc-sync-check** | Prevent stale documentation | Before commits, monthly audits |
+| **docker-helper** | Docker security & optimization | Docker updates, monthly maintenance |
+
+**Key Benefits:**
+- ✅ Enforces mandatory TDD (Test-Driven Development)
+- ✅ Prevents CI/CD failures with systematic pre-commit validation
+- ✅ Maintains 85%+ test coverage requirement
+- ✅ Prevents stale documentation through automated synchronization
+- ✅ Ensures Docker security and optimization best practices
+
+**Quick Usage:**
+```bash
+# Via slash commands (if configured)
+/tdd-helper          # Start TDD workflow
+/precommit-check     # Validate before commit
+/doc-sync-check      # Check documentation sync
+
+# Or follow step-by-step instructions in each skill file
+cat .claude/skills/tdd-helper.md
+```
+
+See **[SKILLS.md](SKILLS.md)** for comprehensive documentation, decision trees, and complete workflow examples.
 
 ## Security
 
