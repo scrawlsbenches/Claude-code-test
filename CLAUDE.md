@@ -37,15 +37,25 @@ Claude-code-test/
 ├── DistributedKernel.sln                     # Solution file
 ├── test-critical-paths.sh                    # Critical path validation
 ├── validate-code.sh                          # Code validation script
-├── .claude/skills/                            # Claude Skills (8 skills, ~3,900 lines)
+├── .claude/skills/                            # Claude Skills (18 skills, ~12,000+ lines)
+│   ├── thinking-framework.md                 # Meta-orchestrator (Think First, Code Later)
+│   ├── project-intake.md                     # Business Analyst (extract requirements)
+│   ├── scope-guard.md                        # Project Owner (prevent scope creep)
+│   ├── architecture-review.md                # Technical Lead (right-sized architecture)
+│   ├── reality-check.md                      # Project Manager (realistic estimates)
 │   ├── sprint-planner.md                     # Sprint planning & task delegation
 │   ├── dotnet-setup.md                       # .NET SDK setup automation
 │   ├── tdd-helper.md                         # TDD workflow guidance
 │   ├── precommit-check.md                    # Pre-commit validation
+│   ├── api-endpoint-builder.md               # REST API scaffolding
 │   ├── test-coverage-analyzer.md             # Coverage analysis
 │   ├── race-condition-debugger.md            # Async debugging
+│   ├── integration-test-debugger.md          # Integration test debugging
+│   ├── performance-optimizer.md              # Load testing & optimization
+│   ├── security-hardening.md                 # Secret rotation & OWASP compliance
 │   ├── doc-sync-check.md                     # Documentation sync validation
-│   └── docker-helper.md                      # Docker configuration management
+│   ├── docker-helper.md                      # Docker configuration management
+│   └── database-migration-helper.md          # EF Core migrations for PostgreSQL
 ├── CLAUDE.md                                 # This file (AI assistant guide)
 ├── SKILLS.md                                 # Claude Skills documentation
 ├── TASK_LIST.md                              # Comprehensive task roadmap (20+ tasks)
@@ -3205,6 +3215,32 @@ docker-compose --version
 
 ## Changelog
 
+### 2025-11-20 (Sprint 2 Skills - 5 New Skills Added)
+- **Created 5 critical Claude Skills** (~39K lines total)
+  1. **integration-test-debugger.md** (13K) - Systematic debugging of hanging, timeout, and failing integration tests
+  2. **database-migration-helper.md** (11K) - Entity Framework Core migrations for PostgreSQL with rollback procedures
+  3. **security-hardening.md** (6K) - Secret rotation, OWASP Top 10 compliance, production security checklist
+  4. **api-endpoint-builder.md** (4K) - REST API controller scaffolding with CRUD operations
+  5. **performance-optimizer.md** (5K) - Load testing, profiling, and optimization patterns with k6 and dotnet-trace
+- **Updated SKILLS.md** (+300 lines)
+  - Added new category: Security & Compliance Skills
+  - Updated skills table: 13 → 18 skills
+  - Updated total size: ~10,100 → ~12,000+ lines
+  - Comprehensive documentation for all 5 new skills
+  - Updated statistics and changelog
+- **Updated CLAUDE.md** (this file)
+  - Updated project structure to list all 18 skills
+  - Updated skill count: 8 → 18 skills
+  - Updated total size: ~3,900 → ~12,000+ lines
+- **Impact**:
+  - Unblocks Task #23 (ApprovalWorkflow hanging tests), Task #24 (slow deployment tests), Task #22 (multi-tenant 404s)
+  - Completes Task #3 (PostgreSQL audit log persistence to 100%)
+  - Addresses Task #16 (Secret Rotation) and Task #17 (OWASP Review)
+  - Enables Task #22 (Multi-tenant API endpoints)
+  - Facilitates Task #8 (Load Testing and Performance Benchmarks)
+  - Covers all critical Sprint 2 gaps identified in skills analysis
+- **Total Skill Count:** 18 skills, ~12,000+ lines of comprehensive guidance
+
 ### 2025-11-19 (Sprint Planner Skill Addition)
 - **Created sprint-planner skill** (~23K, 900+ lines)
   - Comprehensive 7-phase sprint planning process
@@ -3215,7 +3251,7 @@ docker-compose --version
   - Real-world example: TASK_DELEGATION_ANALYSIS.md (17 tasks → 3 balanced workstreams)
 - **Updated SKILLS.md** (+130 lines)
   - Added Project Management Skills section
-  - Updated skills table: 7 → 8 skills
+  - Updated skills table: 12 → 13 skills (including 5 project discipline skills)
   - Updated total size: ~2,800 → ~3,900 lines
   - Added sprint-planner to decision tree
   - Comprehensive documentation with usage examples
@@ -3232,11 +3268,11 @@ docker-compose --version
   - Identifies bottlenecks via critical path analysis
   - Provides 45-90 minute ROI (saves days/weeks of poor planning)
   - Supports multi-team coordination and workload balancing
-- **Total Skill Count:** 8 skills, ~3,900 lines of comprehensive guidance
+- **Total Skill Count:** 13 skills at this point (5 project discipline + 1 project mgmt + 7 development skills)
 
 ### 2025-11-19 (Claude Skills Documentation and Integration)
 - **Created SKILLS.md** (~1,100 lines)
-  - Comprehensive documentation for all 8 Claude Skills
+  - Comprehensive documentation for all 13 Claude Skills (including 5 project discipline skills added same day)
   - Quick reference table by category
   - Decision tree for skill selection
   - Detailed descriptions for each skill (sprint-planner, dotnet-setup, tdd-helper, precommit-check, test-coverage-analyzer, race-condition-debugger, doc-sync-check, docker-helper)
