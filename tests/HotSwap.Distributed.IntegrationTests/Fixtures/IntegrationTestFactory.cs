@@ -73,6 +73,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // Pipeline configuration - use FAST timeouts for integration tests
                 ["Pipeline:MaxConcurrentPipelines"] = "10",
                 ["Pipeline:QaMaxConcurrentNodes"] = "4",
+                ["Pipeline:RollingHealthCheckDelay"] = "00:00:01", // 1 SECOND (vs 30 seconds default) - CRITICAL for fast tests
                 ["Pipeline:StagingSmokeTestTimeout"] = "00:00:10", // 10 seconds (vs 5 minutes production)
                 ["Pipeline:CanaryInitialPercentage"] = "10",
                 ["Pipeline:CanaryIncrementPercentage"] = "50", // Faster rollout: 50% increments vs 20% production
