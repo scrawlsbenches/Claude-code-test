@@ -632,7 +632,7 @@ public class DeploymentPipeline : IDisposable
                 RequesterEmail = request.RequesterEmail,
                 ApproverEmails = new List<string>(), // Would be configured based on environment
                 Metadata = request.Metadata,
-                TimeoutAt = DateTime.UtcNow.AddHours(_config.ApprovalTimeoutHours)
+                TimeoutAt = DateTime.UtcNow.Add(_config.ApprovalTimeout)
             };
 
             // Create the approval request
@@ -677,7 +677,7 @@ public class DeploymentPipeline : IDisposable
             else if (result.Status == ApprovalStatus.Expired)
             {
                 stage.Status = PipelineStageStatus.Failed;
-                stage.Message = $"Approval request expired after {_config.ApprovalTimeoutHours} hours";
+                stage.Message = $"Approval request expired after {_config.ApprovalTimeout.TotalHours} hours";
 
                 _logger.LogWarning(
                     "Deployment to {Environment} failed: approval request expired",

@@ -155,7 +155,7 @@ public class PipelineConfiguration
     public bool AutoRollbackOnFailure { get; set; } = true;
 
     /// <summary>
-    /// Approval timeout in hours. Defaults to 24 hours.
+    /// Approval timeout duration. Defaults to 24 hours.
     /// </summary>
-    public int ApprovalTimeoutHours { get; set; } = 24;
+    public TimeSpan ApprovalTimeout { get; set; } = TimeSpan.FromHours(24);
 }
