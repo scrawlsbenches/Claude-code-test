@@ -434,6 +434,16 @@ public class DeploymentPipeline : IDisposable
 
             stages.Add(deployStage);
 
+            // Update pipeline state after each environment deployment
+            // This ensures clients see progress as each environment completes
+            var allStagesSoFar = new List<PipelineStageResult>();
+            if (previousStages != null)
+            {
+                allStagesSoFar.AddRange(previousStages);
+            }
+            allStagesSoFar.AddRange(stages);
+            await UpdatePipelineStateAsync(request, "Running", deployStage.StageName, allStagesSoFar);
+
             if (deployStage.Status == PipelineStageStatus.Failed)
             {
                 break; // Stop pipeline on failure
