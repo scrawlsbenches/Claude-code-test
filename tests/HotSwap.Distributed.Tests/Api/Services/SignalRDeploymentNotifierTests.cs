@@ -1,6 +1,7 @@
 using HotSwap.Distributed.Api.Hubs;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;

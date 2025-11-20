@@ -317,6 +317,9 @@ else
 // Register deployment tracking service
 builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
 
+// Register deployment notification service
+builder.Services.AddSingleton<IDeploymentNotifier, SignalRDeploymentNotifier>();
+
 // Register tenant services
 builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
 builder.Services.AddSingleton<ITenantProvisioningService, TenantProvisioningService>();

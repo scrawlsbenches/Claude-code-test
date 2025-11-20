@@ -1,6 +1,6 @@
 using HotSwap.Distributed.Domain.Models;
 
-namespace HotSwap.Distributed.Api.Services;
+namespace HotSwap.Distributed.Infrastructure.Interfaces;
 
 /// <summary>
 /// Service for notifying clients about deployment updates via real-time channels.
