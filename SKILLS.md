@@ -1,6 +1,6 @@
 # Claude Skills for .NET Development
 
-**Last Updated**: 2025-11-19
+**Last Updated**: 2025-11-20
 
 This document describes all available Claude Skills for this .NET distributed systems project. Skills are specialized tools that automate common workflows, enforce best practices, and guide you through complex tasks.
 
@@ -8,13 +8,14 @@ This document describes all available Claude Skills for this .NET distributed sy
 
 1. [Overview](#overview)
 2. [Quick Reference](#quick-reference)
-3. [Project Management Skills](#project-management-skills)
-4. [Core Development Skills](#core-development-skills)
-5. [Quality & Testing Skills](#quality--testing-skills)
-6. [Documentation & Infrastructure Skills](#documentation--infrastructure-skills)
-7. [Typical Workflows](#typical-workflows)
-8. [How to Use Skills](#how-to-use-skills)
-9. [Creating New Skills](#creating-new-skills)
+3. [Project Discipline Skills](#project-discipline-skills) ⭐ **NEW - Critical for Success**
+4. [Project Management Skills](#project-management-skills)
+5. [Core Development Skills](#core-development-skills)
+6. [Quality & Testing Skills](#quality--testing-skills)
+7. [Documentation & Infrastructure Skills](#documentation--infrastructure-skills)
+8. [Typical Workflows](#typical-workflows)
+9. [How to Use Skills](#how-to-use-skills)
+10. [Creating New Skills](#creating-new-skills)
 
 ---
 
@@ -41,6 +42,12 @@ Claude Skills are markdown-based instruction sets that guide AI assistants throu
 
 | Skill | Size | When to Use | Frequency |
 |-------|------|-------------|-----------|
+| **Project Discipline** ⭐ ||||
+| [thinking-framework](#thinking-framework) | 9.5K | **EVERY new project/request** | Always |
+| [project-intake](#project-intake) | 10K | Before ANY coding starts | Per project |
+| [scope-guard](#scope-guard) | 8.5K | During implementation | Continuous |
+| [architecture-review](#architecture-review) | 10K | Before design decisions | Per feature |
+| [reality-check](#reality-check) | 8K | Before committing to timelines | Per estimate |
 | **Project Management** ||||
 | [sprint-planner](#sprint-planner) | 23K | Sprint planning, task delegation | Every 1-2 weeks |
 | **Core Development** ||||
@@ -54,11 +61,40 @@ Claude Skills are markdown-based instruction sets that guide AI assistants throu
 | [doc-sync-check](#doc-sync-check) | 14K | Before commits, monthly audits | Daily/Monthly |
 | [docker-helper](#docker-helper) | 18K | Docker changes, maintenance | As needed |
 
-**Total:** 8 skills, ~3,900 lines of comprehensive guidance
+**Total:** 13 skills, ~10,100+ lines of comprehensive guidance (includes 5 new project discipline skills)
 
 ### Decision Tree: Which Skill to Use?
 
 ```
+⭐ NEW REQUEST / PROJECT?
+  └─> /thinking-framework (Meta-skill - routes to appropriate role)
+       ↓
+       Are requirements clear?
+       ├─> NO → /project-intake (Business Analyst)
+       └─> YES → Continue
+                ↓
+                Is scope locked?
+                ├─> NO → /scope-guard (Project Owner)
+                └─> YES → Continue
+                         ↓
+                         Is architecture designed?
+                         ├─> NO → /architecture-review (Technical Lead)
+                         └─> YES → Continue
+                                  ↓
+                                  Is timeline estimated?
+                                  ├─> NO → /reality-check (Project Manager)
+                                  └─> YES → Start implementation
+
+During Implementation:
+  Adding new feature?
+    └─> /scope-guard (validate it's in requirements)
+
+  Making architectural change?
+    └─> /architecture-review (validate it's appropriate)
+
+  Stakeholder asks "when done?"
+    └─> /reality-check (realistic estimate)
+
 Planning new sprint?
   └─> /sprint-planner
 
@@ -89,6 +125,290 @@ Monthly maintenance?
   ├─> /doc-sync-check
   └─> /docker-helper
 ```
+
+---
+
+## Project Discipline Skills
+
+⭐ **These are the MOST CRITICAL skills - they prevent the problems that created this test project.**
+
+The HotSwap.Distributed project was intentionally built without these skills to test what happens when Claude builds autonomously without proper project discipline. The result: 60% scope creep, 26,750 lines of code, 38,237 lines of documentation, unclear product identity, and 6/10 quality score.
+
+**These skills were created from the lessons learned. Use them to avoid repeating those mistakes.**
+
+### thinking-framework
+
+**File:** `.claude/skills/thinking-framework.md`
+**Size:** 9.5K (~290 lines)
+**Role:** Meta-Orchestrator (Routes to appropriate role/skill)
+**Purpose:** Prevents premature coding by enforcing "Think First, Code Later" philosophy
+
+#### When to Use
+- **🚨 EVERY new project or feature request** (without exception)
+- When you feel impulse to "just start coding"
+- When stakeholder request is vague or unclear
+- Before making ANY architectural decisions
+- When you're uncertain which skill to use
+
+#### What It Does
+Acts as the meta-skill that orchestrates the entire project lifecycle. Ensures you progress through phases sequentially and use the right role at each phase:
+
+**The 6-Phase Lifecycle:**
+1. **Phase 1: UNDERSTAND** → Business Analyst role (`project-intake`)
+2. **Phase 2: DEFINE** → Project Owner role (`scope-guard`)
+3. **Phase 3: DESIGN** → Technical Lead role (`architecture-review`)
+4. **Phase 4: PLAN** → Project Manager role (`reality-check`)
+5. **Phase 5: IMPLEMENT** → Developer role (TDD, coding)
+6. **Phase 6: VALIDATE** → All roles review
+
+**Key Principle:** Cannot skip phases. Each phase gates the next.
+
+#### Real-World Example
+**Without thinking-framework:**
+- User: "Build deployment system"
+- Claude: *immediately starts coding*
+- Result: Built 60% out-of-scope features, unclear product
+
+**With thinking-framework:**
+- User: "Build deployment system"
+- Claude: *activates thinking-framework*
+- Claude: Identifies Phase 0 (no requirements) → Routes to `project-intake`
+- Claude: Clarifies requirements, then proceeds through phases
+- Result: Focused product, 0% scope creep, 9/10 quality
+
+#### Success Indicators
+- ✅ Never start coding without requirements
+- ✅ Can explain which phase/role you're in
+- ✅ Progress through phases sequentially
+- ✅ Use appropriate skill for each phase
+
+#### Integration
+**This skill routes to all other discipline skills:**
+- Phase 1 → `project-intake`
+- Phase 2 → `scope-guard`
+- Phase 3 → `architecture-review`
+- Phase 4 → `reality-check`
+- Phase 5 → Development skills (`tdd-helper`, etc.)
+
+---
+
+### project-intake
+
+**File:** `.claude/skills/project-intake.md`
+**Size:** 10K (~305 lines)
+**Role:** Business Analyst
+**Purpose:** Extract clear requirements from vague/confused stakeholders BEFORE any code is written
+
+#### When to Use
+- **At the VERY START of any project** (Phase 1 in thinking-framework)
+- When stakeholder request is vague ("Build something like X")
+- When you don't understand the problem being solved
+- Before ANY code is written
+- When request could expand into many features
+
+#### What It Does
+Prevents building the wrong thing by forcing requirements clarification. Asks the Five Critical Questions:
+
+1. **PROBLEM STATEMENT**: What problem are we solving?
+2. **SUCCESS CRITERIA**: How will we know we've solved it?
+3. **CONSTRAINTS & ASSUMPTIONS**: What are the limits?
+4. **SCOPE BOUNDARIES**: What's in/out of scope?
+5. **RISK ASSESSMENT**: What could go wrong?
+
+**Workflow:**
+1. Ask clarifying questions (don't guess)
+2. Document answers in PROJECT_REQUIREMENTS.md
+3. Get stakeholder approval
+4. Create Implementation Brief
+5. **Gate:** Cannot proceed to architecture without approval
+
+#### Real-World Example
+**What happened without this skill:**
+- Request: "Build hot-swap deployment system"
+- Claude assumed: Multi-tenancy, billing, websites, plugins, messaging all needed
+- Result: 60% of features were NOT requested
+
+**What should have happened with this skill:**
+- Request: "Build hot-swap deployment system"
+- Claude asks: "For whom? What problems? Success criteria? In/out of scope?"
+- Documented: Core deployment only, NO multi-tenancy/billing/websites
+- Result: Built only what was approved
+
+#### Success Indicators
+- ✅ PROJECT_REQUIREMENTS.md exists and approved
+- ✅ "Out of scope" explicitly documented
+- ✅ Success criteria measurable and testable
+- ✅ Didn't build features not in requirements
+
+---
+
+### scope-guard
+
+**File:** `.claude/skills/scope-guard.md`
+**Size:** 8.5K (~260 lines)
+**Role:** Project Owner / Product Owner
+**Purpose:** Prevent feature creep and scope expansion DURING implementation
+
+#### When to Use
+- **During implementation, before adding ANY new feature**
+- When thinking "Since I'm here, let me add..."
+- When thinking "We might need this later"
+- When stakeholder says "While you're at it..."
+- Before adding new dependencies or infrastructure
+- Continuous validation during development
+
+#### What It Does
+Guards approved scope using the 4-Gate Validation System. Every feature must pass ALL four gates:
+
+**Gate 1: Requirements Justification**
+- Is this in PROJECT_REQUIREMENTS.md?
+
+**Gate 2: Complexity Justification**
+- Does complexity justify value?
+- Complexity Score = (LOC × Maintenance) / Value
+- Target: < 1.0
+
+**Gate 3: Dependency Justification**
+- Is new dependency necessary?
+- Can existing code handle this?
+
+**Gate 4: Maintenance Justification**
+- Are we willing to maintain this forever?
+- Is it tested and documented?
+
+**If ANY gate fails → REJECT the feature**
+
+#### Real-World Example
+**What happened without this skill:**
+- Approved scope: Deployment strategies, health monitoring
+- Actually built: + Multi-tenancy + Billing + Websites + Plugins + Message routing
+- Scope creep: 60% (12 out of 20 features were unplanned)
+
+**What should have happened with this skill:**
+- Checkpoint: "About to add multi-tenancy"
+- Gate 1: In requirements? → NO (in OUT_OF_SCOPE section)
+- Decision: REJECT immediately
+- Result: 0% scope creep, stayed focused
+
+#### Success Indicators
+- ✅ Every feature justified by requirement
+- ✅ SCOPE_DECISIONS.md logs all decisions
+- ✅ Weekly scope creep < 10%
+- ✅ Rejected "while I'm at it" additions
+
+---
+
+### architecture-review
+
+**File:** `.claude/skills/architecture-review.md`
+**Size:** 10K (~310 lines)
+**Role:** Technical Lead
+**Purpose:** Ensure architecture matches requirements, avoid over-engineering
+
+#### When to Use
+- **AFTER requirements clear, BEFORE implementation**
+- When choosing technology stack
+- When creating abstraction layers
+- When making sync vs async decisions
+- When thinking "Let's use microservices"
+
+#### What It Does
+Prevents over-engineering by enforcing the KISS (Keep It Simple, Stupid) principle. Ensures architecture is right-sized for the problem.
+
+**The Three Architecture Principles:**
+1. **Right-Sized Architecture** - Match complexity to problem scale
+2. **Vertical Slice Over Horizontal Layers** - Organize by features
+3. **YAGNI** - Don't build for hypothetical future
+
+**Architecture Review Checklist:**
+1. Problem-Architecture Fit
+2. Scale Appropriateness
+3. Team Capability
+4. YAGNI Validation
+5. Alternatives Considered
+
+**Output:** Architecture Decision Records (ADRs) documenting every major choice
+
+#### Real-World Example
+**What happened without this skill:**
+- Scale: 100 servers, 10 deploys/day, single org
+- Built: Message routing (5 strategies), schema registry, multi-tenancy
+- Rationale: "Enterprise systems have these" (assumption)
+- Result: 3x more complex than needed
+
+**What should have happened with this skill:**
+- Question: "Should I use message queue?"
+- Answer: Requirements say sync deployment, user waits
+- Decision: Direct deployment (no queue)
+- Document: ADR-002: Direct Deployment (No Message Queue)
+- Result: Appropriate architecture, 1/3 the complexity
+
+#### Success Indicators
+- ✅ ADRs exist for major decisions
+- ✅ Architecture matches problem scale
+- ✅ Considered simpler alternatives
+- ✅ Can justify every choice with requirement
+
+---
+
+### reality-check
+
+**File:** `.claude/skills/reality-check.md`
+**Size:** 8K (~245 lines)
+**Role:** Project Manager
+**Purpose:** Realistic effort estimation, prevent over-commitment
+
+#### When to Use
+- **AFTER architecture, BEFORE committing to timelines**
+- When stakeholder asks "When will this be done?"
+- Before committing to deadlines
+- When planning sprint/iteration
+- When request feels ambitious
+
+#### What It Does
+Prevents unrealistic promises using scientific estimation methods:
+
+**The Three Estimation Principles:**
+1. **Hofstadter's Law** - Always takes longer than expected
+   - Solution: 3x Multiplier Rule (multiply initial estimate by 3)
+
+2. **Break Down and Sum Up** - Large estimates always wrong
+   - Break into ≤1-day tasks, sum them, add buffer
+
+3. **Identify Unknowns** - Unknowns kill estimates
+   - Known-Knowns: Estimate with confidence
+   - Known-Unknowns: Add research time
+   - Unknown-Unknowns: Add 50-100% buffer
+
+**Reality Check Process:**
+1. Scope Clarity Check
+2. Task Breakdown (≤1-day tasks)
+3. Unknowns Assessment
+4. Dependency Check
+5. Effort vs Capacity Reality Check
+6. Risk Assessment
+
+**Output:** Best/Likely/Worst case timelines + Realistic commitment
+
+#### Real-World Example
+**What happened without this skill:**
+- Claude: "This will be straightforward, a few days"
+- Reality: 3 weeks, 26,750 lines, 60% scope creep
+- Result: Massive over-commitment
+
+**What should have happened with this skill:**
+- Breakdown: 70 hours estimated
+- Apply 3x: 210 hours
+- Add unknowns: 315 hours = 8 weeks
+- Capacity: 240 hours available
+- Reality: NOT FEASIBLE, reduce scope to 5 weeks
+- Result: Realistic expectation set upfront
+
+#### Success Indicators
+- ✅ Break work into ≤1-day tasks
+- ✅ Apply 3x multiplier to estimates
+- ✅ Identify and quantify unknowns
+- ✅ Actual time within 25% of estimate
 
 ---
 
