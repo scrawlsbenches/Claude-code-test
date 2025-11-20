@@ -66,6 +66,10 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // CORS - allow test origins
                 ["Cors:AllowedOrigins:0"] = "http://localhost",
 
+                // Deployment tracking - prevent cache eviction under memory pressure in CI/CD
+                // NeverRemove ensures deployment results remain in cache even under extreme memory pressure
+                ["DeploymentTracking:CachePriority"] = "NeverRemove",
+
                 // Pipeline configuration - use FAST timeouts for integration tests
                 ["Pipeline:MaxConcurrentPipelines"] = "10",
                 ["Pipeline:QaMaxConcurrentNodes"] = "4",

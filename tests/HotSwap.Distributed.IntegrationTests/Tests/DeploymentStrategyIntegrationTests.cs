@@ -372,7 +372,7 @@ public class DeploymentStrategyIntegrationTests : IAsyncLifetime
         {
             "Development" => TestDataBuilder.ForDevelopment(moduleName),
             "QA" => TestDataBuilder.ForQA(moduleName),
-            "Staging" => TestDataBuilder.ForStaging(moduleName),
+            "Staging" => TestDataBuilder.ForStaging(moduleName).WithApprovalRequired(false), // Disable approval for strategy testing
             "Production" => TestDataBuilder.ForProduction(moduleName).WithApprovalRequired(false),
             _ => throw new ArgumentException($"Unknown environment: {environment}")
         };
