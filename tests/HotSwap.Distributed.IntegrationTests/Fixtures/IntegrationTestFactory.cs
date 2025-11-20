@@ -74,7 +74,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 ["Pipeline:CanaryIncrementPercentage"] = "50", // Faster rollout: 50% increments vs 20% production
                 ["Pipeline:CanaryWaitDuration"] = "00:00:05", // 5 SECONDS (vs 15 MINUTES production) - CRITICAL
                 ["Pipeline:AutoRollbackOnFailure"] = "true",
-                ["Pipeline:ApprovalTimeoutHours"] = "1", // 1 hour for integration tests (vs 24 hours production)
+                ["Pipeline:ApprovalTimeout"] = "00:00:10", // 10 SECONDS for integration tests (vs 24 hours production)
 
                 // Reduce logging verbosity for integration tests
                 // Only log warnings and errors to avoid 27k+ log lines

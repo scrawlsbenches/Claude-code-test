@@ -12,9 +12,10 @@ Runs before each commit to ensure code quality.
 2. ✅ Clean build artifacts
 3. ✅ Restore NuGet packages
 4. ✅ Build solution (non-incremental)
-5. ✅ Check for warnings (warns if >3 warnings)
+5. ✅ Check for warnings (fails on ANY warnings)
 6. ✅ Run all tests
 7. ✅ Verify zero test failures
+8. ✅ Verify staged files
 
 **Execution time:** ~30-60 seconds (depending on test suite size)
 
@@ -82,12 +83,18 @@ git push --no-verify origin claude/my-branch
 
 ## Customization
 
-### Adjusting Warning Threshold
+### Adjusting Test Speed
 
-Edit `.githooks/pre-commit` line 42:
+To run only unit tests (faster pre-commit):
+
+Edit `.githooks/pre-commit` test command:
 
 ```bash
-if [ "$WARNING_COUNT" -gt 3 ]; then  # Change 3 to your threshold
+# Run only unit tests (faster)
+dotnet test --filter "FullyQualifiedName!~IntegrationTests" --verbosity quiet
+
+# Or run all tests (comprehensive, slower)
+dotnet test --verbosity quiet
 ```
 
 ### Disabling Specific Checks
@@ -95,9 +102,8 @@ if [ "$WARNING_COUNT" -gt 3 ]; then  # Change 3 to your threshold
 Comment out unwanted checks in the hook scripts:
 
 ```bash
-# Step 4: Run all tests (DISABLED)
-# echo "🧪 Running tests..."
-# TEST_OUTPUT=$(dotnet test --verbosity quiet 2>&1)
+# Example: Disable warning check
+# WARNING_COUNT=$(echo "$BUILD_OUTPUT" | grep -c "Warning(s)" || true)
 ```
 
 ## Troubleshooting

@@ -8,6 +8,7 @@
 set -e  # Exit on any error
 
 echo "🔍 Running pre-commit checks..."
+echo ""
 
 # Check if .NET SDK is available
 if ! command -v dotnet &> /dev/null; then
@@ -16,49 +17,65 @@ if ! command -v dotnet &> /dev/null; then
     exit 1
 fi
 
-# Step 1: Clean build artifacts
-echo "🧹 Cleaning build artifacts..."
+# Step 1: Clean build artifacts and restore packages
+echo "📦 Step 1/5: Clean and restore packages..."
 dotnet clean > /dev/null 2>&1
-
-# Step 2: Restore NuGet packages
-echo "📦 Restoring NuGet packages..."
 if ! dotnet restore > /dev/null 2>&1; then
     echo "❌ Package restore failed. Check your internet connection and NuGet sources."
     exit 1
 fi
 
-# Step 3: Build solution (non-incremental)
-echo "🔨 Building solution..."
-if ! dotnet build --no-incremental > /dev/null 2>&1; then
-    echo "❌ Build failed. Fix compilation errors before committing."
+# Step 2: Build solution (non-incremental)
+echo "🔨 Step 2/5: Building solution (non-incremental)..."
+BUILD_OUTPUT=$(dotnet build --no-incremental 2>&1)
+BUILD_EXIT_CODE=$?
+
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+    echo "❌ BUILD FAILED - Fix compilation errors before committing:"
+    echo "$BUILD_OUTPUT"
+    exit 1
+fi
+
+# Step 3: Check for warnings (strict: fail on ANY warnings)
+WARNING_COUNT=$(echo "$BUILD_OUTPUT" | grep -c "Warning(s)" || true)
+if echo "$BUILD_OUTPUT" | grep -q "1 Warning(s)" || echo "$BUILD_OUTPUT" | grep -q "[2-9] Warning(s)"; then
+    echo "❌ BUILD WARNINGS DETECTED - Fix all warnings before committing:"
+    echo "$BUILD_OUTPUT" | grep -A 5 "Warning(s)"
+    echo ""
     echo "   Run: dotnet build --no-incremental"
     exit 1
 fi
 
-# Check for warnings
-BUILD_OUTPUT=$(dotnet build --no-incremental 2>&1)
-WARNING_COUNT=$(echo "$BUILD_OUTPUT" | grep -c "warning CS" || true)
-if [ "$WARNING_COUNT" -gt 3 ]; then
-    echo "⚠️  Build has $WARNING_COUNT warnings (threshold: 3)"
-    echo "   Consider fixing warnings before committing."
-    echo "   Run: dotnet build --no-incremental"
-    # Don't fail, just warn
-fi
+echo "✅ Build succeeded with 0 warnings"
 
 # Step 4: Run all tests
-echo "🧪 Running tests..."
+echo "🧪 Step 3/5: Running all tests..."
 TEST_OUTPUT=$(dotnet test --verbosity quiet 2>&1)
-if [ $? -ne 0 ]; then
-    echo "❌ Tests failed. Fix failing tests before committing."
+TEST_EXIT_CODE=$?
+
+if [ $TEST_EXIT_CODE -ne 0 ]; then
+    echo "❌ TESTS FAILED:"
     echo "$TEST_OUTPUT"
+    echo ""
+    echo "   Run: dotnet test --verbosity normal"
     exit 1
 fi
 
-# Extract test counts
-FAILED=$(echo "$TEST_OUTPUT" | grep -oP "Failed:\s+\K\d+" | head -1)
-if [ -n "$FAILED" ] && [ "$FAILED" -gt 0 ]; then
-    echo "❌ $FAILED test(s) failed. Fix tests before committing."
-    echo "$TEST_OUTPUT"
+# Check for actual test failures (not "Failed:     0")
+if echo "$TEST_OUTPUT" | grep -E "Failed:\s+[1-9]"; then
+    echo "❌ TESTS FAILED:"
+    echo "$TEST_OUTPUT" | grep "Failed:"
+    exit 1
+fi
+
+echo "✅ All tests passed"
+
+# Step 5: Verify staged files
+echo "📝 Step 4/5: Verifying staged changes..."
+STAGED_FILES=$(git diff --cached --name-only)
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "⚠️  No files staged for commit"
     exit 1
 fi
 
@@ -66,5 +83,9 @@ echo "✅ All pre-commit checks passed!"
 echo ""
 echo "📊 Test Summary:"
 echo "$TEST_OUTPUT" | grep -E "(Passed|Failed|Skipped|Total)" | tail -5
+echo ""
+echo "📋 Files to be committed:"
+echo "$STAGED_FILES"
+echo ""
 
 exit 0

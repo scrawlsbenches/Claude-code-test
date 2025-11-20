@@ -26,6 +26,7 @@ public class DeploymentPipeline : IDisposable
     private readonly IApprovalService? _approvalService;
     private readonly IAuditLogService? _auditLogService;
     private readonly IDeploymentTracker? _deploymentTracker;
+    private readonly IDeploymentNotifier? _deploymentNotifier;
 
     public DeploymentPipeline(
         ILogger<DeploymentPipeline> logger,
@@ -36,7 +37,8 @@ public class DeploymentPipeline : IDisposable
         Dictionary<EnvironmentType, IDeploymentStrategy> strategies,
         IApprovalService? approvalService = null,
         IAuditLogService? auditLogService = null,
-        IDeploymentTracker? deploymentTracker = null)
+        IDeploymentTracker? deploymentTracker = null,
+        IDeploymentNotifier? deploymentNotifier = null)
     {
         _logger = logger;
         _clusterRegistry = clusterRegistry;
@@ -47,6 +49,7 @@ public class DeploymentPipeline : IDisposable
         _approvalService = approvalService;
         _auditLogService = auditLogService;
         _deploymentTracker = deploymentTracker;
+        _deploymentNotifier = deploymentNotifier;
     }
 
     /// <summary>
@@ -629,7 +632,7 @@ public class DeploymentPipeline : IDisposable
                 RequesterEmail = request.RequesterEmail,
                 ApproverEmails = new List<string>(), // Would be configured based on environment
                 Metadata = request.Metadata,
-                TimeoutAt = DateTime.UtcNow.AddHours(_config.ApprovalTimeoutHours)
+                TimeoutAt = DateTime.UtcNow.Add(_config.ApprovalTimeout)
             };
 
             // Create the approval request
@@ -674,7 +677,7 @@ public class DeploymentPipeline : IDisposable
             else if (result.Status == ApprovalStatus.Expired)
             {
                 stage.Status = PipelineStageStatus.Failed;
-                stage.Message = $"Approval request expired after {_config.ApprovalTimeoutHours} hours";
+                stage.Message = $"Approval request expired after {_config.ApprovalTimeout.TotalHours} hours";
 
                 _logger.LogWarning(
                     "Deployment to {Environment} failed: approval request expired",
@@ -774,7 +777,7 @@ public class DeploymentPipeline : IDisposable
     }
 
     /// <summary>
-    /// Updates the deployment tracker with current pipeline state.
+    /// Updates the deployment tracker with current pipeline state and notifies clients via SignalR.
     /// </summary>
     private async Task UpdatePipelineStateAsync(
         DeploymentRequest request,
@@ -782,32 +785,81 @@ public class DeploymentPipeline : IDisposable
         string? currentStage,
         List<PipelineStageResult> stages)
     {
-        if (_deploymentTracker == null)
+        var state = new PipelineExecutionState
         {
-            // Deployment tracking not configured, skip update
-            return;
-        }
+            ExecutionId = request.ExecutionId,
+            Request = request,
+            Status = status,
+            CurrentStage = currentStage,
+            Stages = stages.ToList(), // Create a copy
+            StartTime = stages.FirstOrDefault()?.StartTime ?? DateTime.UtcNow,
+            LastUpdated = DateTime.UtcNow
+        };
 
-        try
+        // Update deployment tracker if configured
+        if (_deploymentTracker != null)
         {
-            var state = new PipelineExecutionState
+            try
             {
-                ExecutionId = request.ExecutionId,
-                Request = request,
-                Status = status,
-                CurrentStage = currentStage,
-                Stages = stages.ToList(), // Create a copy
-                StartTime = stages.FirstOrDefault()?.StartTime ?? DateTime.UtcNow,
-                LastUpdated = DateTime.UtcNow
-            };
+                await _deploymentTracker.UpdatePipelineStateAsync(request.ExecutionId, state);
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the pipeline due to state tracking issues
+                _logger.LogError(ex, "Failed to update pipeline state for execution {ExecutionId}", request.ExecutionId);
+            }
+        }
 
-            await _deploymentTracker.UpdatePipelineStateAsync(request.ExecutionId, state);
-        }
-        catch (Exception ex)
+        // Notify clients via SignalR if notifier is configured
+        if (_deploymentNotifier != null)
         {
-            // Log the error but don't fail the pipeline due to state tracking issues
-            _logger.LogError(ex, "Failed to update pipeline state for execution {ExecutionId}", request.ExecutionId);
+            try
+            {
+                await _deploymentNotifier.NotifyDeploymentStatusChanged(request.ExecutionId.ToString(), state);
+
+                // Calculate progress percentage based on completed stages
+                if (currentStage != null && stages.Any())
+                {
+                    int progress = CalculateProgress(status, stages);
+                    await _deploymentNotifier.NotifyDeploymentProgress(
+                        request.ExecutionId.ToString(),
+                        currentStage,
+                        progress);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the pipeline due to notification issues
+                _logger.LogError(ex, "Failed to notify deployment status for execution {ExecutionId}", request.ExecutionId);
+            }
         }
+    }
+
+    /// <summary>
+    /// Calculates progress percentage based on pipeline status and completed stages.
+    /// </summary>
+    private int CalculateProgress(string status, List<PipelineStageResult> stages)
+    {
+        if (status == "Succeeded" || status == "Failed")
+        {
+            return 100;
+        }
+
+        if (!stages.Any())
+        {
+            return 0;
+        }
+
+        // Count completed stages (succeeded or failed)
+        int completedStages = stages.Count(s =>
+            s.Status == PipelineStageStatus.Succeeded ||
+            s.Status == PipelineStageStatus.Failed);
+
+        // Estimate total stages (typical pipeline has 7-10 stages depending on target environment)
+        // Using a conservative estimate of 8 stages total
+        const int estimatedTotalStages = 8;
+
+        return Math.Min(100, (completedStages * 100) / estimatedTotalStages);
     }
 
     public void Dispose()

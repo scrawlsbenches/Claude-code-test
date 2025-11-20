@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotSwap Deployment Monitor - SignalR Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007acc;
+            padding-bottom: 10px;
+        }
+
+        .connection-status {
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .controls input {
+            padding: 8px 12px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .controls button {
+            padding: 8px 20px;
+            margin: 5px;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .controls button:hover {
+            background-color: #005a9e;
+        }
+
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .deployment-list {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .deployment-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: box-shadow 0.2s;
+        }
+
+        .deployment-item:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .deployment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .execution-id {
+            font-weight: bold;
+            color: #007acc;
+            font-family: 'Courier New', monospace;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-running {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-succeeded {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #007acc 0%, #00c6ff 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .deployment-details {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .deployment-details div {
+            margin: 5px 0;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin: 3px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .log-info {
+            color: #4fc3f7;
+        }
+
+        .log-success {
+            color: #81c784;
+        }
+
+        .log-error {
+            color: #e57373;
+        }
+
+        .log-warning {
+            color: #ffb74d;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 HotSwap Deployment Monitor</h1>
+
+    <div id="connectionStatus" class="connection-status disconnected">
+        ⚠️ Disconnected
+    </div>
+
+    <div class="controls">
+        <h3>Connection Settings</h3>
+        <div>
+            <input type="text" id="apiUrl" placeholder="API URL" value="http://localhost:5000">
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+
+        <h3>Subscribe to Deployment</h3>
+        <div>
+            <input type="text" id="executionId" placeholder="Execution ID (GUID)">
+            <button id="subscribeBtn" onclick="subscribeToDeployment()" disabled>Subscribe</button>
+            <button id="subscribeAllBtn" onclick="subscribeToAll()" disabled>Subscribe to All</button>
+        </div>
+    </div>
+
+    <div class="deployment-list">
+        <h3>Active Deployments</h3>
+        <div id="deploymentList">
+            <p style="color: #999;">No deployments yet. Connect and subscribe to see updates.</p>
+        </div>
+    </div>
+
+    <div class="log-container">
+        <h3 style="color: #d4d4d4; margin-top: 0;">Event Log</h3>
+        <div id="logContainer"></div>
+    </div>
+
+    <!-- SignalR Client Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+
+    <script>
+        let connection = null;
+        const deployments = new Map();
+
+        // Log helper function
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Update connection status UI
+        function updateConnectionStatus(status, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.className = `connection-status ${status}`;
+
+            const icons = {
+                'connected': '✅',
+                'disconnected': '⚠️',
+                'connecting': '🔄'
+            };
+
+            statusDiv.textContent = `${icons[status]} ${message}`;
+
+            // Update button states
+            document.getElementById('connectBtn').disabled = (status === 'connected' || status === 'connecting');
+            document.getElementById('disconnectBtn').disabled = (status === 'disconnected');
+            document.getElementById('subscribeBtn').disabled = (status !== 'connected');
+            document.getElementById('subscribeAllBtn').disabled = (status !== 'connected');
+        }
+
+        // Connect to SignalR hub
+        async function connect() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const hubUrl = `${apiUrl}/deploymentHub`;
+
+            log(`Connecting to SignalR hub at ${hubUrl}...`, 'info');
+            updateConnectionStatus('connecting', 'Connecting...');
+
+            try {
+                // Create SignalR connection
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl(hubUrl)
+                    .withAutomaticReconnect({
+                        nextRetryDelayInMilliseconds: retryContext => {
+                            // Exponential backoff: 0, 2, 10, 30 seconds
+                            if (retryContext.previousRetryCount === 0) return 0;
+                            if (retryContext.previousRetryCount === 1) return 2000;
+                            if (retryContext.previousRetryCount === 2) return 10000;
+                            return 30000;
+                        }
+                    })
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build();
+
+                // Register event handlers
+                connection.on("DeploymentStatusChanged", handleDeploymentStatusChanged);
+                connection.on("DeploymentProgress", handleDeploymentProgress);
+
+                // Connection lifecycle events
+                connection.onreconnecting(error => {
+                    log(`Connection lost. Reconnecting... (${error})`, 'warning');
+                    updateConnectionStatus('connecting', 'Reconnecting...');
+                });
+
+                connection.onreconnected(connectionId => {
+                    log(`Reconnected successfully. Connection ID: ${connectionId}`, 'success');
+                    updateConnectionStatus('connected', 'Connected (Reconnected)');
+                });
+
+                connection.onclose(error => {
+                    log(`Connection closed. ${error || ''}`, 'error');
+                    updateConnectionStatus('disconnected', 'Disconnected');
+                    connection = null;
+                });
+
+                // Start connection
+                await connection.start();
+                log(`Connected successfully. Connection ID: ${connection.connectionId}`, 'success');
+                updateConnectionStatus('connected', 'Connected');
+
+            } catch (error) {
+                log(`Connection failed: ${error.message}`, 'error');
+                updateConnectionStatus('disconnected', `Failed: ${error.message}`);
+                connection = null;
+            }
+        }
+
+        // Disconnect from SignalR hub
+        async function disconnect() {
+            if (connection) {
+                try {
+                    await connection.stop();
+                    log('Disconnected from hub', 'info');
+                    updateConnectionStatus('disconnected', 'Disconnected');
+                    connection = null;
+                } catch (error) {
+                    log(`Disconnect error: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Subscribe to specific deployment
+        async function subscribeToDeployment() {
+            const executionId = document.getElementById('executionId').value.trim();
+
+            if (!executionId) {
+                alert('Please enter an execution ID');
+                return;
+            }
+
+            if (!connection) {
+                alert('Please connect first');
+                return;
+            }
+
+            try {
+                await connection.invoke("SubscribeToDeployment", executionId);
+                log(`Subscribed to deployment: ${executionId}`, 'success');
+            } catch (error) {
+                log(`Subscription failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Subscribe to all deployments
+        async function subscribeToAll() {
+            if (!connection) {
+                alert('Please connect first');
+                return;
+            }
+
+            try {
+                await connection.invoke("SubscribeToAllDeployments");
+                log('Subscribed to all deployments', 'success');
+            } catch (error) {
+                log(`Subscription failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Handle deployment status changed event
+        function handleDeploymentStatusChanged(message) {
+            log(`Status changed for ${message.ExecutionId}: ${message.Status}`, 'info');
+
+            const deployment = {
+                executionId: message.ExecutionId,
+                status: message.Status,
+                updatedAt: message.UpdatedAt,
+                details: message.Details
+            };
+
+            deployments.set(message.ExecutionId, deployment);
+            renderDeployments();
+        }
+
+        // Handle deployment progress event
+        function handleDeploymentProgress(message) {
+            log(`Progress update for ${message.ExecutionId}: ${message.Stage} - ${message.Progress}%`, 'info');
+
+            const deployment = deployments.get(message.ExecutionId);
+            if (deployment) {
+                deployment.currentStage = message.Stage;
+                deployment.progress = message.Progress;
+                deployment.lastProgressUpdate = message.Timestamp;
+                renderDeployments();
+            }
+        }
+
+        // Render deployments list
+        function renderDeployments() {
+            const listDiv = document.getElementById('deploymentList');
+
+            if (deployments.size === 0) {
+                listDiv.innerHTML = '<p style="color: #999;">No deployments yet. Connect and subscribe to see updates.</p>';
+                return;
+            }
+
+            let html = '';
+            deployments.forEach((deployment, id) => {
+                const statusClass = `status-${deployment.status.toLowerCase()}`;
+                const progress = deployment.progress || 0;
+
+                html += `
+                    <div class="deployment-item">
+                        <div class="deployment-header">
+                            <span class="execution-id">${deployment.executionId}</span>
+                            <span class="status-badge ${statusClass}">${deployment.status}</span>
+                        </div>
+
+                        ${deployment.currentStage ? `
+                            <div style="margin: 10px 0;">
+                                <strong>Current Stage:</strong> ${deployment.currentStage}
+                            </div>
+                        ` : ''}
+
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: ${progress}%">
+                                ${progress}%
+                            </div>
+                        </div>
+
+                        <div class="deployment-details">
+                            ${deployment.details && deployment.details.Request ? `
+                                <div><strong>Module:</strong> ${deployment.details.Request.Module.Name} v${deployment.details.Request.Module.Version}</div>
+                                <div><strong>Environment:</strong> ${deployment.details.Request.TargetEnvironment}</div>
+                                <div><strong>Requester:</strong> ${deployment.details.Request.RequesterEmail}</div>
+                            ` : ''}
+                            <div><strong>Last Updated:</strong> ${new Date(deployment.updatedAt).toLocaleString()}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            listDiv.innerHTML = html;
+        }
+
+        // Initialize
+        log('SignalR Deployment Monitor initialized', 'info');
+        log('Click "Connect" to start receiving real-time updates', 'info');
+    </script>
+</body>
+</html>
