@@ -172,4 +172,71 @@ public class DeploymentHubTests
             x => x.RemoveFromGroupAsync(connectionId, $"deployment-{executionId}", default),
             Times.Once);
     }
+
+    [Fact]
+    public async Task SubscribeToAllDeployments_AddsConnectionToAllDeploymentsGroup()
+    {
+        // Arrange
+        var connectionId = "connection-123";
+        _mockContext.Setup(x => x.ConnectionId).Returns(connectionId);
+
+        // Act
+        await _hub.SubscribeToAllDeployments();
+
+        // Assert
+        _mockGroups.Verify(
+            x => x.AddToGroupAsync(connectionId, "all-deployments", default),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UnsubscribeFromAllDeployments_RemovesConnectionFromAllDeploymentsGroup()
+    {
+        // Arrange
+        var connectionId = "connection-123";
+        _mockContext.Setup(x => x.ConnectionId).Returns(connectionId);
+
+        // Act
+        await _hub.UnsubscribeFromAllDeployments();
+
+        // Assert
+        _mockGroups.Verify(
+            x => x.RemoveFromGroupAsync(connectionId, "all-deployments", default),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SubscribeToAllDeployments_CalledMultipleTimes_AddsToGroupMultipleTimes()
+    {
+        // Arrange
+        var connectionId = "connection-123";
+        _mockContext.Setup(x => x.ConnectionId).Returns(connectionId);
+
+        // Act
+        await _hub.SubscribeToAllDeployments();
+        await _hub.SubscribeToAllDeployments();
+
+        // Assert
+        // SignalR allows duplicate subscriptions (idempotent at SignalR level)
+        _mockGroups.Verify(
+            x => x.AddToGroupAsync(connectionId, "all-deployments", default),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task UnsubscribeFromAllDeployments_WithoutPriorSubscription_RemovesFromGroupSafely()
+    {
+        // Arrange
+        var connectionId = "connection-123";
+        _mockContext.Setup(x => x.ConnectionId).Returns(connectionId);
+
+        // Act
+        await _hub.UnsubscribeFromAllDeployments();
+
+        // Assert
+        // Should not throw even if not previously subscribed
+        _mockGroups.Verify(
+            x => x.RemoveFromGroupAsync(connectionId, "all-deployments", default),
+            Times.Once);
+    }
 }

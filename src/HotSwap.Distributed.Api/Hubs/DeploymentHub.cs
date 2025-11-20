@@ -53,6 +53,22 @@ public class DeploymentHub : Hub
     }
 
     /// <summary>
+    /// Subscribes the current connection to receive updates for all deployments.
+    /// </summary>
+    public async Task SubscribeToAllDeployments()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "all-deployments");
+    }
+
+    /// <summary>
+    /// Unsubscribes the current connection from receiving updates for all deployments.
+    /// </summary>
+    public async Task UnsubscribeFromAllDeployments()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "all-deployments");
+    }
+
+    /// <summary>
     /// Called when a new connection is established.
     /// </summary>
     public override async Task OnConnectedAsync()
