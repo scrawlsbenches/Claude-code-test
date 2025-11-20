@@ -1,0 +1,70 @@
+#!/bin/bash
+# Pre-commit hook for HotSwap Distributed Kernel
+# This hook enforces the pre-commit checklist from CLAUDE.md
+#
+# To install: run .githooks/install-hooks.sh
+# To bypass: use git commit --no-verify (NOT recommended)
+
+set -e  # Exit on any error
+
+echo "🔍 Running pre-commit checks..."
+
+# Check if .NET SDK is available
+if ! command -v dotnet &> /dev/null; then
+    echo "❌ .NET SDK not found. Please install .NET 8.0 SDK."
+    echo "   See CLAUDE.md 'Development Environment Setup' section."
+    exit 1
+fi
+
+# Step 1: Clean build artifacts
+echo "🧹 Cleaning build artifacts..."
+dotnet clean > /dev/null 2>&1
+
+# Step 2: Restore NuGet packages
+echo "📦 Restoring NuGet packages..."
+if ! dotnet restore > /dev/null 2>&1; then
+    echo "❌ Package restore failed. Check your internet connection and NuGet sources."
+    exit 1
+fi
+
+# Step 3: Build solution (non-incremental)
+echo "🔨 Building solution..."
+if ! dotnet build --no-incremental > /dev/null 2>&1; then
+    echo "❌ Build failed. Fix compilation errors before committing."
+    echo "   Run: dotnet build --no-incremental"
+    exit 1
+fi
+
+# Check for warnings
+BUILD_OUTPUT=$(dotnet build --no-incremental 2>&1)
+WARNING_COUNT=$(echo "$BUILD_OUTPUT" | grep -c "warning CS" || true)
+if [ "$WARNING_COUNT" -gt 3 ]; then
+    echo "⚠️  Build has $WARNING_COUNT warnings (threshold: 3)"
+    echo "   Consider fixing warnings before committing."
+    echo "   Run: dotnet build --no-incremental"
+    # Don't fail, just warn
+fi
+
+# Step 4: Run all tests
+echo "🧪 Running tests..."
+TEST_OUTPUT=$(dotnet test --verbosity quiet 2>&1)
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed. Fix failing tests before committing."
+    echo "$TEST_OUTPUT"
+    exit 1
+fi
+
+# Extract test counts
+FAILED=$(echo "$TEST_OUTPUT" | grep -oP "Failed:\s+\K\d+" | head -1)
+if [ -n "$FAILED" ] && [ "$FAILED" -gt 0 ]; then
+    echo "❌ $FAILED test(s) failed. Fix tests before committing."
+    echo "$TEST_OUTPUT"
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"
+echo ""
+echo "📊 Test Summary:"
+echo "$TEST_OUTPUT" | grep -E "(Passed|Failed|Skipped|Total)" | tail -5
+
+exit 0
