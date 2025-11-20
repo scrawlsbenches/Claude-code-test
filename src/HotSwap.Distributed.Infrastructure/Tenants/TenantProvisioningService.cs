@@ -254,37 +254,35 @@ public class TenantProvisioningService : ITenantProvisioningService
 
         try
         {
-            // Create S3 bucket or prefix with appropriate permissions
-            // In production, this would use AWS SDK or Azure Storage SDK
-            // Example production code for AWS S3:
-            // using var s3Client = new AmazonS3Client();
+            // Create MinIO bucket or prefix with appropriate permissions
+            // In production, this would use MinIO SDK (S3-compatible, self-hosted object storage)
+            // Example production code for MinIO:
+            // using var minioClient = new MinioClient()
+            //     .WithEndpoint("minio.example.com:9000")
+            //     .WithCredentials(accessKey, secretKey)
+            //     .WithSSL()
+            //     .Build();
             // var bucketName = $"tenant-{tenant.TenantId:N}";
-            // await s3Client.PutBucketAsync(new PutBucketRequest
-            // {
-            //     BucketName = bucketName,
-            //     UseClientRegion = true
-            // }, cancellationToken);
+            // await minioClient.MakeBucketAsync(new MakeBucketArgs()
+            //     .WithBucket(bucketName), cancellationToken);
             //
             // // Set bucket policy for tenant isolation
-            // var policy = new
+            // var policy = $$"""
             // {
-            //     Version = "2012-10-17",
-            //     Statement = new[]
+            //   "Version": "2012-10-17",
+            //   "Statement": [
             //     {
-            //         new
-            //         {
-            //             Effect = "Allow",
-            //             Principal = new { AWS = $"arn:aws:iam::account:role/tenant-{tenant.TenantId}" },
-            //             Action = new[] { "s3:GetObject", "s3:PutObject", "s3:DeleteObject" },
-            //             Resource = $"arn:aws:s3:::{bucketName}/{tenant.StorageBucketPrefix}*"
-            //         }
+            //       "Effect": "Allow",
+            //       "Principal": {"AWS": ["arn:aws:iam:::user/tenant-{{tenant.TenantId}}"]},
+            //       "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+            //       "Resource": ["arn:aws:s3:::{{bucketName}}/{{tenant.StorageBucketPrefix}}*"]
             //     }
-            // };
-            // await s3Client.PutBucketPolicyAsync(new PutBucketPolicyRequest
-            // {
-            //     BucketName = bucketName,
-            //     Policy = JsonSerializer.Serialize(policy)
-            // }, cancellationToken);
+            //   ]
+            // }
+            // """;
+            // await minioClient.SetPolicyAsync(new SetPolicyArgs()
+            //     .WithBucket(bucketName)
+            //     .WithPolicy(policy), cancellationToken);
 
             _logger.LogInformation("Storage bucket provisioned with prefix {Prefix} for tenant {TenantId}",
                 tenant.StorageBucketPrefix, tenant.TenantId);
@@ -441,30 +439,35 @@ public class TenantProvisioningService : ITenantProvisioningService
         try
         {
             // Delete all objects with tenant prefix
-            // In production, this would use AWS SDK or Azure Storage SDK
-            // Example production code for AWS S3:
-            // using var s3Client = new AmazonS3Client();
+            // In production, this would use MinIO SDK (S3-compatible, self-hosted object storage)
+            // Example production code for MinIO:
+            // using var minioClient = new MinioClient()
+            //     .WithEndpoint("minio.example.com:9000")
+            //     .WithCredentials(accessKey, secretKey)
+            //     .WithSSL()
+            //     .Build();
             // var bucketName = $"tenant-{tenant.TenantId:N}";
-            // var listRequest = new ListObjectsV2Request
+            // var objectsToDelete = new List<string>();
+            // await foreach (var item in minioClient.ListObjectsEnumAsync(new ListObjectsArgs()
+            //     .WithBucket(bucketName)
+            //     .WithPrefix(tenant.StorageBucketPrefix)
+            //     .WithRecursive(true), cancellationToken))
             // {
-            //     BucketName = bucketName,
-            //     Prefix = tenant.StorageBucketPrefix
-            // };
-            // ListObjectsV2Response listResponse;
-            // do
-            // {
-            //     listResponse = await s3Client.ListObjectsV2Async(listRequest, cancellationToken);
-            //     if (listResponse.S3Objects.Any())
+            //     objectsToDelete.Add(item.Key);
+            //     if (objectsToDelete.Count >= 1000) // Batch delete for efficiency
             //     {
-            //         var deleteRequest = new DeleteObjectsRequest
-            //         {
-            //             BucketName = bucketName,
-            //             Objects = listResponse.S3Objects.Select(o => new KeyVersion { Key = o.Key }).ToList()
-            //         };
-            //         await s3Client.DeleteObjectsAsync(deleteRequest, cancellationToken);
+            //         await minioClient.RemoveObjectsAsync(new RemoveObjectsArgs()
+            //             .WithBucket(bucketName)
+            //             .WithObjects(objectsToDelete), cancellationToken);
+            //         objectsToDelete.Clear();
             //     }
-            //     listRequest.ContinuationToken = listResponse.NextContinuationToken;
-            // } while (listResponse.IsTruncated);
+            // }
+            // if (objectsToDelete.Any())
+            // {
+            //     await minioClient.RemoveObjectsAsync(new RemoveObjectsArgs()
+            //         .WithBucket(bucketName)
+            //         .WithObjects(objectsToDelete), cancellationToken);
+            // }
 
             _logger.LogInformation("Storage bucket prefix {Prefix} cleaned up for tenant {TenantId}",
                 tenant.StorageBucketPrefix, tenant.TenantId);
