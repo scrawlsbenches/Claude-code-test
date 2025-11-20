@@ -271,7 +271,7 @@ chmod +x .git/hooks/pre-commit
 
 ### Claude Skills
 
-**[SKILLS.md](SKILLS.md)** - 8 automated workflow skills for AI-assisted development (~3,700 lines)
+**[SKILLS.md](SKILLS.md)** - 8 automated workflow skills for AI-assisted development (~3,900 lines)
 
 This project includes specialized Claude Skills that automate complex development workflows, enforce best practices, and prevent common errors. These skills guide AI assistants through systematic processes for setup, testing, validation, and maintenance.
 
