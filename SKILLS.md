@@ -1155,7 +1155,7 @@ var deployments = await _context.Deployments
 **Purpose:** Comprehensive security hardening: secret rotation, OWASP Top 10 compliance, and security configuration validation
 
 #### When to Use
-- Implementing Azure Key Vault or HashiCorp Vault integration
+- Implementing HashiCorp Vault (self-hosted) or Kubernetes Secrets integration
 - Rotating secrets (JWT keys, DB passwords, API keys)
 - Reviewing OWASP Top 10 compliance
 - Hardening security configurations
