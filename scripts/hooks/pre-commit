@@ -1,0 +1,52 @@
+#!/bin/bash
+# Pre-commit hook for Claude-code-test
+# Enforces build and test requirements before committing
+# Based on CLAUDE.md Pre-Commit Checklist
+
+set -e  # Exit on any error
+
+echo "🔍 Running pre-commit checks..."
+echo ""
+
+# Step 1: Clean build artifacts
+echo "1️⃣  Cleaning build artifacts..."
+dotnet clean --verbosity quiet
+if [ $? -ne 0 ]; then
+    echo "❌ dotnet clean failed"
+    exit 1
+fi
+echo "✅ Clean completed"
+echo ""
+
+# Step 2: Restore NuGet packages
+echo "2️⃣  Restoring NuGet packages..."
+dotnet restore --verbosity quiet
+if [ $? -ne 0 ]; then
+    echo "❌ dotnet restore failed"
+    exit 1
+fi
+echo "✅ Restore completed"
+echo ""
+
+# Step 3: Build solution (non-incremental)
+echo "3️⃣  Building solution (non-incremental)..."
+dotnet build --no-incremental --verbosity quiet
+if [ $? -ne 0 ]; then
+    echo "❌ dotnet build failed - Fix build errors before committing"
+    exit 1
+fi
+echo "✅ Build succeeded"
+echo ""
+
+# Step 4: Run all tests
+echo "4️⃣  Running all tests..."
+dotnet test --verbosity quiet --no-build
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed - Fix failing tests before committing"
+    exit 1
+fi
+echo "✅ All tests passed"
+echo ""
+
+echo "✨ Pre-commit checks passed! Proceeding with commit..."
+exit 0
