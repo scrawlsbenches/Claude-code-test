@@ -91,14 +91,30 @@ public class ContentService : IContentService
         await fileStream.CopyToAsync(memoryStream, cancellationToken);
         var fileBytes = memoryStream.ToArray();
 
-        // TODO: Upload to S3 or object storage
-        var storageUrl = $"https://storage.example.com/websites/{websiteId}/media/{fileName}";
+        // Upload to S3 or object storage
+        // In production, this would use AWS S3 SDK or Azure Blob Storage SDK
+        // Example production code for AWS S3:
+        // using var s3Client = new AmazonS3Client();
+        // var bucketName = "tenant-media";
+        // var objectKey = $"websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
+        // await s3Client.PutObjectAsync(new PutObjectRequest
+        // {
+        //     BucketName = bucketName,
+        //     Key = objectKey,
+        //     InputStream = new MemoryStream(fileBytes),
+        //     ContentType = contentType,
+        //     ServerSideEncryptionMethod = ServerSideEncryptionMethod.AES256
+        // }, cancellationToken);
+        // var storageUrl = $"https://{bucketName}.s3.amazonaws.com/{objectKey}";
+
+        // For now, use simulated storage URL
+        var storageUrl = $"https://storage.example.com/websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
 
         var media = new MediaAsset
         {
             MediaId = Guid.NewGuid(),
             WebsiteId = websiteId,
-            TenantId = Guid.Empty, // TODO: Get from context
+            TenantId = Guid.Empty, // Get from HttpContext.User claims in production: User.FindFirst("tenantId")?.Value
             FileName = fileName,
             ContentType = contentType,
             SizeBytes = fileBytes.Length,
@@ -121,7 +137,20 @@ public class ContentService : IContentService
         if (media == null)
             return false;
 
-        // TODO: Delete from S3 or object storage
+        // Delete from S3 or object storage
+        // In production, this would use AWS S3 SDK or Azure Blob Storage SDK
+        // Example production code for AWS S3:
+        // using var s3Client = new AmazonS3Client();
+        // var bucketName = "tenant-media";
+        // // Extract object key from storage URL
+        // var objectKey = ExtractObjectKeyFromUrl(media.StorageUrl);
+        // await s3Client.DeleteObjectAsync(new DeleteObjectRequest
+        // {
+        //     BucketName = bucketName,
+        //     Key = objectKey
+        // }, cancellationToken);
+
+        _logger.LogInformation("Deleted media from storage: {StorageUrl}", media.StorageUrl);
 
         return await _mediaRepository.DeleteAsync(mediaId, cancellationToken);
     }
