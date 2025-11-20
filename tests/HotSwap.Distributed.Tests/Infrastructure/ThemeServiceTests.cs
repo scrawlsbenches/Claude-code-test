@@ -34,7 +34,8 @@ public class ThemeServiceTests
             ThemeId = themeId,
             Name = "Modern Theme",
             Version = "1.5.0",
-            Description = "A modern, responsive theme"
+            Description = "A modern, responsive theme",
+            Author = "Test Author"
         };
 
         _mockThemeRepository.Setup(r => r.GetByIdAsync(themeId, It.IsAny<CancellationToken>()))
@@ -84,7 +85,8 @@ public class ThemeServiceTests
         {
             ThemeId = themeId,
             Name = "New Theme",
-            Version = "2.0.0"
+            Version = "2.0.0",
+            Author = "Test Author"
         };
 
         _mockWebsiteRepository.Setup(r => r.GetByIdAsync(websiteId, It.IsAny<CancellationToken>()))

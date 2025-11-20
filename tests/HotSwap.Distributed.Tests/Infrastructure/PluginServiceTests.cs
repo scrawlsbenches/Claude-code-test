@@ -34,7 +34,8 @@ public class PluginServiceTests
             PluginId = pluginId,
             Name = "Test Plugin",
             Version = "1.0.0",
-            Description = "A test plugin"
+            Description = "A test plugin",
+            Author = "Test Author"
         };
 
         _mockPluginRepository.Setup(r => r.GetByIdAsync(pluginId, It.IsAny<CancellationToken>()))

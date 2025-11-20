@@ -154,7 +154,7 @@ public class SubscriptionService : ISubscriptionService
             var existingReport = reports.FirstOrDefault(r =>
                 r.PeriodStart == periodStart && r.PeriodEnd == periodEnd);
             if (existingReport != null)
-                return Task.FromResult(existingReport);
+                return existingReport;
         }
 
         // Calculate actual usage
@@ -174,16 +174,16 @@ public class SubscriptionService : ISubscriptionService
         // Calculate overage costs
         var storageCostPerGB = 0.10m; // $0.10 per GB
         var bandwidthCostPerGB = 0.05m; // $0.05 per GB
-        var storageCost = Math.Max(0, storageUsedGB - 10) * storageCostPerGB; // First 10 GB free
-        var bandwidthCost = Math.Max(0, bandwidthUsedGB - 100) * bandwidthCostPerGB; // First 100 GB free
+        var storageCost = (decimal)Math.Max(0, storageUsedGB - 10) * storageCostPerGB; // First 10 GB free
+        var bandwidthCost = (decimal)Math.Max(0, bandwidthUsedGB - 100) * bandwidthCostPerGB; // First 100 GB free
 
         var report = new UsageReport
         {
             TenantId = tenantId,
             PeriodStart = periodStart,
             PeriodEnd = periodEnd,
-            StorageUsedGB = storageUsedGB,
-            BandwidthUsedGB = bandwidthUsedGB,
+            StorageUsedGB = (long)storageUsedGB,
+            BandwidthUsedGB = (long)bandwidthUsedGB,
             DeploymentsCount = deploymentsCount,
             TotalCost = baseCost + storageCost + bandwidthCost,
             LineItems = new Dictionary<string, decimal>
@@ -200,7 +200,7 @@ public class SubscriptionService : ISubscriptionService
             _ => new List<UsageReport> { report },
             (_, existing) => { existing.Add(report); return existing; });
 
-        return Task.FromResult(report);
+        return report;
     }
 
     public Task<TenantSubscription?> GetCurrentSubscriptionAsync(Guid tenantId, CancellationToken cancellationToken = default)

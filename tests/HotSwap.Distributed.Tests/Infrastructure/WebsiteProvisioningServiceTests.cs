@@ -33,7 +33,8 @@ public class WebsiteProvisioningServiceTests
         {
             ThemeId = Guid.NewGuid(),
             Name = "Default Theme",
-            Version = "1.0.0"
+            Version = "1.0.0",
+            Author = "Test Author"
         };
 
         _mockWebsiteRepository.Setup(r => r.CreateAsync(It.IsAny<Website>(), It.IsAny<CancellationToken>()))
@@ -66,7 +67,7 @@ public class WebsiteProvisioningServiceTests
             TenantId = Guid.NewGuid(),
             Name = "", // Invalid: empty name
             Subdomain = "test",
-            Status = WebsiteStatus.Pending
+            Status = WebsiteStatus.Provisioning
         };
 
         // Act
@@ -248,7 +249,7 @@ public class WebsiteProvisioningServiceTests
             TenantId = Guid.NewGuid(),
             Name = "Test Website",
             Subdomain = "test-website",
-            Status = WebsiteStatus.Pending,
+            Status = WebsiteStatus.Provisioning,
             CurrentThemeId = Guid.Empty
         };
     }

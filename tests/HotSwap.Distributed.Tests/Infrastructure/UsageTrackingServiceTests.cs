@@ -200,7 +200,7 @@ public class UsageTrackingServiceTests
     }
 
     [Fact]
-    public async Task Constructor_WithNullLogger_ThrowsArgumentNullException()
+    public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
         var act = () => new UsageTrackingService(null!);

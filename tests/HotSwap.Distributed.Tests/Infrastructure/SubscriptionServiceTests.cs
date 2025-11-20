@@ -191,10 +191,10 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
-        var tenant = CreateTestTenant(tenantId);
 
+        // Return a fresh copy of the tenant for each call to avoid reference issues
         _mockTenantRepository.Setup(r => r.GetByIdAsync(tenantId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tenant);
+            .ReturnsAsync(() => CreateTestTenant(tenantId));
         _mockTenantRepository.Setup(r => r.UpdateAsync(It.IsAny<Tenant>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Tenant t, CancellationToken _) => t);
 

@@ -317,7 +317,7 @@ public class TenantProvisioningServiceTests
             Subdomain = "test-tenant",
             Tier = SubscriptionTier.Free,
             ResourceQuota = ResourceQuota.CreateDefault(SubscriptionTier.Free),
-            Status = TenantStatus.Pending
+            Status = TenantStatus.Provisioning
         };
     }
 }
