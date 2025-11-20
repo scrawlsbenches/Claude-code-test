@@ -84,13 +84,16 @@ public class DeploymentsController : ControllerBase
         await _deploymentTracker.TrackInProgressAsync(deploymentRequest.ExecutionId, deploymentRequest);
 
         // Start deployment asynchronously
+        // IMPORTANT: Use CancellationToken.None because the pipeline execution should continue
+        // independently of the HTTP request lifecycle. If we use the request's cancellationToken,
+        // the pipeline may be cancelled when the HTTP response completes.
         _ = Task.Run(async () =>
         {
             try
             {
                 var result = await _orchestrator.ExecuteDeploymentPipelineAsync(
                     deploymentRequest,
-                    cancellationToken);
+                    CancellationToken.None);
 
                 // Store result BEFORE removing in-progress to avoid race condition with rollback
                 await _deploymentTracker.StoreResultAsync(deploymentRequest.ExecutionId, result);
@@ -101,7 +104,7 @@ public class DeploymentsController : ControllerBase
                 _logger.LogError(ex, "Deployment {ExecutionId} failed", deploymentRequest.ExecutionId);
                 await _deploymentTracker.RemoveInProgressAsync(deploymentRequest.ExecutionId);
             }
-        }, cancellationToken);
+        }, CancellationToken.None);
 
         // Return 202 Accepted with execution details
         var response = new DeploymentResponse
