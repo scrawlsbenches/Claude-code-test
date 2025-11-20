@@ -121,20 +121,20 @@ SecretRotationService (Infrastructure layer)
 
 ---
 
-## Task #21: Fix Rollback Test Assertions (HTTP 202 vs 200) 🟢 QUICK WIN
+## Task #21: Fix Rollback Test Assertions (HTTP 202 vs 200) 🟢 QUICK WIN ✅
 
-**Status:** ⏳ Not Implemented
-**Effort:** 0.5 days (4 hours)
+**Status:** ✅ Completed (2025-11-20)
+**Effort:** 0.5 days (4 hours) - Actual: 0.25 days (2 hours)
 **Priority:** 🟢 Medium
 **References:** INTEGRATION_TEST_TROUBLESHOOTING_GUIDE.md:Phase7
 
 ### Requirements
 
-- [ ] Update RollbackScenarioIntegrationTests assertions (8 tests)
-- [ ] Change expected HTTP status from 200 OK to 202 Accepted
-- [ ] Verify rollback API behavior (async operations return 202)
-- [ ] Un-skip all 8 tests
-- [ ] Verify all tests pass
+- [x] Update RollbackScenarioIntegrationTests assertions (8 tests)
+- [x] Change expected HTTP status from 200 OK to 202 Accepted
+- [x] Verify rollback API behavior (async operations return 202)
+- [x] Un-skip all 8 tests
+- [x] Verify all tests pass
 
 ### Implementation Guidance
 
@@ -173,15 +173,33 @@ public async Task RollbackDeployment_WithValidId_Returns202Accepted()
 
 ### Acceptance Criteria
 
-- ✅ All 8 RollbackScenarioIntegrationTests pass
-- ✅ Tests correctly expect HTTP 202 for async rollback operations
-- ✅ No Skip attributes remain on these tests
-- ✅ Integration test count: 24 → 32 passing (8 more)
+- ✅ All 8 RollbackScenarioIntegrationTests pass - **COMPLETED**
+- ✅ Tests correctly expect HTTP 202 for async rollback operations - **COMPLETED**
+- ✅ No Skip attributes remain on these tests - **COMPLETED**
+- ✅ Integration test count improved: +8 passing tests - **COMPLETED**
+
+### Test Results (2025-11-20)
+```
+Test Run Successful.
+Total tests: 8
+     Passed: 8
+ Total time: 2.6 Minutes
+```
+
+All 8 tests passing:
+1. RollbackSuccessfulDeployment_RestoresPreviousVersion
+2. RollbackDeployment_ToMultipleEnvironments_Succeeds
+3. RollbackBlueGreenDeployment_SwitchesBackToBlueEnvironment
+4. RollbackNonExistentDeployment_Returns404NotFound
+5. RollbackInProgressDeployment_ReturnsBadRequestOrConflict
+6. Rollback_WithoutAuthentication_Returns401Unauthorized
+7. Rollback_WithViewerRole_Returns403Forbidden
+8. MultipleSequentialRollbacks_AllSucceed
 
 ### Documentation Required
 
-- Update `TASK_LIST.md` (mark as complete)
-- Update test counts in `README.md` and `PROJECT_STATUS_REPORT.md`
+- ✅ Update `TASK_LIST.md` (mark as complete) - **COMPLETED**
+- ⏳ Update test counts in `README.md` and `PROJECT_STATUS_REPORT.md` - **IN PROGRESS**
 
 ---
 
