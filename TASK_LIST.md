@@ -116,7 +116,7 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 **Priority:** 🟡 Medium-High
 **Status:** ✅ Complete (Production Ready)
 **Effort:** 2-3 days (100% complete)
-**Completed:** 2025-11-16
+**Completed:** 2025-11-16, **Rollback events added:** 2025-11-20
 **References:** SPEC_COMPLIANCE_REVIEW.md:235, PROJECT_STATUS_REPORT.md:496, docs/AUDIT_LOG_SCHEMA.md
 
 **Requirements:**
@@ -125,8 +125,8 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
 - [x] Create AuditLogService with repository pattern
 - [x] Persist all deployment events (pipeline-level)
 - [x] Persist approval events
-- [ ] Persist rollback events
-- [ ] Persist configuration changes
+- [x] **Persist rollback events** ✅ **COMPLETED 2025-11-20**
+- [ ] Persist configuration changes (Future: requires configuration management API)
 - [x] Persist security events (authentication/authorization)
 - [x] Implement retention policy (configurable)
 - [x] Add database migration scripts
