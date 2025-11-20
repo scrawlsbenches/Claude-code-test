@@ -993,23 +993,96 @@ for (int i = 0; i < 3; i++)
 
 ---
 
+### 25. MinIO Object Storage Implementation
+**Priority:** 🟢 Medium
+**Status:** ⏳ Not Implemented
+**Effort:** 2-3 days
+**References:** TenantProvisioningService.cs:257, ContentService.cs:94, SubscriptionService.cs:229
+
+**Requirements:**
+- [ ] Add MinIO SDK NuGet package (Minio 6.0+)
+- [ ] Implement MinIO client configuration service
+- [ ] Replace simulated storage in TenantProvisioningService with actual MinIO bucket operations
+- [ ] Replace simulated storage in ContentService with actual MinIO media uploads/deletes
+- [ ] Implement storage metrics collection from MinIO API (for SubscriptionService)
+- [ ] Add MinIO connection configuration (endpoint, credentials, SSL)
+- [ ] Create MinIO health check for startup validation
+- [ ] Add unit tests for MinIO integration (15+ tests with mocked MinIO client)
+- [ ] Add integration tests with actual MinIO instance (Docker container)
+- [ ] Document MinIO deployment and configuration
+
+**Implementation Guidance:**
+
+**Architecture:**
+```
+MinIO Integration (Infrastructure layer)
+  ├── IObjectStorageService interface (abstraction)
+  ├── MinioObjectStorageService (implementation)
+  ├── MinioConfiguration (appsettings.json)
+  ├── MinioHealthCheck (startup validation)
+  └── MinioClientFactory (connection management)
+```
+
+**Configuration Example:**
+```json
+{
+  "MinIO": {
+    "Endpoint": "minio.example.com:9000",
+    "AccessKey": "your-access-key",
+    "SecretKey": "your-secret-key",
+    "UseSSL": true,
+    "DefaultBucket": "tenant-media"
+  }
+}
+```
+
+**Test Coverage Required:**
+- Bucket creation and deletion
+- Object upload and download
+- Object listing with prefix filtering
+- Storage metrics retrieval
+- Connection failure handling
+- Bucket policy management
+
+**Security Considerations:**
+- Store MinIO credentials in HashiCorp Vault or Kubernetes Secrets (not appsettings.json)
+- Use TLS/SSL for MinIO connections
+- Implement bucket policies for tenant isolation
+- Rotate MinIO access keys periodically
+
+**Acceptance Criteria:**
+- ✅ MinIO SDK integrated and configured
+- ✅ Tenant media uploads stored in MinIO buckets
+- ✅ Tenant bucket provisioning creates actual MinIO buckets
+- ✅ Storage metrics retrieved from MinIO API
+- ✅ All storage operations tested (unit + integration)
+- ✅ MinIO deployment documented with docker-compose example
+
+**Impact:** Medium - Enables production-ready object storage for multi-tenant media/files
+
+**Dependencies:**
+- Task #16 (Secret Rotation) - For MinIO credential management
+- Task #8 (Helm Charts) - For Kubernetes MinIO deployment
+
+---
+
 ## Summary Statistics
 
-**Total Tasks:** 24 (updated 2025-11-19)
+**Total Tasks:** 25 (updated 2025-11-20)
 
 **By Priority:**
-- 🔴 Critical: 3 tasks (12.5%)
-- 🟡 High: 3 tasks (12.5%)
-- 🟢 Medium: 14 tasks (58.5%)
-- ⚪ Low: 4 tasks (16.5%)
+- 🔴 Critical: 3 tasks (12%)
+- 🟡 High: 3 tasks (12%)
+- 🟢 Medium: 15 tasks (60%)
+- ⚪ Low: 4 tasks (16%)
 
 **By Status:**
-- ✅ Completed: 8 tasks (33%) - Tasks #1, #2, #3, #4, #5, #7, #15, #17, #21
+- ✅ Completed: 8 tasks (32%) - Tasks #1, #2, #3, #4, #5, #7, #15, #17, #21
 - 🟡 Root Cause Fixed: 1 task (4%) - Task #23 (pending test verification)
-- Not Implemented: 13 tasks (54%)
+- Not Implemented: 14 tasks (56%) - includes new Task #25 (MinIO)
 - Partial: 2 tasks (8%)
 
-**Estimated Total Effort:** 67-95 days (updated 2025-11-19)
+**Estimated Total Effort:** 69-98 days (updated 2025-11-20)
 
 **✅ Sprint 1 Completed (2025-11-15):**
 1. ✅ JWT Authentication (2-3 days) - COMPLETED
@@ -1076,14 +1149,16 @@ graph TD
 
 ---
 
-**Last Updated:** 2025-11-20 (Task #21 Completed: Rollback Tests Fixed, Task #23 Root Cause Resolved)
+**Last Updated:** 2025-11-20 (Task #25 Added: MinIO Object Storage Implementation, Cloud References Replaced)
 **Next Review:** Before Sprint 3 kickoff
 
 **Recent Updates:**
+- 2025-11-20: Task #25 added - MinIO Object Storage Implementation (2-3 days, Medium priority)
+- 2025-11-20: All cloud provider references replaced with self-hosted alternatives (AWS/Azure/GCP → MinIO/Vault/Nginx)
+- 2025-11-20: Updated summary statistics - 8/25 tasks complete (32%), 14 not implemented
 - 2025-11-20: Task #21 completed - Fixed rollback test assertions (8 RollbackScenarioIntegrationTests now passing)
 - 2025-11-20: Task #23 root cause resolved - Fixed CancellationToken misuse in DeploymentsController.cs (approval workflow tests unblocked)
 - 2025-11-20: Task #3 updated - Rollback audit logging completed (pipeline integration finalized)
-- 2025-11-20: Updated summary statistics - 8/24 tasks complete (33%)
 - 2025-11-19: Sprint 2 completed - Tasks #7 (Prometheus Metrics) and #17 (OWASP Security Review)
 - 2025-11-19: Added PROMETHEUS_METRICS_GUIDE.md - 600+ lines, comprehensive monitoring setup
 - 2025-11-19: Added OWASP_SECURITY_REVIEW.md - 1,063 lines, security rating: GOOD (4/5)
