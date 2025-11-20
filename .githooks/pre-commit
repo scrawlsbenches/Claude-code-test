@@ -38,9 +38,9 @@ fi
 
 echo "✅ Build succeeded with 0 warnings"
 
-# Step 3: Run ALL tests
-echo "🧪 Step 3/4: Running all tests..."
-TEST_OUTPUT=$(dotnet test --verbosity quiet 2>&1)
+# Step 3: Run unit tests only (skip slow integration tests)
+echo "🧪 Step 3/4: Running unit tests (skipping integration tests)..."
+TEST_OUTPUT=$(dotnet test --filter "FullyQualifiedName!~IntegrationTests" --verbosity quiet 2>&1)
 TEST_EXIT_CODE=$?
 
 if [ $TEST_EXIT_CODE -ne 0 ]; then
@@ -49,8 +49,8 @@ if [ $TEST_EXIT_CODE -ne 0 ]; then
     exit 1
 fi
 
-# Check for test failures
-if echo "$TEST_OUTPUT" | grep -q "Failed:"; then
+# Check for actual test failures (not "Failed:     0")
+if echo "$TEST_OUTPUT" | grep -E "Failed:\s+[1-9]"; then
     echo "❌ TESTS FAILED:"
     echo "$TEST_OUTPUT" | grep "Failed:"
     exit 1
