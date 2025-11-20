@@ -591,7 +591,7 @@ These tasks are enhancements that can be implemented based on specific needs.
 **References:** BUILD_STATUS.md:392, PROJECT_STATUS_REPORT.md:526
 
 **Requirements:**
-- [ ] Integrate ML.NET or Azure ML
+- [ ] Integrate ML.NET (self-hosted .NET machine learning framework)
 - [ ] Collect historical metrics data
 - [ ] Train anomaly detection model
 - [ ] Implement real-time anomaly detection
@@ -680,7 +680,7 @@ Critical security items from production checklist.
 **References:** README.md:241, PROJECT_STATUS_REPORT.md:674
 
 **Requirements:**
-- [ ] Integrate Azure Key Vault or HashiCorp Vault
+- [ ] Integrate HashiCorp Vault (self-hosted) or Kubernetes Secrets with encryption-at-rest
 - [ ] Implement automatic secret rotation
 - [ ] Add secret versioning
 - [ ] Configure rotation policies

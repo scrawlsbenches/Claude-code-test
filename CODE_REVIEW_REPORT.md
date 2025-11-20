@@ -553,7 +553,7 @@ public async Task RouteAsync_WithMultipleSubscriptions_DistributesRoundRobin()
 - [ ] Penetration testing completed
 - [ ] All 582 tests passing (investigate 14 skipped)
 - [ ] Database-backed repositories implemented (replace in-memory)
-- [ ] Secrets management configured (Azure Key Vault, AWS Secrets Manager, etc.)
+- [ ] Secrets management configured (HashiCorp Vault self-hosted, Kubernetes Secrets with encryption, etc.)
 - [ ] Monitoring and alerting configured (Prometheus, Grafana, PagerDuty)
 - [ ] Disaster recovery plan documented
 - [ ] Runbook created for common incidents

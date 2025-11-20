@@ -913,7 +913,7 @@ docker-compose logs -f orchestrator-api | grep -E "deployment|error"
 - [x] Add security headers
 
 **Sprint 2 - Recommended:**
-- [ ] Set up secret rotation (Azure Key Vault/HashiCorp Vault)
+- [ ] Set up secret rotation (HashiCorp Vault self-hosted/Kubernetes Secrets)
 - [ ] Configure network policies (Kubernetes NetworkPolicy)
 - [ ] Enable audit log retention (PostgreSQL persistence)
 - [ ] Set up security scanning (SAST/DAST tools)

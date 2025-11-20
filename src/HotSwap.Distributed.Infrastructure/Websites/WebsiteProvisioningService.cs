@@ -135,7 +135,7 @@ public class WebsiteProvisioningService : IWebsiteProvisioningService
             // Example production approach:
             // 1. Create DNS validation record or HTTP challenge
             // 2. Request certificate from Let's Encrypt
-            // 3. Store certificate in Kubernetes Secret or Azure Key Vault
+            // 3. Store certificate in Kubernetes Secret or encrypted filesystem storage
             //
             // Example code using Certes library:
             // var acme = new AcmeContext(WellKnownServers.LetsEncryptV2);
