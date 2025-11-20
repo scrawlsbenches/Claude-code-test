@@ -70,7 +70,7 @@ See [SKILLS.md](SKILLS.md) for complete documentation.
 
 ### Requirements
 
-- [ ] Integrate Azure Key Vault or HashiCorp Vault client SDK
+- [ ] Integrate HashiCorp Vault (self-hosted) client SDK or Kubernetes Secrets API
 - [ ] Implement automatic secret rotation service
 - [ ] Add secret versioning support
 - [ ] Configure rotation policies (30/60/90 day rotation)
@@ -84,7 +84,7 @@ See [SKILLS.md](SKILLS.md) for complete documentation.
 **Architecture:**
 ```
 SecretRotationService (Infrastructure layer)
-  ├── ISecretProvider interface (Azure KV, Vault, etc.)
+  ├── ISecretProvider interface (HashiCorp Vault, Kubernetes Secrets, etc.)
   ├── SecretRotationPolicy (configuration)
   ├── SecretRotationBackgroundService (hosted service)
   └── SecretExpirationMonitor (alerting)
@@ -95,10 +95,10 @@ SecretRotationService (Infrastructure layer)
 - Automatic rotation triggering
 - Version rollback scenarios
 - Expiration detection and alerts
-- Multiple provider support (Azure KV, Vault)
+- Multiple provider support (HashiCorp Vault, Kubernetes Secrets)
 
 **Security Considerations:**
-- Use Managed Identity for Azure Key Vault (no credentials in code)
+- Use Kubernetes Service Accounts or Vault AppRole for authentication (no credentials in code)
 - Implement rotation without service downtime
 - Audit all secret access operations
 - Never log secret values

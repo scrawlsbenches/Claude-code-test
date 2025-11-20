@@ -91,21 +91,24 @@ public class ContentService : IContentService
         await fileStream.CopyToAsync(memoryStream, cancellationToken);
         var fileBytes = memoryStream.ToArray();
 
-        // Upload to S3 or object storage
-        // In production, this would use AWS S3 SDK or Azure Blob Storage SDK
-        // Example production code for AWS S3:
-        // using var s3Client = new AmazonS3Client();
+        // Upload to MinIO object storage (self-hosted, S3-compatible)
+        // In production, this would use MinIO SDK
+        // Example production code for MinIO:
+        // using var minioClient = new MinioClient()
+        //     .WithEndpoint("minio.example.com:9000")
+        //     .WithCredentials(accessKey, secretKey)
+        //     .WithSSL()
+        //     .Build();
         // var bucketName = "tenant-media";
         // var objectKey = $"websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
-        // await s3Client.PutObjectAsync(new PutObjectRequest
-        // {
-        //     BucketName = bucketName,
-        //     Key = objectKey,
-        //     InputStream = new MemoryStream(fileBytes),
-        //     ContentType = contentType,
-        //     ServerSideEncryptionMethod = ServerSideEncryptionMethod.AES256
-        // }, cancellationToken);
-        // var storageUrl = $"https://{bucketName}.s3.amazonaws.com/{objectKey}";
+        // await minioClient.PutObjectAsync(new PutObjectArgs()
+        //     .WithBucket(bucketName)
+        //     .WithObject(objectKey)
+        //     .WithStreamData(new MemoryStream(fileBytes))
+        //     .WithObjectSize(fileBytes.Length)
+        //     .WithContentType(contentType)
+        //     .WithServerSideEncryption(sse), cancellationToken);
+        // var storageUrl = $"https://minio.example.com/{bucketName}/{objectKey}";
 
         // For now, use simulated storage URL
         var storageUrl = $"https://storage.example.com/websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
@@ -137,18 +140,20 @@ public class ContentService : IContentService
         if (media == null)
             return false;
 
-        // Delete from S3 or object storage
-        // In production, this would use AWS S3 SDK or Azure Blob Storage SDK
-        // Example production code for AWS S3:
-        // using var s3Client = new AmazonS3Client();
+        // Delete from MinIO object storage (self-hosted, S3-compatible)
+        // In production, this would use MinIO SDK
+        // Example production code for MinIO:
+        // using var minioClient = new MinioClient()
+        //     .WithEndpoint("minio.example.com:9000")
+        //     .WithCredentials(accessKey, secretKey)
+        //     .WithSSL()
+        //     .Build();
         // var bucketName = "tenant-media";
         // // Extract object key from storage URL
         // var objectKey = ExtractObjectKeyFromUrl(media.StorageUrl);
-        // await s3Client.DeleteObjectAsync(new DeleteObjectRequest
-        // {
-        //     BucketName = bucketName,
-        //     Key = objectKey
-        // }, cancellationToken);
+        // await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+        //     .WithBucket(bucketName)
+        //     .WithObject(objectKey), cancellationToken);
 
         _logger.LogInformation("Deleted media from storage: {StorageUrl}", media.StorageUrl);
 

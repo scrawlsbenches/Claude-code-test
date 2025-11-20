@@ -371,7 +371,7 @@ HAVING COUNT(*) > 5;  -- More than 5 failures from same IP
 
 ## Future Enhancements
 
-1. **Archival** - Move old audit logs to cold storage (S3, Azure Blob)
+1. **Archival** - Move old audit logs to cold storage (MinIO with lifecycle policies or compressed filesystem archives)
 2. **Analytics** - Aggregate audit data for reporting dashboards
 3. **Alerting** - Real-time alerts for suspicious patterns
 4. **Search** - Full-text search on audit log messages

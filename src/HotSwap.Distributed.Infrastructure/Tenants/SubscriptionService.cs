@@ -159,8 +159,8 @@ public class SubscriptionService : ISubscriptionService
 
         // Calculate actual usage
         // In production, these would query actual metrics from:
-        // - Storage: S3/Azure Blob Storage metrics
-        // - Bandwidth: CloudFront/CDN metrics or nginx logs
+        // - Storage: MinIO metrics API or filesystem usage monitoring
+        // - Bandwidth: Nginx access logs or Varnish cache statistics
         // - Deployments: Deployment history from database
 
         var storageUsedGB = CalculateStorageUsage(tenantId, periodStart, periodEnd);
@@ -226,20 +226,22 @@ public class SubscriptionService : ISubscriptionService
     {
         // Calculate actual storage usage
         // In production, this would query:
-        // - S3/Azure Blob Storage metrics for tenant's bucket/prefix
+        // - MinIO metrics API for tenant's bucket/prefix
         // - Database size for tenant's schema
         // Example production code:
-        // var s3Client = new AmazonS3Client();
+        // var minioClient = new MinioClient()
+        //     .WithEndpoint("minio.example.com:9000")
+        //     .WithCredentials(accessKey, secretKey)
+        //     .WithSSL()
+        //     .Build();
         // var bucketName = $"tenant-{tenantId:N}";
         // var totalBytes = 0L;
-        // var listRequest = new ListObjectsV2Request { BucketName = bucketName };
-        // ListObjectsV2Response listResponse;
-        // do
+        // await foreach (var item in minioClient.ListObjectsEnumAsync(new ListObjectsArgs()
+        //     .WithBucket(bucketName)
+        //     .WithRecursive(true)))
         // {
-        //     listResponse = await s3Client.ListObjectsV2Async(listRequest);
-        //     totalBytes += listResponse.S3Objects.Sum(o => o.Size);
-        //     listRequest.ContinuationToken = listResponse.NextContinuationToken;
-        // } while (listResponse.IsTruncated);
+        //     totalBytes += (long)item.Size;
+        // }
         // return totalBytes / (1024.0 * 1024.0 * 1024.0); // Convert to GB
 
         // Return simulated value from in-memory tracking or 0
@@ -251,22 +253,24 @@ public class SubscriptionService : ISubscriptionService
     {
         // Calculate actual bandwidth usage
         // In production, this would query:
-        // - CloudFront/CDN metrics
-        // - Nginx/load balancer access logs
+        // - Nginx access logs (parse and aggregate bytes sent/received)
+        // - Varnish cache statistics (varnishstat or varnishlog)
         // - Database query logs
-        // Example production code:
-        // var cloudFrontClient = new AmazonCloudFrontClient();
-        // var distributionId = GetDistributionId(tenantId);
-        // var metricsRequest = new GetDistributionMetricsRequest
+        // Example production code for Nginx log analysis:
+        // // Parse Nginx access logs: grep tenant-{tenantId} /var/log/nginx/access.log
+        // // Sum the bytes_sent field (typically field $10 in default log format)
+        // var logFile = $"/var/log/nginx/access.log";
+        // var tenantPattern = $"tenant-{tenantId}";
+        // var totalBytes = 0L;
+        // await foreach (var line in File.ReadLinesAsync(logFile))
         // {
-        //     DistributionId = distributionId,
-        //     StartTime = periodStart,
-        //     EndTime = periodEnd,
-        //     Granularity = "P1D",
-        //     Metrics = new[] { "BytesDownloaded", "BytesUploaded" }
-        // };
-        // var metrics = await cloudFrontClient.GetDistributionMetricsAsync(metricsRequest);
-        // var totalBytes = metrics.Datapoints.Sum(d => d.Sum);
+        //     if (line.Contains(tenantPattern))
+        //     {
+        //         var fields = line.Split(' ');
+        //         if (fields.Length > 9 && long.TryParse(fields[9], out var bytes))
+        //             totalBytes += bytes;
+        //     }
+        // }
         // return totalBytes / (1024.0 * 1024.0 * 1024.0); // Convert to GB
 
         // Return simulated value from in-memory tracking or 0

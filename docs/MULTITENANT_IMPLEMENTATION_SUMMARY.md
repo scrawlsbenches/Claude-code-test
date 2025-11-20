@@ -272,7 +272,7 @@ This document summarizes the autonomous implementation of a comprehensive **mult
    - Key metrics: deployment throughput, API latency, error rates, resource utilization
    - Custom metrics for deployments, API requests, active websites
 
-**Implementation Notes**: These features require infrastructure provisioning (AWS CloudFront, PostgreSQL replication setup, Redis cluster, Grafana/Prometheus deployment). The backend codebase is architected to support these features, and complete implementation patterns are documented.
+**Implementation Notes**: These features require infrastructure provisioning (Nginx/Varnish caching proxy, PostgreSQL replication setup, Redis cluster, Grafana/Prometheus deployment). The backend codebase is architected to support these features, and complete implementation patterns are documented.
 
 ---
 
@@ -579,11 +579,12 @@ DATABASE_CONNECTION_STRING="Host=localhost;Database=platform_db;Username=postgre
 # Redis
 REDIS_CONNECTION_STRING="localhost:6379"
 
-# S3 Storage
-AWS_ACCESS_KEY_ID="<your-key>"
-AWS_SECRET_ACCESS_KEY="<your-secret>"
-AWS_REGION="us-west-2"
-S3_BUCKET_NAME="platform-media"
+# MinIO Object Storage (self-hosted, S3-compatible)
+MINIO_ENDPOINT="minio.example.com:9000"
+MINIO_ACCESS_KEY="<your-access-key>"
+MINIO_SECRET_KEY="<your-secret-key>"
+MINIO_USE_SSL="true"
+MINIO_BUCKET_NAME="platform-media"
 
 # Kubernetes
 KUBERNETES_NAMESPACE_PREFIX="tenant-"
