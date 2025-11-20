@@ -1,4 +1,5 @@
 using System.Text;
+using HotSwap.Distributed.Api.Hubs;
 using HotSwap.Distributed.Api.Middleware;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
@@ -316,6 +317,9 @@ else
 // Register deployment tracking service
 builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
 
+// Register deployment notification service
+builder.Services.AddSingleton<IDeploymentNotifier, SignalRDeploymentNotifier>();
+
 // Register tenant services
 builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
 builder.Services.AddSingleton<ITenantProvisioningService, TenantProvisioningService>();
@@ -358,6 +362,16 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
 
 // Add health checks
 builder.Services.AddHealthChecks();
+
+// Configure SignalR for real-time deployment updates
+builder.Services.AddSignalR(options =>
+{
+    // Configure SignalR options
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.MaximumReceiveMessageSize = 32 * 1024; // 32 KB per message
+});
 
 // Register middleware configurations
 builder.Services.AddSingleton(sp =>
@@ -463,7 +477,10 @@ app.UseAuthorization();
 // 10. Map controllers
 app.MapControllers();
 
-// 11. Health check endpoint
+// 11. Map SignalR hub for real-time deployment updates
+app.MapHub<DeploymentHub>("/hubs/deployment");
+
+// 12. Health check endpoint
 app.MapHealthChecks("/health");
 
 // Graceful shutdown
