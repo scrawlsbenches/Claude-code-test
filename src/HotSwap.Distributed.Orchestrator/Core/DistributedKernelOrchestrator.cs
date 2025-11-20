@@ -229,7 +229,7 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
             originalRequest.TargetEnvironment);
 
         var startTime = DateTime.UtcNow;
-        var executionId = originalRequest.ExecutionId ?? Guid.NewGuid();
+        var executionId = originalRequest.ExecutionId;
 
         try
         {
@@ -287,7 +287,7 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
                 {
                     DeploymentExecutionId = executionId,
                     ModuleName = originalRequest.Module.Name,
-                    ModuleVersion = originalRequest.Module.Version,
+                    ModuleVersion = originalRequest.Module.Version.ToString(),
                     TargetEnvironment = originalRequest.TargetEnvironment.ToString(),
                     DeploymentStrategy = "Rollback",
                     PipelineStage = "Rollback",
@@ -349,7 +349,7 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
                 {
                     DeploymentExecutionId = executionId,
                     ModuleName = originalRequest.Module.Name,
-                    ModuleVersion = originalRequest.Module.Version,
+                    ModuleVersion = originalRequest.Module.Version.ToString(),
                     TargetEnvironment = originalRequest.TargetEnvironment.ToString(),
                     DeploymentStrategy = "Rollback",
                     PipelineStage = "Rollback",
