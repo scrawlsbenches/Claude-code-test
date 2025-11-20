@@ -22,7 +22,7 @@ public class ApprovalServiceTests : IDisposable
         _mockNotificationService = new Mock<INotificationService>();
         _config = new PipelineConfiguration
         {
-            ApprovalTimeoutHours = 24
+            ApprovalTimeout = TimeSpan.FromHours(24)
         };
 
         _approvalService = new ApprovalService(

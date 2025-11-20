@@ -50,7 +50,7 @@ public class ApprovalService : IApprovalService
         // Set timeout based on configuration
         if (request.TimeoutAt == default)
         {
-            request.TimeoutAt = DateTime.UtcNow.AddHours(_config.ApprovalTimeoutHours);
+            request.TimeoutAt = DateTime.UtcNow.Add(_config.ApprovalTimeout);
         }
 
         // Store the approval request
