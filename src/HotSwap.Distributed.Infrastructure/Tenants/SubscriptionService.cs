@@ -16,6 +16,8 @@ public class SubscriptionService : ISubscriptionService
     private readonly ILogger<SubscriptionService> _logger;
     private readonly ConcurrentDictionary<Guid, TenantSubscription> _subscriptions = new();
     private readonly ConcurrentDictionary<Guid, List<UsageReport>> _usageReports = new();
+    private readonly ConcurrentDictionary<Guid, long> _storageUsage = new();
+    private readonly ConcurrentDictionary<Guid, long> _bandwidthUsage = new();
 
     public SubscriptionService(
         ITenantRepository tenantRepository,
@@ -141,7 +143,7 @@ public class SubscriptionService : ISubscriptionService
         return true;
     }
 
-    public Task<UsageReport> GetUsageReportAsync(Guid tenantId, DateTime periodStart, DateTime periodEnd, CancellationToken cancellationToken = default)
+    public async Task<UsageReport> GetUsageReportAsync(Guid tenantId, DateTime periodStart, DateTime periodEnd, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting usage report for tenant {TenantId} from {Start} to {End}",
             tenantId, periodStart, periodEnd);
