@@ -262,6 +262,10 @@ builder.Services.AddSingleton<ITenantProvisioningService, TenantProvisioningServ
 // Register rate limit cleanup service
 builder.Services.AddHostedService<RateLimitCleanupService>();
 
+// Register secret management services
+builder.Services.AddSingleton<ISecretService, HotSwap.Distributed.Infrastructure.SecretManagement.InMemorySecretService>();
+builder.Services.AddHostedService<SecretRotationBackgroundService>();
+
 // Note: Orchestrator initialization now happens synchronously after app.Build()
 // to ensure it's ready before accepting requests (removed background service)
 
