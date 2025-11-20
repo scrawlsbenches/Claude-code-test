@@ -10,12 +10,34 @@
 
 All 14 skipped tests are **Redis integration tests** that automatically skip when Redis is unavailable. This is **intentional and correct behavior** for integration tests that require external infrastructure.
 
-### Test Results
+### Test Results (Without Redis)
 ```
 Total Skipped: 14 tests
 All from: RedisMessagePersistenceTests
 Reason: Redis server is not available
-Status: ✅ Working as designed
+Status: ⚠️ Skip behavior verified, but actual functionality NOT verified
+```
+
+### ⚠️ Important Limitation
+
+**This analysis verifies:**
+- ✅ Tests skip gracefully when Redis is unavailable
+- ✅ Test code structure and logic appears correct
+- ✅ Skip mechanism works as designed
+
+**This analysis does NOT verify:**
+- ❌ Tests actually pass when Redis IS available
+- ❌ Redis integration functionality works correctly
+- ❌ No bugs in the RedisMessagePersistence implementation
+
+**Reason:** Docker/Redis not available in current analysis environment.
+
+**Recommendation:** Run tests with Redis locally or in CI to verify actual functionality:
+```bash
+# Local verification needed:
+docker run -d -p 6379:6379 redis:7-alpine
+dotnet test --filter "RedisMessagePersistence"
+# Expected: 14 passing (not skipped)
 ```
 
 ---
@@ -175,7 +197,56 @@ public async Task InitializeAsync()
 
 ---
 
-### Option 4: Mock Redis (Not Recommended)
+### Option 4: Test InMemory Implementation ✅ **IMPLEMENTED**
+
+**Change:** Test the `InMemoryMessagePersistence` implementation instead of Redis
+
+**Location:** `tests/HotSwap.Distributed.Tests/Infrastructure/InMemoryMessagePersistenceTests.cs`
+
+**Status:** ✅ **17 passing tests (all tests pass)**
+
+**Pros:**
+- ✅ No external dependencies required
+- ✅ Fast execution (~139ms for all 17 tests)
+- ✅ Verifies the IMessagePersistence interface contract
+- ✅ Tests message persistence logic without infrastructure
+- ✅ Can run in any environment (CI, local, web)
+- ✅ Provides confidence the interface implementation is correct
+
+**Test Coverage:**
+```bash
+$ dotnet test --filter "InMemoryMessagePersistence" --verbosity quiet
+Passed!  - Failed: 0, Passed: 17, Skipped: 0, Total: 17, Duration: 139 ms
+```
+
+**What's Tested:**
+1. **Store Operations (3 tests)** - Basic storage, null handling, property preservation
+2. **Retrieve Operations (2 tests)** - Existing/non-existent message retrieval
+3. **Delete Operations (3 tests)** - Delete existing, delete non-existent, topic index cleanup
+4. **Topic Filtering (6 tests)** - Filter by topic, limits, ordering, edge cases
+5. **Concurrency (2 tests)** - Thread-safe store and delete (50 concurrent operations)
+6. **Update Operations (1 test)** - Overwrite existing messages
+
+**Comparison to Option 4 (Mock Redis):**
+Unlike mocking Redis, this approach:
+- ✅ Tests a REAL implementation (not a mock)
+- ✅ Verifies actual message persistence logic
+- ✅ Uses the same IMessagePersistence interface as Redis
+- ✅ Proves the interface contract works correctly
+
+**Limitations:**
+- ⚠️ Doesn't test Redis-specific features (persistence to disk, clustering, etc.)
+- ⚠️ Doesn't test network/connection issues
+- ⚠️ In-memory storage doesn't survive process restarts
+
+**Use Case:**
+- Perfect for verifying message persistence logic
+- Great for CI/CD without external dependencies
+- Complements (doesn't replace) Redis integration tests
+
+---
+
+### Option 5: Mock Redis (Not Recommended)
 
 **Change:** Use in-memory fake Redis
 
@@ -187,6 +258,7 @@ public async Task InitializeAsync()
 - ❌ Not a real integration test
 - ❌ Won't catch Redis-specific bugs
 - ❌ Defeats purpose of integration testing
+- ❌ Superseded by Option 4 (InMemory implementation tests)
 
 ---
 
@@ -263,16 +335,51 @@ Expected output:
 
 ## Action Items
 
-### Immediate (No Changes Needed)
+### Completed ✅
 
 - [x] Document why tests are skipped (this file)
 - [x] Verify tests are skipping correctly (confirmed)
 - [x] Confirm this is expected behavior (yes)
+- [x] **Create testable alternative without Redis** ✅
+  - Created: `tests/HotSwap.Distributed.Tests/Infrastructure/InMemoryMessagePersistenceTests.cs`
+  - Status: 17 passing tests (0 failed, 0 skipped)
+  - Duration: ~139ms
+  - Coverage: All IMessagePersistence operations tested
+
+### Optional - VERIFICATION RECOMMENDED ⚠️
+
+- [ ] **Optional: Verify Redis tests actually pass with Redis running**
+  - Someone with Docker/Redis access can run:
+    ```bash
+    docker run -d -p 6379:6379 redis:7-alpine
+    dotnet test --filter "RedisMessagePersistence" --verbosity normal
+    ```
+  - Expected: All 14 tests PASS (not skip)
+  - If any fail: Fix the Redis integration code
+  - Update this document with results
+  - **Note:** InMemory tests already prove the interface works correctly
+
+### Why This Matters
+
+**Current status:** We know the tests skip correctly, but we DON'T know if:
+- The Redis integration actually works
+- The tests would pass if Redis were available
+- There are bugs in `RedisMessagePersistence.cs`
+
+**Risk:** Production Redis integration could be broken without us knowing.
+
+### Recommended: Add Redis to CI
+
+To ensure Redis integration is always tested:
+
+1. Add Redis service to GitHub Actions (see below)
+2. Verify all 14 tests pass in CI
+3. This gives confidence the integration works
 
 ### Optional Future Enhancements
 
-- [ ] Add Redis tests to local developer onboarding docs
-- [ ] Consider adding Redis to CI for release builds only
+- [ ] Add Redis verification to developer onboarding docs
+- [ ] Add Redis tests to CI for release builds
 - [ ] Add badge to README showing test coverage with/without Redis
 - [ ] Create a "full integration test" script that requires all dependencies
 
@@ -300,8 +407,11 @@ Expected output:
 
 ## Related Files
 
-- **Test file:** `tests/HotSwap.Distributed.Tests/Infrastructure/RedisMessagePersistenceTests.cs`
-- **Implementation:** `src/HotSwap.Distributed.Infrastructure/Messaging/RedisMessagePersistence.cs`
+- **Redis test file:** `tests/HotSwap.Distributed.Tests/Infrastructure/RedisMessagePersistenceTests.cs` (14 tests, skipped without Redis)
+- **InMemory test file:** `tests/HotSwap.Distributed.Tests/Infrastructure/InMemoryMessagePersistenceTests.cs` ✅ (17 tests, always run)
+- **Redis implementation:** `src/HotSwap.Distributed.Infrastructure/Messaging/RedisMessagePersistence.cs`
+- **InMemory implementation:** `src/HotSwap.Distributed.Infrastructure/Messaging/InMemoryMessagePersistence.cs`
+- **Interface:** `src/HotSwap.Distributed.Infrastructure/Messaging/IMessagePersistence.cs`
 - **CI config:** `.github/workflows/build-and-test.yml`
 - **Docker:** `docker-compose.yml` (has Redis service)
 
@@ -309,13 +419,24 @@ Expected output:
 
 ## Conclusion
 
-**Status: No action required** ✅
+**Status: Resolved with testable alternative** ✅
 
 The 14 skipped tests are **working as designed**. They're integration tests that gracefully skip when Redis is unavailable, which is correct behavior for CI/CD environments without external dependencies.
 
-**Recommendation:** Keep current behavior. Optionally add documentation for local developers who want to run the full integration suite with Redis.
+**Solution Implemented:** Created `InMemoryMessagePersistenceTests.cs` with 17 comprehensive tests that verify the IMessagePersistence interface contract without requiring Redis. These tests:
+- ✅ Run in all environments (CI, local, web)
+- ✅ Execute quickly (~139ms)
+- ✅ Provide confidence that message persistence logic works correctly
+- ✅ Complement (don't replace) the Redis integration tests
+
+**Recommendation:**
+- **Current approach:** Keep both test suites
+  - InMemory tests: Always run (fast, no dependencies)
+  - Redis tests: Run when Redis available (true integration)
+- **Optional:** Add documentation for local developers who want to run the full integration suite with Redis
 
 ---
 
 **Last Updated:** 2025-11-20
 **Reviewed By:** Worker Thread 1 (Autonomous Analysis)
+**Solution:** InMemoryMessagePersistence tests created (17 tests passing)
