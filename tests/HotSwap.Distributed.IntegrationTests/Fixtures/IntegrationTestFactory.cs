@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using StackExchange.Redis;
 
 namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 
@@ -110,14 +109,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 options.UseSqlite(_sqliteConnection);
             });
 
-            // Replace Redis with MemoryDistributedCache for in-memory distributed locking
-            // Remove any existing IConnectionMultiplexer registrations
-            var redisDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IConnectionMultiplexer));
-            if (redisDescriptor != null)
-            {
-                services.Remove(redisDescriptor);
-            }
-
+            // Replace any existing IDistributedCache registrations with in-memory implementation
             // Remove any existing IDistributedCache registrations
             var cacheDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Microsoft.Extensions.Caching.Distributed.IDistributedCache));
             if (cacheDescriptor != null)
