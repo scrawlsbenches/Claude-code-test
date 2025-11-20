@@ -130,6 +130,12 @@ public class PipelineConfiguration
     public int QaMaxConcurrentNodes { get; set; } = 2;
 
     /// <summary>
+    /// Health check delay for QA rolling deployment (time to wait between batches).
+    /// Defaults to 30 seconds for production; should be ~1 second for tests.
+    /// </summary>
+    public TimeSpan RollingHealthCheckDelay { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Timeout for staging smoke tests.
     /// </summary>
     public TimeSpan StagingSmokeTestTimeout { get; set; } = TimeSpan.FromMinutes(5);

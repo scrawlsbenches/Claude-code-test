@@ -123,7 +123,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
 
             _strategies[EnvironmentType.QA] = new RollingDeploymentStrategy(
                 _loggerFactory.CreateLogger<RollingDeploymentStrategy>(),
-                maxConcurrent: _pipelineConfig.QaMaxConcurrentNodes);
+                maxConcurrent: _pipelineConfig.QaMaxConcurrentNodes,
+                healthCheckDelay: _pipelineConfig.RollingHealthCheckDelay);
 
             _strategies[EnvironmentType.Staging] = new BlueGreenDeploymentStrategy(
                 _loggerFactory.CreateLogger<BlueGreenDeploymentStrategy>(),

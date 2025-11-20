@@ -3,6 +3,7 @@ using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Deployments;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -13,13 +14,19 @@ public class InMemoryDeploymentTrackerTests
 {
     private readonly IMemoryCache _cache;
     private readonly Mock<ILogger<InMemoryDeploymentTracker>> _mockLogger;
+    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly InMemoryDeploymentTracker _tracker;
 
     public InMemoryDeploymentTrackerTests()
     {
         _cache = new MemoryCache(new MemoryCacheOptions());
         _mockLogger = new Mock<ILogger<InMemoryDeploymentTracker>>();
-        _tracker = new InMemoryDeploymentTracker(_cache, _mockLogger.Object);
+        _mockConfiguration = new Mock<IConfiguration>();
+
+        // Default configuration: use Normal priority (production behavior)
+        _mockConfiguration.Setup(c => c["DeploymentTracking:CachePriority"]).Returns("Normal");
+
+        _tracker = new InMemoryDeploymentTracker(_cache, _mockLogger.Object, _mockConfiguration.Object);
     }
 
     [Fact]
@@ -357,7 +364,7 @@ public class InMemoryDeploymentTrackerTests
     public void Constructor_WithNullCache_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = () => new InMemoryDeploymentTracker(null!, _mockLogger.Object);
+        var act = () => new InMemoryDeploymentTracker(null!, _mockLogger.Object, _mockConfiguration.Object);
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("cache");
     }
@@ -366,7 +373,7 @@ public class InMemoryDeploymentTrackerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = () => new InMemoryDeploymentTracker(_cache, null!);
+        var act = () => new InMemoryDeploymentTracker(_cache, null!, _mockConfiguration.Object);
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
     }
