@@ -675,8 +675,8 @@ Critical security items from production checklist.
 
 ### 16. Secret Rotation System
 **Priority:** 🟡 High
-**Status:** Not Implemented
-**Effort:** 2-3 days
+**Status:** 🔄 **In Progress** (Started: 2025-11-20)
+**Effort:** 2-3 days (Broken down into 8 sub-tasks below)
 **References:** README.md:241, PROJECT_STATUS_REPORT.md:674
 
 **Requirements:**
@@ -686,6 +686,141 @@ Critical security items from production checklist.
 - [ ] Configure rotation policies
 - [ ] Add secret expiration monitoring
 - [ ] Create runbook for manual rotation
+
+**Implementation Breakdown:**
+This task has been broken down into 8 smaller, manageable sub-tasks (16.1 - 16.8) below for incremental implementation.
+
+#### 16.1 Create ISecretService Abstraction Layer
+**Status:** ✅ **Completed** (2025-11-20)
+**Effort:** 0.5 days (Actual: 0.5 days)
+**Description:** Design and implement abstraction layer for secret management to support multiple backends (Vault, Kubernetes Secrets, local dev).
+
+**Acceptance Criteria:**
+- [x] Create `ISecretService` interface in `Infrastructure/Interfaces/`
+- [x] Define methods: `GetSecretAsync`, `SetSecretAsync`, `RotateSecretAsync`, `GetSecretVersionAsync`
+- [x] Add secret metadata model (version, expiration, rotation policy)
+- [x] Support secret versioning in interface design
+
+**Implementation Details:**
+- Created `SecretModels.cs` with 4 classes: `SecretMetadata`, `SecretVersion`, `RotationPolicy`, `SecretRotationResult`
+- Created `ISecretService.cs` with 9 methods for complete secret lifecycle management
+- Supports versioning, rotation windows, expiration tracking, and policy-based rotation
+- Build succeeded with 0 errors, 0 warnings
+
+---
+
+#### 16.2 Implement VaultSecretService with HashiCorp Vault SDK
+**Status:** ⏳ Pending
+**Effort:** 1 day
+**Dependencies:** Task 16.1
+**Description:** Implement HashiCorp Vault integration using VaultSharp .NET SDK for secret storage and retrieval.
+
+**Acceptance Criteria:**
+- [ ] Add VaultSharp NuGet package dependency
+- [ ] Implement `VaultSecretService : ISecretService`
+- [ ] Configure Vault connection (URL, token, namespace)
+- [ ] Implement Get/Set/Rotate secret operations
+- [ ] Handle Vault authentication (AppRole, Token)
+- [ ] Add retry logic and error handling
+- [ ] Support Vault KV v2 engine (versioning)
+
+---
+
+#### 16.3 Add Secret Versioning and Rotation Policies
+**Status:** ⏳ Pending
+**Effort:** 0.5 days
+**Dependencies:** Task 16.2
+**Description:** Implement secret versioning support and configurable rotation policies.
+
+**Acceptance Criteria:**
+- [ ] Define rotation policy model (interval, max age, notification threshold)
+- [ ] Implement versioning: track current and previous secret versions
+- [ ] Support graceful key rollover (both keys valid during rotation window)
+- [ ] Add configuration for rotation policies in appsettings.json
+- [ ] Log rotation events with version information
+
+---
+
+#### 16.4 Implement Automatic Rotation Background Service
+**Status:** ⏳ Pending
+**Effort:** 0.5 days
+**Dependencies:** Task 16.3
+**Description:** Create background service that automatically rotates secrets based on policies.
+
+**Acceptance Criteria:**
+- [ ] Create `SecretRotationBackgroundService : IHostedService`
+- [ ] Implement periodic rotation check (configurable interval)
+- [ ] Trigger rotation based on expiration policy
+- [ ] Handle rotation failures with retry logic
+- [ ] Send notifications before/after rotation
+- [ ] Update application configuration after rotation
+
+---
+
+#### 16.5 Update JwtTokenService to Support Rotated Keys
+**Status:** ⏳ Pending
+**Effort:** 0.5 days
+**Dependencies:** Task 16.4
+**Description:** Modify JWT token service to validate tokens with both current and previous keys during rotation window.
+
+**Acceptance Criteria:**
+- [ ] Update `JwtTokenService` to load secrets from `ISecretService`
+- [ ] Support multiple signing keys (current + previous version)
+- [ ] Validate tokens with key version fallback
+- [ ] Token generation always uses current key version
+- [ ] Add key refresh mechanism without service restart
+
+---
+
+#### 16.6 Add Secret Expiration Monitoring
+**Status:** ⏳ Pending
+**Effort:** 0.25 days
+**Dependencies:** Task 16.4
+**Description:** Implement monitoring and alerting for secrets approaching expiration.
+
+**Acceptance Criteria:**
+- [ ] Monitor secret expiration dates
+- [ ] Send notifications at 7, 3, 1 days before expiration
+- [ ] Expose Prometheus metrics for secret age
+- [ ] Log expiration warnings
+- [ ] Add health check endpoint for secret status
+
+---
+
+#### 16.7 Write Comprehensive Unit Tests
+**Status:** ⏳ Pending
+**Effort:** 0.5 days
+**Dependencies:** Tasks 16.1 - 16.6
+**Description:** Create full test coverage for secret rotation functionality.
+
+**Acceptance Criteria:**
+- [ ] Test `ISecretService` interface implementations
+- [ ] Test secret rotation workflow (happy path)
+- [ ] Test rotation failure scenarios
+- [ ] Test JWT validation with rotated keys
+- [ ] Test expiration monitoring and notifications
+- [ ] Test graceful key rollover
+- [ ] Mock Vault integration for unit tests
+- [ ] Achieve >85% code coverage for new code
+
+---
+
+#### 16.8 Create SECRET_ROTATION_GUIDE.md Runbook
+**Status:** ⏳ Pending
+**Effort:** 0.25 days
+**Dependencies:** Tasks 16.1 - 16.7
+**Description:** Document secret rotation procedures, configuration, and troubleshooting.
+
+**Acceptance Criteria:**
+- [ ] Document HashiCorp Vault setup and configuration
+- [ ] Provide manual rotation procedures
+- [ ] Document rotation policies and configuration options
+- [ ] Include troubleshooting guide for rotation failures
+- [ ] Document emergency procedures (immediate rotation)
+- [ ] Add Vault backup and recovery procedures
+- [ ] Include monitoring and alerting setup
+
+**Total Estimated Effort:** ~4 days (8 sub-tasks)
 
 ---
 
