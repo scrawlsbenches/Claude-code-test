@@ -1,6 +1,6 @@
 # Claude Skills for .NET Development
 
-**Last Updated**: 2025-11-19
+**Last Updated**: 2025-11-20
 
 This document describes all available Claude Skills for this .NET distributed systems project. Skills are specialized tools that automate common workflows, enforce best practices, and guide you through complex tasks.
 
@@ -8,12 +8,14 @@ This document describes all available Claude Skills for this .NET distributed sy
 
 1. [Overview](#overview)
 2. [Quick Reference](#quick-reference)
-3. [Core Development Skills](#core-development-skills)
-4. [Quality & Testing Skills](#quality--testing-skills)
-5. [Documentation & Infrastructure Skills](#documentation--infrastructure-skills)
-6. [Typical Workflows](#typical-workflows)
-7. [How to Use Skills](#how-to-use-skills)
-8. [Creating New Skills](#creating-new-skills)
+3. [Project Discipline Skills](#project-discipline-skills) ⭐ **NEW - Critical for Success**
+4. [Project Management Skills](#project-management-skills)
+5. [Core Development Skills](#core-development-skills)
+6. [Quality & Testing Skills](#quality--testing-skills)
+7. [Documentation & Infrastructure Skills](#documentation--infrastructure-skills)
+8. [Typical Workflows](#typical-workflows)
+9. [How to Use Skills](#how-to-use-skills)
+10. [Creating New Skills](#creating-new-skills)
 
 ---
 
@@ -40,22 +42,68 @@ Claude Skills are markdown-based instruction sets that guide AI assistants throu
 
 | Skill | Size | When to Use | Frequency |
 |-------|------|-------------|-----------|
+| **Project Discipline** ⭐ ||||
+| [thinking-framework](#thinking-framework) | 9.5K | **EVERY new project/request** | Always |
+| [project-intake](#project-intake) | 10K | Before ANY coding starts | Per project |
+| [scope-guard](#scope-guard) | 8.5K | During implementation | Continuous |
+| [architecture-review](#architecture-review) | 10K | Before design decisions | Per feature |
+| [reality-check](#reality-check) | 8K | Before committing to timelines | Per estimate |
+| **Project Management** ||||
+| [sprint-planner](#sprint-planner) | 23K | Sprint planning, task delegation | Every 1-2 weeks |
 | **Core Development** ||||
 | [dotnet-setup](#dotnet-setup) | 2.6K | New session, .NET SDK missing | Per session |
 | [tdd-helper](#tdd-helper) | 10K | Any code changes | Daily |
 | [precommit-check](#precommit-check) | 4.6K | Before EVERY commit | Daily |
+| [api-endpoint-builder](#api-endpoint-builder) | 4K | REST API scaffolding | As needed |
 | **Quality & Testing** ||||
 | [test-coverage-analyzer](#test-coverage-analyzer) | 14K | After features, quality audits | Weekly |
 | [race-condition-debugger](#race-condition-debugger) | 8.4K | Intermittent test failures | As needed |
+| [integration-test-debugger](#integration-test-debugger) | 13K | Hanging/slow integration tests | As needed |
+| [performance-optimizer](#performance-optimizer) | 5K | Load testing, optimization | Per sprint |
+| **Security & Compliance** ||||
+| [security-hardening](#security-hardening) | 6K | Secret rotation, OWASP review | Monthly |
 | **Documentation & Infrastructure** ||||
 | [doc-sync-check](#doc-sync-check) | 14K | Before commits, monthly audits | Daily/Monthly |
 | [docker-helper](#docker-helper) | 18K | Docker changes, maintenance | As needed |
+| [database-migration-helper](#database-migration-helper) | 11K | EF Core migrations, PostgreSQL | As needed |
 
-**Total:** 7 skills, ~2,800 lines of comprehensive guidance
+**Total:** 18 skills, ~12,000+ lines of comprehensive guidance
 
 ### Decision Tree: Which Skill to Use?
 
 ```
+⭐ NEW REQUEST / PROJECT?
+  └─> /thinking-framework (Meta-skill - routes to appropriate role)
+       ↓
+       Are requirements clear?
+       ├─> NO → /project-intake (Business Analyst)
+       └─> YES → Continue
+                ↓
+                Is scope locked?
+                ├─> NO → /scope-guard (Project Owner)
+                └─> YES → Continue
+                         ↓
+                         Is architecture designed?
+                         ├─> NO → /architecture-review (Technical Lead)
+                         └─> YES → Continue
+                                  ↓
+                                  Is timeline estimated?
+                                  ├─> NO → /reality-check (Project Manager)
+                                  └─> YES → Start implementation
+
+During Implementation:
+  Adding new feature?
+    └─> /scope-guard (validate it's in requirements)
+
+  Making architectural change?
+    └─> /architecture-review (validate it's appropriate)
+
+  Stakeholder asks "when done?"
+    └─> /reality-check (realistic estimate)
+
+Planning new sprint?
+  └─> /sprint-planner
+
 Starting new session?
   └─> /dotnet-setup
 
@@ -75,11 +123,427 @@ About to commit?
 Updating Docker?
   └─> /docker-helper
 
+Need to delegate work?
+  └─> /sprint-planner
+
 Monthly maintenance?
   ├─> /test-coverage-analyzer
   ├─> /doc-sync-check
   └─> /docker-helper
 ```
+
+---
+
+## Project Discipline Skills
+
+⭐ **These are the MOST CRITICAL skills - they prevent the problems that created this test project.**
+
+The HotSwap.Distributed project was intentionally built without these skills to test what happens when Claude builds autonomously without proper project discipline. The result: 60% scope creep, 26,750 lines of code, 38,237 lines of documentation, unclear product identity, and 6/10 quality score.
+
+**These skills were created from the lessons learned. Use them to avoid repeating those mistakes.**
+
+### thinking-framework
+
+**File:** `.claude/skills/thinking-framework.md`
+**Size:** 9.5K (~290 lines)
+**Role:** Meta-Orchestrator (Routes to appropriate role/skill)
+**Purpose:** Prevents premature coding by enforcing "Think First, Code Later" philosophy
+
+#### When to Use
+- **🚨 EVERY new project or feature request** (without exception)
+- When you feel impulse to "just start coding"
+- When stakeholder request is vague or unclear
+- Before making ANY architectural decisions
+- When you're uncertain which skill to use
+
+#### What It Does
+Acts as the meta-skill that orchestrates the entire project lifecycle. Ensures you progress through phases sequentially and use the right role at each phase:
+
+**The 6-Phase Lifecycle:**
+1. **Phase 1: UNDERSTAND** → Business Analyst role (`project-intake`)
+2. **Phase 2: DEFINE** → Project Owner role (`scope-guard`)
+3. **Phase 3: DESIGN** → Technical Lead role (`architecture-review`)
+4. **Phase 4: PLAN** → Project Manager role (`reality-check`)
+5. **Phase 5: IMPLEMENT** → Developer role (TDD, coding)
+6. **Phase 6: VALIDATE** → All roles review
+
+**Key Principle:** Cannot skip phases. Each phase gates the next.
+
+#### Real-World Example
+**Without thinking-framework:**
+- User: "Build deployment system"
+- Claude: *immediately starts coding*
+- Result: Built 60% out-of-scope features, unclear product
+
+**With thinking-framework:**
+- User: "Build deployment system"
+- Claude: *activates thinking-framework*
+- Claude: Identifies Phase 0 (no requirements) → Routes to `project-intake`
+- Claude: Clarifies requirements, then proceeds through phases
+- Result: Focused product, 0% scope creep, 9/10 quality
+
+#### Success Indicators
+- ✅ Never start coding without requirements
+- ✅ Can explain which phase/role you're in
+- ✅ Progress through phases sequentially
+- ✅ Use appropriate skill for each phase
+
+#### Integration
+**This skill routes to all other discipline skills:**
+- Phase 1 → `project-intake`
+- Phase 2 → `scope-guard`
+- Phase 3 → `architecture-review`
+- Phase 4 → `reality-check`
+- Phase 5 → Development skills (`tdd-helper`, etc.)
+
+---
+
+### project-intake
+
+**File:** `.claude/skills/project-intake.md`
+**Size:** 10K (~305 lines)
+**Role:** Business Analyst
+**Purpose:** Extract clear requirements from vague/confused stakeholders BEFORE any code is written
+
+#### When to Use
+- **At the VERY START of any project** (Phase 1 in thinking-framework)
+- When stakeholder request is vague ("Build something like X")
+- When you don't understand the problem being solved
+- Before ANY code is written
+- When request could expand into many features
+
+#### What It Does
+Prevents building the wrong thing by forcing requirements clarification. Asks the Five Critical Questions:
+
+1. **PROBLEM STATEMENT**: What problem are we solving?
+2. **SUCCESS CRITERIA**: How will we know we've solved it?
+3. **CONSTRAINTS & ASSUMPTIONS**: What are the limits?
+4. **SCOPE BOUNDARIES**: What's in/out of scope?
+5. **RISK ASSESSMENT**: What could go wrong?
+
+**Workflow:**
+1. Ask clarifying questions (don't guess)
+2. Document answers in PROJECT_REQUIREMENTS.md
+3. Get stakeholder approval
+4. Create Implementation Brief
+5. **Gate:** Cannot proceed to architecture without approval
+
+#### Real-World Example
+**What happened without this skill:**
+- Request: "Build hot-swap deployment system"
+- Claude assumed: Multi-tenancy, billing, websites, plugins, messaging all needed
+- Result: 60% of features were NOT requested
+
+**What should have happened with this skill:**
+- Request: "Build hot-swap deployment system"
+- Claude asks: "For whom? What problems? Success criteria? In/out of scope?"
+- Documented: Core deployment only, NO multi-tenancy/billing/websites
+- Result: Built only what was approved
+
+#### Success Indicators
+- ✅ PROJECT_REQUIREMENTS.md exists and approved
+- ✅ "Out of scope" explicitly documented
+- ✅ Success criteria measurable and testable
+- ✅ Didn't build features not in requirements
+
+---
+
+### scope-guard
+
+**File:** `.claude/skills/scope-guard.md`
+**Size:** 8.5K (~260 lines)
+**Role:** Project Owner / Product Owner
+**Purpose:** Prevent feature creep and scope expansion DURING implementation
+
+#### When to Use
+- **During implementation, before adding ANY new feature**
+- When thinking "Since I'm here, let me add..."
+- When thinking "We might need this later"
+- When stakeholder says "While you're at it..."
+- Before adding new dependencies or infrastructure
+- Continuous validation during development
+
+#### What It Does
+Guards approved scope using the 4-Gate Validation System. Every feature must pass ALL four gates:
+
+**Gate 1: Requirements Justification**
+- Is this in PROJECT_REQUIREMENTS.md?
+
+**Gate 2: Complexity Justification**
+- Does complexity justify value?
+- Complexity Score = (LOC × Maintenance) / Value
+- Target: < 1.0
+
+**Gate 3: Dependency Justification**
+- Is new dependency necessary?
+- Can existing code handle this?
+
+**Gate 4: Maintenance Justification**
+- Are we willing to maintain this forever?
+- Is it tested and documented?
+
+**If ANY gate fails → REJECT the feature**
+
+#### Real-World Example
+**What happened without this skill:**
+- Approved scope: Deployment strategies, health monitoring
+- Actually built: + Multi-tenancy + Billing + Websites + Plugins + Message routing
+- Scope creep: 60% (12 out of 20 features were unplanned)
+
+**What should have happened with this skill:**
+- Checkpoint: "About to add multi-tenancy"
+- Gate 1: In requirements? → NO (in OUT_OF_SCOPE section)
+- Decision: REJECT immediately
+- Result: 0% scope creep, stayed focused
+
+#### Success Indicators
+- ✅ Every feature justified by requirement
+- ✅ SCOPE_DECISIONS.md logs all decisions
+- ✅ Weekly scope creep < 10%
+- ✅ Rejected "while I'm at it" additions
+
+---
+
+### architecture-review
+
+**File:** `.claude/skills/architecture-review.md`
+**Size:** 10K (~310 lines)
+**Role:** Technical Lead
+**Purpose:** Ensure architecture matches requirements, avoid over-engineering
+
+#### When to Use
+- **AFTER requirements clear, BEFORE implementation**
+- When choosing technology stack
+- When creating abstraction layers
+- When making sync vs async decisions
+- When thinking "Let's use microservices"
+
+#### What It Does
+Prevents over-engineering by enforcing the KISS (Keep It Simple, Stupid) principle. Ensures architecture is right-sized for the problem.
+
+**The Three Architecture Principles:**
+1. **Right-Sized Architecture** - Match complexity to problem scale
+2. **Vertical Slice Over Horizontal Layers** - Organize by features
+3. **YAGNI** - Don't build for hypothetical future
+
+**Architecture Review Checklist:**
+1. Problem-Architecture Fit
+2. Scale Appropriateness
+3. Team Capability
+4. YAGNI Validation
+5. Alternatives Considered
+
+**Output:** Architecture Decision Records (ADRs) documenting every major choice
+
+#### Real-World Example
+**What happened without this skill:**
+- Scale: 100 servers, 10 deploys/day, single org
+- Built: Message routing (5 strategies), schema registry, multi-tenancy
+- Rationale: "Enterprise systems have these" (assumption)
+- Result: 3x more complex than needed
+
+**What should have happened with this skill:**
+- Question: "Should I use message queue?"
+- Answer: Requirements say sync deployment, user waits
+- Decision: Direct deployment (no queue)
+- Document: ADR-002: Direct Deployment (No Message Queue)
+- Result: Appropriate architecture, 1/3 the complexity
+
+#### Success Indicators
+- ✅ ADRs exist for major decisions
+- ✅ Architecture matches problem scale
+- ✅ Considered simpler alternatives
+- ✅ Can justify every choice with requirement
+
+---
+
+### reality-check
+
+**File:** `.claude/skills/reality-check.md`
+**Size:** 8K (~245 lines)
+**Role:** Project Manager
+**Purpose:** Realistic effort estimation, prevent over-commitment
+
+#### When to Use
+- **AFTER architecture, BEFORE committing to timelines**
+- When stakeholder asks "When will this be done?"
+- Before committing to deadlines
+- When planning sprint/iteration
+- When request feels ambitious
+
+#### What It Does
+Prevents unrealistic promises using scientific estimation methods:
+
+**The Three Estimation Principles:**
+1. **Hofstadter's Law** - Always takes longer than expected
+   - Solution: 3x Multiplier Rule (multiply initial estimate by 3)
+
+2. **Break Down and Sum Up** - Large estimates always wrong
+   - Break into ≤1-day tasks, sum them, add buffer
+
+3. **Identify Unknowns** - Unknowns kill estimates
+   - Known-Knowns: Estimate with confidence
+   - Known-Unknowns: Add research time
+   - Unknown-Unknowns: Add 50-100% buffer
+
+**Reality Check Process:**
+1. Scope Clarity Check
+2. Task Breakdown (≤1-day tasks)
+3. Unknowns Assessment
+4. Dependency Check
+5. Effort vs Capacity Reality Check
+6. Risk Assessment
+
+**Output:** Best/Likely/Worst case timelines + Realistic commitment
+
+#### Real-World Example
+**What happened without this skill:**
+- Claude: "This will be straightforward, a few days"
+- Reality: 3 weeks, 26,750 lines, 60% scope creep
+- Result: Massive over-commitment
+
+**What should have happened with this skill:**
+- Breakdown: 70 hours estimated
+- Apply 3x: 210 hours
+- Add unknowns: 315 hours = 8 weeks
+- Capacity: 240 hours available
+- Reality: NOT FEASIBLE, reduce scope to 5 weeks
+- Result: Realistic expectation set upfront
+
+#### Success Indicators
+- ✅ Break work into ≤1-day tasks
+- ✅ Apply 3x multiplier to estimates
+- ✅ Identify and quantify unknowns
+- ✅ Actual time within 25% of estimate
+
+---
+
+## Project Management Skills
+
+### sprint-planner
+
+**File:** `.claude/skills/sprint-planner.md`
+**Size:** 23K
+**Purpose:** Systematic sprint planning with task analysis, effort estimation, dependency mapping, and workload balancing
+
+#### When to Use
+- Starting a new sprint (every 1-2 weeks)
+- Planning major features or releases
+- Delegating work across multiple developers or AI agents
+- Balancing workload and identifying bottlenecks
+- Setting sprint goals with measurable success criteria
+
+#### What It Does
+Provides a comprehensive 7-phase sprint planning process:
+
+**Phase 1: Task Discovery & Inventory**
+- Identifies all tasks for upcoming sprint
+- Documents current project state (tests, builds, metrics)
+- Categorizes tasks by status, priority, and type
+
+**Phase 2: Effort Estimation & Complexity Analysis**
+- T-shirt sizing (XS to XXL)
+- Fibonacci point estimation
+- Complexity factor adjustment (+25% to +100%)
+- Uncertainty buffers
+
+**Phase 3: Dependency Mapping & Critical Path**
+- Identifies hard dependencies (blocking)
+- Identifies soft dependencies (helpful)
+- Creates Mermaid dependency diagrams
+- Calculates critical path for time optimization
+
+**Phase 4: Domain Grouping & Theme Identification**
+- Groups tasks by domain (Security, Testing, Platform, Features, Operations)
+- Identifies cross-domain collaboration needs
+- Creates thematic sprint clusters
+
+**Phase 5: Workload Balancing & Team Assignment**
+- Calculates available team capacity
+- Assesses team skill matrix
+- Balances effort across team members (±10% variance)
+- Respects dependencies and critical path
+
+**Phase 6: Sprint Goals & Success Metrics**
+- Defines SMART goals (Specific, Measurable, Achievable, Relevant, Time-bound)
+- Sets primary, secondary, and stretch goals
+- Establishes quantifiable success criteria
+
+**Phase 7: Risk Analysis & Mitigation**
+- Identifies technical, resource, scope, and dependency risks
+- Assesses impact and probability
+- Plans mitigation strategies
+- Defines contingency plans
+
+#### Expected Duration
+- Full sprint planning: 45-90 minutes
+- Creates comprehensive plan preventing days/weeks of wasted effort
+
+#### Success Criteria
+- ✅ Balanced task assignments (±10% variance)
+- ✅ Clear sprint goals with measurable criteria
+- ✅ Dependency graph showing execution order
+- ✅ Risk analysis with mitigation plans
+- ✅ Daily/weekly milestones defined
+- ✅ Team capacity not over-committed
+
+#### Key Features
+- **Workload Balance Algorithm** - Distributes tasks evenly across N team members
+- **Critical Path Analysis** - Identifies longest dependency chain
+- **Risk Matrix** - Prioritizes risks by impact × probability
+- **SMART Goals** - Ensures measurable success criteria
+- **Dependency Diagrams** - Visualizes task relationships with Mermaid
+- **Capacity Planning** - Accounts for meetings, overhead, interruptions
+
+#### Real-World Example
+See [TASK_DELEGATION_ANALYSIS.md](../TASK_DELEGATION_ANALYSIS.md) for a complete example where this skill was used to split 17 tasks into 3 balanced workstreams (8-10 days each) for parallel execution.
+
+#### Output
+Generates a comprehensive sprint plan document including:
+- Executive summary with sprint goals
+- Task assignments per team member (balanced effort)
+- Dependency graph (Mermaid diagram)
+- Risk analysis with mitigation strategies
+- Daily/weekly milestones
+- Success criteria checklist
+
+#### Integration with Other Skills
+- **Before Sprint:** Use this skill to plan
+- **During Sprint:** Use /tdd-helper, /precommit-check for each task
+- **After Sprint:** Review plan vs actual for velocity tracking
+
+#### Common Use Cases
+1. **Regular Sprint Planning** - Every 1-2 weeks
+2. **Multi-Team Delegation** - Split work across 3+ developers
+3. **Major Release Planning** - Quarterly planning cycles
+4. **Capacity Analysis** - Prevent over-commitment
+5. **Bottleneck Identification** - Find critical path blockers
+
+#### Usage
+```bash
+# Via slash command (if configured)
+/sprint-planner
+
+# Follow the 7-phase process:
+# Phase 1: Discover tasks from TASK_LIST.md
+# Phase 2: Estimate effort (T-shirt sizes or Fibonacci points)
+# Phase 3: Map dependencies and create graph
+# Phase 4: Group tasks by domain/theme
+# Phase 5: Balance workload across team
+# Phase 6: Define SMART sprint goals
+# Phase 7: Identify and mitigate risks
+```
+
+#### Metrics Tracked
+- **Velocity:** Story points completed per sprint
+- **Estimation Accuracy:** Estimated vs actual effort
+- **Quality:** Bugs introduced, test coverage maintained
+- **Predictability:** Sprint goals achieved percentage
+
+#### Advanced Features
+- **Multi-Team Coordination** - Track inter-team dependencies
+- **Shared Resource Management** - Schedule staging environments, load balancers
+- **Continuous Improvement** - Track metrics over time for better estimates
 
 ---
 
@@ -320,6 +784,71 @@ git commit -m "feat: your feature"
 
 ---
 
+### api-endpoint-builder
+
+**File:** `.claude/skills/api-endpoint-builder.md`
+**Size:** 4K (~400 lines)
+**Purpose:** Systematic scaffolding of REST API controllers with proper routing, validation, authorization, and documentation
+
+#### When to Use
+- Creating new API controllers
+- Adding CRUD endpoints
+- Implementing multi-tenant endpoints (Task #22)
+- Need RESTful API best practices
+
+#### What It Does
+
+**Phase 1: Controller Scaffolding**
+- Creates controller class with proper attributes
+- Implements standard CRUD endpoints (GET list, GET single, POST, PUT, DELETE)
+- Adds proper HTTP status codes and response types
+- Includes XML documentation comments
+
+**Phase 2: Request/Response Models**
+- Creates request DTOs with validation attributes
+- Creates response DTOs with proper serialization
+- Implements model validation
+
+**Phase 3: Integration Tests**
+- Creates test class with WebApplicationFactory
+- Tests all CRUD operations
+- Tests authorization and validation
+
+#### Code Pattern Example
+```csharp
+[ApiController]
+[Route("api/v1/[controller]")]
+[Authorize]
+public class TenantsController : ControllerBase
+{
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<TenantResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<TenantResponse>>> GetAll(
+        CancellationToken cancellationToken)
+    {
+        var tenants = await _tenantService.GetAllTenantsAsync(cancellationToken);
+        return Ok(tenants.Select(t => new TenantResponse { ... }));
+    }
+}
+```
+
+#### Expected Duration
+- Per controller: 1-2 hours (including tests)
+
+#### Success Criteria
+- ✅ Controller created with all CRUD endpoints
+- ✅ Request/Response models with validation
+- ✅ XML documentation comments added
+- ✅ Authorization configured (roles)
+- ✅ Integration tests written and passing
+- ✅ Swagger UI shows endpoints correctly
+
+#### Addresses
+- Task #22: Multi-Tenant API endpoints (3-4 days)
+- Any new API endpoint requirements
+
+---
+
 ## Quality & Testing Skills
 
 ### test-coverage-analyzer
@@ -479,6 +1008,217 @@ dotnet test --collect:"XPlat Code Coverage"
 # 6. Test thoroughly
 # 7. Document findings
 ```
+
+---
+
+### integration-test-debugger
+
+**File:** `.claude/skills/integration-test-debugger.md`
+**Size:** 13K (~440 lines)
+**Purpose:** Systematic debugging of integration test failures: hanging tests, timeouts, assertion failures, and dependency issues
+
+#### When to Use
+- Integration tests are hanging indefinitely
+- Tests timeout after 30+ seconds
+- Tests fail with assertion errors (HTTP 200 vs 202, 404, etc.)
+- Tests pass locally but fail in CI/CD
+- Tests have intermittent failures (flaky tests)
+
+#### What It Does
+
+**Phase 1: Categorize the Failure**
+- Identifies failure pattern (hanging, timeout, assertion, HTTP error, exception)
+- Checks test status in TASK_LIST.md for known issues
+
+**Phase 2: Debug Hanging Tests**
+- Adds timeout to test
+- Checks for async/await deadlocks
+- Profiles with dotnet-trace to find blocking operations
+- Fixes ApprovalWorkflow hanging (Task #23 specific)
+
+**Phase 3: Debug Timeout Tests**
+- Identifies slow operations with logging
+- Reduces deployment timeouts for tests
+- Mocks time-based delays with ITimeProvider
+- Reduces node count for test clusters
+
+**Phase 4: Debug Assertion Failures**
+- Common HTTP status code mismatches (200 vs 202)
+- Verifies expected behavior vs actual
+
+#### Real-World Example
+```csharp
+// Fix hanging approval tests - mock approval service to auto-approve
+var mockApprovalService = new Mock<IApprovalService>();
+mockApprovalService
+    .Setup(x => x.CreateApprovalRequestAsync(...))
+    .ReturnsAsync(new ApprovalRequest
+    {
+        Status = ApprovalStatus.Approved // Auto-approve
+    });
+```
+
+#### Expected Duration
+- Per test suite: 30-90 minutes
+
+#### Success Criteria
+- ✅ All tests in suite pass (0 failures)
+- ✅ Tests complete in reasonable time (<5 minutes total)
+- ✅ No tests are skipped (unless documented as blocked)
+- ✅ Tests are stable (pass consistently on multiple runs)
+- ✅ Tests pass in both local and CI/CD environments
+
+#### Addresses
+- Task #23: ApprovalWorkflow tests hanging (7 tests)
+- Task #24: Slow deployment tests (16 tests timing out)
+- Task #22: Multi-tenant tests returning 404 (14 tests)
+
+---
+
+### performance-optimizer
+
+**File:** `.claude/skills/performance-optimizer.md`
+**Size:** 5K (~350 lines)
+**Purpose:** Systematic performance optimization using load testing, profiling, and proven optimization patterns
+
+#### When to Use
+- Preparing for production load (Task #8: Load testing)
+- Investigating slow endpoints or high latency
+- Optimizing resource usage (CPU, memory, database)
+- Establishing performance baselines
+- Validating scalability requirements
+
+#### What It Does
+
+**Phase 1: Establish Performance Baseline**
+- Identifies critical endpoints
+- Defines performance requirements
+- Creates k6 load test scripts
+- Runs baseline tests and documents results
+
+**Phase 2: Identify Bottlenecks**
+- Profiles with dotnet-trace
+- Monitors real-time metrics with dotnet-counters
+- Profiles database queries (finds slow queries >100ms)
+
+**Phase 3: Apply Optimizations**
+- Fixes N+1 query problems (use Include for eager loading)
+- Adds caching (IMemoryCache)
+- Fixes blocking async (.Result → await)
+- Implements pagination for large result sets
+
+**Phase 4: Scalability Testing**
+- Stress tests (ramp to 200 users)
+- Soak tests (4 hours sustained load)
+- Checks for memory leaks
+
+**Phase 5: Production Monitoring**
+- Adds performance metrics (histograms)
+- Configures Prometheus alerts
+
+#### Real-World Example
+```csharp
+// SLOW: N+1 queries
+var deployments = await _context.Deployments.ToListAsync();
+foreach (var d in deployments) {
+    d.Approvals = await _context.Approvals.Where(a => a.DeploymentId == d.Id).ToListAsync();
+}
+
+// FAST: Single query with Include
+var deployments = await _context.Deployments
+    .Include(d => d.Approvals)
+    .ToListAsync();
+```
+
+#### Expected Duration
+- Full optimization cycle: 2-3 days
+
+#### Success Criteria
+- ✅ Baseline established for all critical endpoints
+- ✅ Load tests passing with <5% error rate
+- ✅ p95 latency meets requirements
+- ✅ Memory usage stable during soak test
+- ✅ No memory leaks detected
+- ✅ Production monitoring configured
+
+#### Addresses
+- Task #8: Load Testing and Performance Benchmarks (2-3 days)
+
+---
+
+## Security & Compliance Skills
+
+### security-hardening
+
+**File:** `.claude/skills/security-hardening.md`
+**Size:** 6K (~425 lines)
+**Purpose:** Comprehensive security hardening: secret rotation, OWASP Top 10 compliance, and security configuration validation
+
+#### When to Use
+- Implementing HashiCorp Vault (self-hosted) or Kubernetes Secrets integration
+- Rotating secrets (JWT keys, DB passwords, API keys)
+- Reviewing OWASP Top 10 compliance
+- Hardening security configurations
+- Preparing for security audits
+
+#### What It Does
+
+**Phase 1: Secret Rotation with Key Vault**
+- Chooses secret management provider (Azure Key Vault or HashiCorp Vault)
+- Implements secret service interface
+- Configures automatic secret loading
+- Implements rotation schedule (every 90 days)
+
+**Phase 2: OWASP Top 10 Compliance**
+- A01: Broken Access Control (JWT, RBAC, IP whitelisting, MFA)
+- A02: Cryptographic Failures (BCrypt, HTTPS/TLS 1.2+, RSA-2048)
+- A03: Injection (EF Core parameterized queries, input validation)
+- A04: Insecure Design (approval workflow, rate limiting)
+- A05: Security Misconfiguration (HSTS, security headers, disable dev endpoints in prod)
+- A06: Vulnerable Components (dotnet list package --vulnerable)
+- A07: Authentication Failures (account lockout, MFA, password complexity)
+- A08: Data Integrity Failures (module signature verification, audit logging)
+- A09: Logging/Monitoring Failures (audit all events, SIEM integration)
+- A10: SSRF (validate user-controlled URLs)
+
+**Phase 3: Production Security Checklist**
+- Critical: Update vulnerable dependencies, implement account lockout, rotate JWT key to Key Vault
+- High Priority: Add MFA for Admin, IP whitelisting, centralized logging
+- Medium Priority: Password complexity, session timeout, WAF
+
+#### Real-World Example
+```csharp
+// Azure Key Vault integration
+public class AzureKeyVaultSecretService : ISecretService
+{
+    private readonly SecretClient _client;
+
+    public AzureKeyVaultSecretService(string keyVaultUrl)
+    {
+        _client = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
+    }
+
+    public async Task<string> GetSecretAsync(string secretName, CancellationToken cancellationToken)
+    {
+        var secret = await _client.GetSecretAsync(secretName, cancellationToken: cancellationToken);
+        return secret.Value.Value;
+    }
+}
+```
+
+#### Expected Duration
+- Full security hardening: 2-4 hours per implementation
+
+#### Success Criteria
+- ✅ Secrets stored in Key Vault (not code/config)
+- ✅ Secret rotation schedule implemented
+- ✅ OWASP Top 10 reviewed and addressed
+- ✅ Vulnerability scan clean (no HIGH/CRITICAL)
+- ✅ Security audit report generated
+
+#### Addresses
+- Task #16: Secret Rotation System (2-3 days)
+- Task #17: OWASP Top 10 Security Review (2-3 days)
 
 ---
 
@@ -690,6 +1430,83 @@ time docker build --no-cache -t hotswap-test .
 # Address any warnings or errors
 # Update documentation if needed
 ```
+
+---
+
+### database-migration-helper
+
+**File:** `.claude/skills/database-migration-helper.md`
+**Size:** 11K (~400 lines)
+**Purpose:** Guides Entity Framework Core migrations for PostgreSQL with best practices for development, testing, and production deployment
+
+#### When to Use
+- Implementing database persistence (Task #3: PostgreSQL audit logs)
+- Creating or modifying database schema
+- Applying migrations to production
+- Rolling back failed migrations
+- Testing database changes
+
+#### What It Does
+
+**Phase 1: Setup EF Core**
+- Installs required packages (Microsoft.EntityFrameworkCore.Design, Npgsql.EntityFrameworkCore.PostgreSQL)
+- Creates entity classes
+- Creates DbContext with proper configuration
+- Implements IDesignTimeDbContextFactory for migrations
+
+**Phase 2: Create and Apply Migrations**
+- Creates initial migration with `dotnet ef migrations add`
+- Reviews generated migration code
+- Applies migration to database with `dotnet ef database update`
+- Verifies migration succeeded
+
+**Phase 3: Test Migration**
+- Uses SQLite for quick local testing
+- Creates PostgreSQL integration tests
+- Validates data persistence and queries
+
+**Phase 4: Rollback Procedures**
+- Lists all migrations
+- Reverts to previous migration
+- Removes failed migration files
+- Validates database state after rollback
+
+**Phase 5: Production Deployment**
+- Backs up production database
+- Applies migration with connection string
+- Verifies migration success
+- Implements rollback plan if needed
+
+#### Real-World Example
+```csharp
+// AuditLogDbContext with PostgreSQL-specific configuration
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<AuditLog>()
+        .Property(a => a.Details)
+        .HasColumnType("jsonb"); // PostgreSQL-specific
+
+    modelBuilder.Entity<AuditLog>()
+        .HasIndex(a => a.Timestamp)
+        .HasDatabaseName("idx_audit_logs_timestamp");
+}
+```
+
+#### Expected Duration
+- Initial setup: 30-60 minutes
+- Per migration: 15-30 minutes
+
+#### Success Criteria
+- ✅ EF Core packages installed and configured
+- ✅ DbContext created with proper entity configuration
+- ✅ Migration files generated successfully
+- ✅ Database schema updated
+- ✅ Integration tests pass with PostgreSQL
+- ✅ Rollback procedure documented and tested
+
+#### Addresses
+- Task #3: PostgreSQL Audit Log Persistence (85% → 100%)
+- Any database schema changes
 
 ---
 
@@ -908,30 +1725,29 @@ Based on: [CLAUDE.md sections]
 
 ## Statistics
 
-**Current Skills (as of 2025-11-19)**:
+**Current Skills (as of 2025-11-20)**:
 
 | Metric | Value |
 |--------|-------|
-| Total Skills | 7 |
-| Total Lines | ~2,800 |
-| Categories | 3 |
-| Average Skill Size | ~400 lines |
+| Total Skills | 18 |
+| Total Lines | ~12,000+ |
+| Categories | 5 |
+| Average Skill Size | ~667 lines |
 | Creation Date | 2025-11-19 |
+| Last Updated | 2025-11-20 |
 
-**Coverage**:
-- ✅ Environment Setup: dotnet-setup
-- ✅ Test-Driven Development: tdd-helper
-- ✅ Pre-Commit Validation: precommit-check
-- ✅ Test Coverage Analysis: test-coverage-analyzer
-- ✅ Race Condition Debugging: race-condition-debugger
-- ✅ Documentation Sync: doc-sync-check
-- ✅ Docker Management: docker-helper
+**Coverage by Category**:
+- ✅ **Project Discipline (5 skills)**: thinking-framework, project-intake, scope-guard, architecture-review, reality-check
+- ✅ **Project Management (1 skill)**: sprint-planner
+- ✅ **Core Development (4 skills)**: dotnet-setup, tdd-helper, precommit-check, api-endpoint-builder
+- ✅ **Quality & Testing (4 skills)**: test-coverage-analyzer, race-condition-debugger, integration-test-debugger, performance-optimizer
+- ✅ **Security & Compliance (1 skill)**: security-hardening
+- ✅ **Documentation & Infrastructure (3 skills)**: doc-sync-check, docker-helper, database-migration-helper
 
 **Future Skill Ideas**:
 - Package security scanner
 - API documentation generator
-- Performance profiling assistant
-- Database migration helper
+- CI/CD pipeline troubleshooter
 - Deployment orchestration guide
 
 ---
@@ -946,6 +1762,36 @@ Based on: [CLAUDE.md sections]
 ---
 
 ## Changelog
+
+### 2025-11-20 (Sprint 2 Skills - 5 New Skills Added)
+
+**Skills Added**:
+1. **integration-test-debugger** (13K) - Systematic debugging of hanging, timeout, and failing integration tests
+2. **database-migration-helper** (11K) - Entity Framework Core migrations for PostgreSQL with rollback procedures
+3. **security-hardening** (6K) - Secret rotation, OWASP Top 10 compliance, production security checklist
+4. **api-endpoint-builder** (4K) - REST API controller scaffolding with CRUD operations
+5. **performance-optimizer** (5K) - Load testing, profiling, and optimization patterns with k6 and dotnet-trace
+
+**New Category**:
+- **Security & Compliance Skills** - Dedicated category for security-related workflows
+
+**Impact**:
+- Unblocks Task #23 (ApprovalWorkflow hanging tests), Task #24 (slow deployment tests), Task #22 (multi-tenant 404s)
+- Completes Task #3 (PostgreSQL audit log persistence to 100%)
+- Addresses Task #16 (Secret Rotation) and Task #17 (OWASP Review)
+- Enables Task #22 (Multi-tenant API endpoints)
+- Facilitates Task #8 (Load Testing and Performance Benchmarks)
+- Total: 39K+ lines of new guidance, covering critical Sprint 2 gaps
+
+**Skills Updated**:
+- None (all new additions)
+
+**Statistics**:
+- Total skills increased: 13 → 18 skills
+- Total lines increased: ~10,100 → ~12,000+ lines
+- Categories increased: 4 → 5 categories (new: Security & Compliance)
+
+---
 
 ### 2025-11-19 (Initial Release - 7 Skills)
 

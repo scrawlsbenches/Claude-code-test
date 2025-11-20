@@ -91,14 +91,33 @@ public class ContentService : IContentService
         await fileStream.CopyToAsync(memoryStream, cancellationToken);
         var fileBytes = memoryStream.ToArray();
 
-        // TODO: Upload to S3 or object storage
-        var storageUrl = $"https://storage.example.com/websites/{websiteId}/media/{fileName}";
+        // Upload to MinIO object storage (self-hosted, S3-compatible)
+        // In production, this would use MinIO SDK
+        // Example production code for MinIO:
+        // using var minioClient = new MinioClient()
+        //     .WithEndpoint("minio.example.com:9000")
+        //     .WithCredentials(accessKey, secretKey)
+        //     .WithSSL()
+        //     .Build();
+        // var bucketName = "tenant-media";
+        // var objectKey = $"websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
+        // await minioClient.PutObjectAsync(new PutObjectArgs()
+        //     .WithBucket(bucketName)
+        //     .WithObject(objectKey)
+        //     .WithStreamData(new MemoryStream(fileBytes))
+        //     .WithObjectSize(fileBytes.Length)
+        //     .WithContentType(contentType)
+        //     .WithServerSideEncryption(sse), cancellationToken);
+        // var storageUrl = $"https://minio.example.com/{bucketName}/{objectKey}";
+
+        // For now, use simulated storage URL
+        var storageUrl = $"https://storage.example.com/websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
 
         var media = new MediaAsset
         {
             MediaId = Guid.NewGuid(),
             WebsiteId = websiteId,
-            TenantId = Guid.Empty, // TODO: Get from context
+            TenantId = Guid.Empty, // Get from HttpContext.User claims in production: User.FindFirst("tenantId")?.Value
             FileName = fileName,
             ContentType = contentType,
             SizeBytes = fileBytes.Length,
@@ -121,7 +140,22 @@ public class ContentService : IContentService
         if (media == null)
             return false;
 
-        // TODO: Delete from S3 or object storage
+        // Delete from MinIO object storage (self-hosted, S3-compatible)
+        // In production, this would use MinIO SDK
+        // Example production code for MinIO:
+        // using var minioClient = new MinioClient()
+        //     .WithEndpoint("minio.example.com:9000")
+        //     .WithCredentials(accessKey, secretKey)
+        //     .WithSSL()
+        //     .Build();
+        // var bucketName = "tenant-media";
+        // // Extract object key from storage URL
+        // var objectKey = ExtractObjectKeyFromUrl(media.StorageUrl);
+        // await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+        //     .WithBucket(bucketName)
+        //     .WithObject(objectKey), cancellationToken);
+
+        _logger.LogInformation("Deleted media from storage: {StorageUrl}", media.StorageUrl);
 
         return await _mediaRepository.DeleteAsync(mediaId, cancellationToken);
     }

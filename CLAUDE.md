@@ -15,7 +15,7 @@ This document provides comprehensive guidance for AI assistants working with thi
 **Status**: Production Ready (95% Specification Compliance)
 **Build Status**: ✅ Passing (582 tests: 568 passing, 14 skipped)
 **Test Coverage**: 85%+
-**Last Updated**: November 19, 2025
+**Last Updated**: November 20, 2025
 
 ### Project Structure
 
@@ -37,14 +37,25 @@ Claude-code-test/
 ├── DistributedKernel.sln                     # Solution file
 ├── test-critical-paths.sh                    # Critical path validation
 ├── validate-code.sh                          # Code validation script
-├── .claude/skills/                            # Claude Skills (7 skills, ~2,800 lines)
+├── .claude/skills/                            # Claude Skills (18 skills, ~12,000+ lines)
+│   ├── thinking-framework.md                 # Meta-orchestrator (Think First, Code Later)
+│   ├── project-intake.md                     # Business Analyst (extract requirements)
+│   ├── scope-guard.md                        # Project Owner (prevent scope creep)
+│   ├── architecture-review.md                # Technical Lead (right-sized architecture)
+│   ├── reality-check.md                      # Project Manager (realistic estimates)
+│   ├── sprint-planner.md                     # Sprint planning & task delegation
 │   ├── dotnet-setup.md                       # .NET SDK setup automation
 │   ├── tdd-helper.md                         # TDD workflow guidance
 │   ├── precommit-check.md                    # Pre-commit validation
+│   ├── api-endpoint-builder.md               # REST API scaffolding
 │   ├── test-coverage-analyzer.md             # Coverage analysis
 │   ├── race-condition-debugger.md            # Async debugging
+│   ├── integration-test-debugger.md          # Integration test debugging
+│   ├── performance-optimizer.md              # Load testing & optimization
+│   ├── security-hardening.md                 # Secret rotation & OWASP compliance
 │   ├── doc-sync-check.md                     # Documentation sync validation
-│   └── docker-helper.md                      # Docker configuration management
+│   ├── docker-helper.md                      # Docker configuration management
+│   └── database-migration-helper.md          # EF Core migrations for PostgreSQL
 ├── CLAUDE.md                                 # This file (AI assistant guide)
 ├── SKILLS.md                                 # Claude Skills documentation
 ├── TASK_LIST.md                              # Comprehensive task roadmap (20+ tasks)
@@ -940,7 +951,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0@sha256:[digest-here]
 #### Typical Development Session
 
 ```bash
-# 1. Pull latest changes
+# 1. Pull latest changes from main
 git pull origin main
 
 # 2. Create feature branch
@@ -968,8 +979,24 @@ dotnet test
 git add .
 git commit -m "feat: your feature description"
 
-# 10. Push to remote
+# 10. Pull latest changes and resolve conflicts (CRITICAL)
+git fetch origin claude/your-feature-name-sessionid
+git pull origin claude/your-feature-name-sessionid --no-rebase
+
+# If merge conflicts occur:
+# - Fix conflicts in affected files
+# - git add <resolved-files>
+# - git commit -m "merge: resolve conflicts with remote changes"
+# - Rebuild and retest: dotnet build && dotnet test
+
+# 11. Push to remote with retry logic
 git push -u origin claude/your-feature-name-sessionid
+
+# If push fails with network error, retry with exponential backoff:
+# Wait 2s, retry
+# Wait 4s, retry
+# Wait 8s, retry
+# Wait 16s, retry (final attempt)
 ```
 
 ### Troubleshooting Setup Issues
@@ -1631,10 +1658,153 @@ dotnet test
 ```
 
 ### Git Push Requirements
-- **ALWAYS** use `git push -u origin <branch-name>`
-- Branch MUST start with `claude/` and end with session ID
-- Retry up to 4 times with exponential backoff (2s, 4s, 8s, 16s) on network errors
-- Never force push to main/master
+
+**⚠️ CRITICAL: Always pull before push to avoid conflicts**
+
+#### Pre-Push Procedure (MANDATORY)
+
+**Before EVERY `git push`, follow these steps:**
+
+```bash
+# Step 1: Fetch latest changes from remote
+git fetch origin <branch-name>
+
+# Step 2: Pull and merge remote changes
+git pull origin <branch-name> --no-rebase
+
+# Step 3: If merge conflicts occur, resolve them (see below)
+# Step 4: After resolving conflicts, rebuild and test
+dotnet build && dotnet test
+
+# Step 5: Only then push to remote
+git push -u origin <branch-name>
+```
+
+#### Push Requirements Checklist
+
+- ✅ **ALWAYS pull before push** - Prevents merge conflicts and rejected pushes
+- ✅ **ALWAYS use** `git push -u origin <branch-name>` - Sets upstream tracking
+- ✅ **Branch MUST start with** `claude/` and end with session ID - Required for permission
+- ✅ **Rebuild and test after merges** - Ensures merged code still works
+- ✅ **Retry on network errors** - Up to 4 times with exponential backoff (2s, 4s, 8s, 16s)
+- ❌ **NEVER force push to main/master** - Destroys history and breaks collaboration
+- ❌ **NEVER push without pulling first** - Causes conflicts and wasted time
+
+#### Handling Merge Conflicts
+
+**When `git pull` reports conflicts:**
+
+```bash
+# Step 1: Identify conflicted files
+git status
+# Look for "both modified:" entries
+
+# Step 2: Open each conflicted file and look for conflict markers
+# <<<<<<< HEAD
+# Your changes
+# =======
+# Remote changes
+# >>>>>>> branch-name
+
+# Step 3: Resolve conflicts by:
+# - Keeping your changes, OR
+# - Keeping remote changes, OR
+# - Combining both (most common)
+# - Remove conflict markers (<<<<<<, =======, >>>>>>>)
+
+# Step 4: Stage resolved files
+git add <resolved-file-1> <resolved-file-2>
+
+# Step 5: Complete the merge
+git commit -m "merge: resolve conflicts with remote changes"
+
+# Step 6: CRITICAL - Rebuild and test after merge
+dotnet clean
+dotnet restore
+dotnet build --no-incremental
+dotnet test
+
+# Step 7: Only if build and tests pass, push
+git push -u origin <branch-name>
+```
+
+#### Common Conflict Scenarios
+
+**Scenario 1: Remote has new commits**
+```bash
+# Your push is rejected: "Updates were rejected because the remote contains work..."
+# Solution: Pull, merge, test, push
+git pull origin <branch-name> --no-rebase
+dotnet build && dotnet test
+git push -u origin <branch-name>
+```
+
+**Scenario 2: Conflicting changes in same file**
+```bash
+# git pull reports: "CONFLICT (content): Merge conflict in src/File.cs"
+# Solution: Resolve conflicts manually
+git status  # See conflicted files
+# Edit files to resolve conflicts
+git add src/File.cs
+git commit -m "merge: resolve conflicts in File.cs"
+dotnet build && dotnet test
+git push -u origin <branch-name>
+```
+
+**Scenario 3: Network failure during push**
+```bash
+# Push fails with: "fatal: unable to access... Could not resolve host"
+# Solution: Retry with exponential backoff
+
+# Attempt 1
+git push -u origin <branch-name>
+# If fails, wait 2 seconds
+
+# Attempt 2
+sleep 2
+git push -u origin <branch-name>
+# If fails, wait 4 seconds
+
+# Attempt 3
+sleep 4
+git push -u origin <branch-name>
+# If fails, wait 8 seconds
+
+# Attempt 4
+sleep 8
+git push -u origin <branch-name>
+# If fails, wait 16 seconds
+
+# Attempt 5 (final)
+sleep 16
+git push -u origin <branch-name>
+# If still fails, report network issue to user
+```
+
+#### Emergency: When Push is Blocked
+
+**If push fails with permission error (HTTP 403):**
+
+```bash
+# Error: "remote: Permission to repository denied"
+# Check: Branch name MUST match pattern: claude/*-<session-id>
+
+# ❌ WRONG: claude/my-feature (missing session ID)
+# ✅ CORRECT: claude/my-feature-01HQxN4hS7696T2bepqRT3VW
+
+# Solution: Create correctly named branch
+git checkout -b claude/my-feature-<session-id>
+git cherry-pick <commit-hash>  # Move commits to new branch
+git push -u origin claude/my-feature-<session-id>
+```
+
+#### Best Practices
+
+1. **Pull frequently** - Before starting work, after breaks, before pushing
+2. **Commit small, push often** - Smaller commits = easier conflict resolution
+3. **Test after every merge** - Merged code may break tests even if no conflicts
+4. **Never ignore conflicts** - Always resolve properly, never force push
+5. **Document complex merges** - Add details to merge commit message
 
 ## AI Assistant Guidelines
 
@@ -3204,16 +3374,94 @@ docker-compose --version
 
 ## Changelog
 
+### 2025-11-20 (Git Push Procedure Enhancement)
+- **Enhanced Git Push Requirements section** (~150 lines)
+  - Added mandatory pre-push procedure (fetch, pull, resolve conflicts, test, push)
+  - Comprehensive push requirements checklist with do's and don'ts
+  - Detailed merge conflict resolution guide (7-step process)
+  - Common conflict scenarios with solutions (3 scenarios)
+  - Network failure retry logic with exponential backoff
+  - Emergency procedures for permission errors (HTTP 403)
+  - Best practices for pulling, committing, and merging
+- **Updated Typical Development Session workflow**
+  - Added Step 10: Pull latest changes before push (CRITICAL)
+  - Included merge conflict resolution steps
+  - Added retry logic guidance for network failures
+  - Step-by-step instructions for handling conflicts
+- **Impact**:
+  - Prevents rejected pushes due to remote changes
+  - Reduces merge conflicts through proactive pulling
+  - Ensures code is always tested after merges
+  - Provides clear guidance for resolving conflicts
+  - Establishes retry logic for transient network failures
+  - Aligns with Git best practices and team collaboration workflows
+- **Total additions**: ~165 lines of git push and merge conflict guidance
+
+### 2025-11-20 (Sprint 2 Skills - 5 New Skills Added)
+- **Created 5 critical Claude Skills** (~39K lines total)
+  1. **integration-test-debugger.md** (13K) - Systematic debugging of hanging, timeout, and failing integration tests
+  2. **database-migration-helper.md** (11K) - Entity Framework Core migrations for PostgreSQL with rollback procedures
+  3. **security-hardening.md** (6K) - Secret rotation, OWASP Top 10 compliance, production security checklist
+  4. **api-endpoint-builder.md** (4K) - REST API controller scaffolding with CRUD operations
+  5. **performance-optimizer.md** (5K) - Load testing, profiling, and optimization patterns with k6 and dotnet-trace
+- **Updated SKILLS.md** (+300 lines)
+  - Added new category: Security & Compliance Skills
+  - Updated skills table: 13 → 18 skills
+  - Updated total size: ~10,100 → ~12,000+ lines
+  - Comprehensive documentation for all 5 new skills
+  - Updated statistics and changelog
+- **Updated CLAUDE.md** (this file)
+  - Updated project structure to list all 18 skills
+  - Updated skill count: 8 → 18 skills
+  - Updated total size: ~3,900 → ~12,000+ lines
+- **Impact**:
+  - Unblocks Task #23 (ApprovalWorkflow hanging tests), Task #24 (slow deployment tests), Task #22 (multi-tenant 404s)
+  - Completes Task #3 (PostgreSQL audit log persistence to 100%)
+  - Addresses Task #16 (Secret Rotation) and Task #17 (OWASP Review)
+  - Enables Task #22 (Multi-tenant API endpoints)
+  - Facilitates Task #8 (Load Testing and Performance Benchmarks)
+  - Covers all critical Sprint 2 gaps identified in skills analysis
+- **Total Skill Count:** 18 skills, ~12,000+ lines of comprehensive guidance
+
+### 2025-11-19 (Sprint Planner Skill Addition)
+- **Created sprint-planner skill** (~23K, 900+ lines)
+  - Comprehensive 7-phase sprint planning process
+  - Task discovery, effort estimation, dependency mapping
+  - Workload balancing across N team members
+  - Sprint goals with SMART criteria
+  - Risk analysis and mitigation strategies
+  - Real-world example: TASK_DELEGATION_ANALYSIS.md (17 tasks → 3 balanced workstreams)
+- **Updated SKILLS.md** (+130 lines)
+  - Added Project Management Skills section
+  - Updated skills table: 12 → 13 skills (including 5 project discipline skills)
+  - Updated total size: ~2,800 → ~3,900 lines
+  - Added sprint-planner to decision tree
+  - Comprehensive documentation with usage examples
+- **Updated README.md**
+  - Added sprint-planner to skills table
+  - Updated skill count and total lines
+- **Updated CLAUDE.md**
+  - Updated project structure with sprint-planner.md
+  - Updated skill count references (3 locations)
+  - Updated statistics throughout
+- **Impact**:
+  - Enables systematic sprint planning with task delegation
+  - Prevents over-commitment through capacity planning
+  - Identifies bottlenecks via critical path analysis
+  - Provides 45-90 minute ROI (saves days/weeks of poor planning)
+  - Supports multi-team coordination and workload balancing
+- **Total Skill Count:** 13 skills at this point (5 project discipline + 1 project mgmt + 7 development skills)
+
 ### 2025-11-19 (Claude Skills Documentation and Integration)
-- **Created SKILLS.md** (~970 lines)
-  - Comprehensive documentation for all 7 Claude Skills
+- **Created SKILLS.md** (~1,100 lines)
+  - Comprehensive documentation for all 13 Claude Skills (including 5 project discipline skills added same day)
   - Quick reference table by category
   - Decision tree for skill selection
-  - Detailed descriptions for each skill (dotnet-setup, tdd-helper, precommit-check, test-coverage-analyzer, race-condition-debugger, doc-sync-check, docker-helper)
-  - Typical workflows (daily development, feature completion, bug fix, Docker update, monthly maintenance)
+  - Detailed descriptions for each skill (sprint-planner, dotnet-setup, tdd-helper, precommit-check, test-coverage-analyzer, race-condition-debugger, doc-sync-check, docker-helper)
+  - Typical workflows (daily development, feature completion, bug fix, Docker update, monthly maintenance, sprint planning)
   - How to use skills (slash commands, Claude Code tool, manual execution)
   - Creating new skills (template and best practices)
-  - Statistics: 7 skills, ~2,800 lines total
+  - Statistics: 8 skills, ~3,900 lines total
 - **Updated CLAUDE.md to reference skills** (~10 locations)
   - Added .claude/skills/ directory to Project Structure
   - Added SKILLS.md to file list
@@ -3231,7 +3479,7 @@ docker-compose --version
   - Skills are now fully documented and discoverable
   - Clear guidance on which skill to use for each task
   - Integrated into existing workflows throughout CLAUDE.md
-  - Provides ~2,800 lines of automated workflow guidance
+  - Provides ~3,900 lines of automated workflow guidance
   - Reduces cognitive load by automating complex tasks
 
 ### 2025-11-17 (Docker Documentation and Maintenance Guidelines)

@@ -1,0 +1,48 @@
+#!/bin/bash
+# Pre-push hook for HotSwap Distributed Kernel
+# Additional validation before pushing to remote
+#
+# To install: run .githooks/install-hooks.sh
+# To bypass: use git push --no-verify (NOT recommended)
+
+set -e
+
+echo "🚀 Running pre-push checks..."
+
+# Get current branch name
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Check if branch follows claude/* naming convention
+if [[ ! "$BRANCH" =~ ^claude/ ]]; then
+    echo "⚠️  Warning: Branch '$BRANCH' does not follow 'claude/*' convention."
+    echo "   Recommended: Use 'claude/[task-name]-[session-id]' format."
+fi
+
+# Check for uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+    echo "❌ You have uncommitted changes. Commit or stash them before pushing."
+    git status --short
+    exit 1
+fi
+
+# Verify tests still pass (quick sanity check)
+echo "🧪 Running quick test sanity check..."
+if ! dotnet test --verbosity quiet > /dev/null 2>&1; then
+    echo "❌ Tests are failing. Fix tests before pushing."
+    exit 1
+fi
+
+# Check if pushing to main/master without permission
+REMOTE="$1"
+URL="$2"
+
+while read local_ref local_sha remote_ref remote_sha; do
+    if [[ "$remote_ref" =~ (refs/heads/main|refs/heads/master) ]]; then
+        echo "❌ Direct push to main/master is not allowed."
+        echo "   Please create a pull request instead."
+        exit 1
+    fi
+done
+
+echo "✅ All pre-push checks passed!"
+exit 0

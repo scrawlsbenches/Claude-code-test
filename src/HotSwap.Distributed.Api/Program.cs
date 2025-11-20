@@ -1,4 +1,5 @@
 using System.Text;
+using HotSwap.Distributed.Api.Hubs;
 using HotSwap.Distributed.Api.Middleware;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
@@ -23,7 +24,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -171,33 +171,9 @@ builder.Services.AddSingleton(jwtConfig);
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 
-// Register messaging services
+// Register messaging services (in-memory implementations)
 builder.Services.AddSingleton<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessageQueue>();
-
-// Only register Redis-based message persistence if Redis is configured
-if (!string.IsNullOrEmpty(builder.Configuration["Redis:ConnectionString"]))
-{
-    builder.Services.AddSingleton<IMessagePersistence>(sp =>
-    {
-        try
-        {
-            var redis = sp.GetRequiredService<IConnectionMultiplexer>();
-            return new HotSwap.Distributed.Infrastructure.Messaging.RedisMessagePersistence(redis);
-        }
-        catch (Exception ex)
-        {
-            var logger = sp.GetRequiredService<ILogger<Program>>();
-            logger.LogWarning("Redis not available for message persistence, using in-memory fallback. Error: {Error}", ex.Message);
-            // Fallback to in-memory (messages won't persist, but app will work)
-            return new HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessagePersistence();
-        }
-    });
-}
-else
-{
-    // No Redis configured, use in-memory persistence
-    builder.Services.AddSingleton<IMessagePersistence, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessagePersistence>();
-}
+builder.Services.AddSingleton<IMessagePersistence, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessagePersistence>();
 
 // Configure JWT authentication
 builder.Services.AddAuthentication(options =>
@@ -245,48 +221,8 @@ builder.Services.AddSingleton<IModuleVerifier>(sp =>
     return new ModuleVerifier(logger, strictMode);
 });
 
-// Register Redis if configured
-var redisConnection = builder.Configuration["Redis:ConnectionString"];
-if (!string.IsNullOrEmpty(redisConnection))
-{
-    builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-    {
-        var logger = sp.GetRequiredService<ILogger<Program>>();
-
-        // Retry logic with exponential backoff for Redis connection
-        var maxRetries = 3;
-        var baseDelay = TimeSpan.FromSeconds(1);
-
-        for (int attempt = 0; attempt < maxRetries; attempt++)
-        {
-            try
-            {
-                logger.LogInformation("Attempting to connect to Redis (attempt {Attempt}/{MaxRetries})", attempt + 1, maxRetries);
-                var connection = ConnectionMultiplexer.Connect(redisConnection);
-                logger.LogInformation("Successfully connected to Redis");
-                return connection;
-            }
-            catch (Exception ex) when (attempt < maxRetries - 1)
-            {
-                var delay = baseDelay * Math.Pow(2, attempt); // Exponential backoff: 1s, 2s, 4s
-                logger.LogWarning("Failed to connect to Redis (attempt {Attempt}/{MaxRetries}). Retrying in {Delay}s. Error: {Error}",
-                    attempt + 1, maxRetries, delay.TotalSeconds, ex.Message);
-                Thread.Sleep(delay);
-            }
-            catch (Exception ex)
-            {
-                // Final attempt failed - log once and return null
-                logger.LogError("Failed to connect to Redis after {MaxRetries} attempts. Redis features will be unavailable. Error: {Error}",
-                    maxRetries, ex.Message);
-                throw; // Let DI handle the failure
-            }
-        }
-
-        throw new InvalidOperationException("Failed to connect to Redis after retries");
-    });
-
-    builder.Services.AddSingleton<IDistributedLock, RedisDistributedLock>();
-}
+// Register distributed lock (in-memory implementation)
+builder.Services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
 
 // Register pipeline configuration
 builder.Services.AddSingleton(sp =>
@@ -316,12 +252,19 @@ else
 // Register deployment tracking service
 builder.Services.AddSingleton<IDeploymentTracker, InMemoryDeploymentTracker>();
 
+// Register deployment notification service
+builder.Services.AddSingleton<IDeploymentNotifier, SignalRDeploymentNotifier>();
+
 // Register tenant services
 builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
 builder.Services.AddSingleton<ITenantProvisioningService, TenantProvisioningService>();
 
 // Register rate limit cleanup service
 builder.Services.AddHostedService<RateLimitCleanupService>();
+
+// Register secret management services
+builder.Services.AddSingleton<ISecretService, HotSwap.Distributed.Infrastructure.SecretManagement.InMemorySecretService>();
+builder.Services.AddHostedService<SecretRotationBackgroundService>();
 
 // Note: Orchestrator initialization now happens synchronously after app.Build()
 // to ensure it's ready before accepting requests (removed background service)
@@ -358,6 +301,16 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
 
 // Add health checks
 builder.Services.AddHealthChecks();
+
+// Configure SignalR for real-time deployment updates
+builder.Services.AddSignalR(options =>
+{
+    // Configure SignalR options
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.MaximumReceiveMessageSize = 32 * 1024; // 32 KB per message
+});
 
 // Register middleware configurations
 builder.Services.AddSingleton(sp =>
@@ -463,7 +416,10 @@ app.UseAuthorization();
 // 10. Map controllers
 app.MapControllers();
 
-// 11. Health check endpoint
+// 11. Map SignalR hub for real-time deployment updates
+app.MapHub<DeploymentHub>("/hubs/deployment");
+
+// 12. Health check endpoint
 app.MapHealthChecks("/health");
 
 // Graceful shutdown

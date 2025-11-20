@@ -385,7 +385,7 @@ public class InMemoryUserRepositoryTests
     }
 
     [Fact]
-    public async Task IsLockedOut_WithExpiredLockout_ShouldReturnFalse()
+    public void IsLockedOut_WithExpiredLockout_ShouldReturnFalse()
     {
         // Arrange
         var user = new User
@@ -402,7 +402,7 @@ public class InMemoryUserRepositoryTests
     }
 
     [Fact]
-    public async Task IsLockedOut_WithActiveLockout_ShouldReturnTrue()
+    public void IsLockedOut_WithActiveLockout_ShouldReturnTrue()
     {
         // Arrange
         var user = new User
@@ -419,7 +419,7 @@ public class InMemoryUserRepositoryTests
     }
 
     [Fact]
-    public async Task IsLockedOut_WithNoLockout_ShouldReturnFalse()
+    public void IsLockedOut_WithNoLockout_ShouldReturnFalse()
     {
         // Arrange
         var user = new User

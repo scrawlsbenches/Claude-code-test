@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using StackExchange.Redis;
 
 namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 
@@ -75,7 +74,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 ["Pipeline:CanaryIncrementPercentage"] = "50", // Faster rollout: 50% increments vs 20% production
                 ["Pipeline:CanaryWaitDuration"] = "00:00:05", // 5 SECONDS (vs 15 MINUTES production) - CRITICAL
                 ["Pipeline:AutoRollbackOnFailure"] = "true",
-                ["Pipeline:ApprovalTimeoutHours"] = "1", // 1 hour for integration tests (vs 24 hours production)
+                ["Pipeline:ApprovalTimeout"] = "00:00:10", // 10 SECONDS for integration tests (vs 24 hours production)
 
                 // Reduce logging verbosity for integration tests
                 // Only log warnings and errors to avoid 27k+ log lines
@@ -110,14 +109,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 options.UseSqlite(_sqliteConnection);
             });
 
-            // Replace Redis with MemoryDistributedCache for in-memory distributed locking
-            // Remove any existing IConnectionMultiplexer registrations
-            var redisDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IConnectionMultiplexer));
-            if (redisDescriptor != null)
-            {
-                services.Remove(redisDescriptor);
-            }
-
+            // Replace any existing IDistributedCache registrations with in-memory implementation
             // Remove any existing IDistributedCache registrations
             var cacheDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Microsoft.Extensions.Caching.Distributed.IDistributedCache));
             if (cacheDescriptor != null)

@@ -639,7 +639,7 @@ POST   /api/v1/schemas/{id}/approve   - Admin only
 - Optional end-to-end encryption
 - Payload encrypted before publish
 - Consumer decrypts after consume
-- Keys managed via Azure Key Vault / HashiCorp Vault
+- Keys managed via HashiCorp Vault (self-hosted) or Kubernetes Secrets with encryption-at-rest
 
 ### Rate Limiting
 
@@ -862,7 +862,7 @@ Producer → Master Broker → Replica 1
 
 ### External Services
 
-1. **Azure Key Vault** / **HashiCorp Vault** - Secret management
+1. **HashiCorp Vault (self-hosted)** / **Kubernetes Secrets** - Secret management
 2. **SMTP Server** - Email notifications (approval workflow)
 3. **Webhook Endpoints** - Push-based message delivery
 

@@ -10,94 +10,116 @@ database replication, backups, and API gateway capabilities.
 ### Architecture
 
 ```
-User Request → CloudFront/Cloudflare → Origin (S3 + API)
-                                     ↓
-                              Cache Hit/Miss
-                                     ↓
-                          S3 (Static Assets) / API (Dynamic Content)
+User Request → Nginx/Varnish Cache → Origin (MinIO + API)
+                                   ↓
+                            Cache Hit/Miss
+                                   ↓
+                       MinIO (Static Assets) / API (Dynamic Content)
 ```
 
 ### Implementation Strategy
 
-#### CloudFront Configuration
+#### Nginx Caching Proxy Configuration
 
-```yaml
-# terraform/cloudfront.tf
-resource "aws_cloudfront_distribution" "tenant_cdn" {
-  enabled = true
+```nginx
+# /etc/nginx/conf.d/cdn-cache.conf
 
-  origin {
-    domain_name = "${aws_s3_bucket.tenant_assets.bucket_regional_domain_name}"
-    origin_id   = "S3-tenant-assets"
+# Define cache zones
+proxy_cache_path /var/cache/nginx/static levels=1:2 keys_zone=static_cache:100m max_size=10g inactive=7d use_temp_path=off;
+proxy_cache_path /var/cache/nginx/media levels=1:2 keys_zone=media_cache:100m max_size=50g inactive=30d use_temp_path=off;
 
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.tenant.id
-    }
-  }
+upstream minio_backend {
+    server minio.example.com:9000;
+}
 
-  origin {
-    domain_name = "${var.api_domain}"
-    origin_id   = "API-origin"
+upstream api_backend {
+    server api.example.com:5000;
+}
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-    }
-  }
+server {
+    listen 80;
+    listen 443 ssl http2;
+    server_name cdn.example.com;
 
-  default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-tenant-assets"
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
 
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
+    # Redirect HTTP to HTTPS
+    if ($scheme != "https") {
+        return 301 https://$host$request_uri;
     }
 
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-  }
+    # Static assets from MinIO
+    location /assets/ {
+        proxy_pass https://minio_backend/tenant-assets/;
+        proxy_cache static_cache;
+        proxy_cache_valid 200 1y;
+        proxy_cache_valid 404 10m;
+        proxy_cache_key "$scheme$request_method$host$request_uri";
+        add_header X-Cache-Status $upstream_cache_status;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Media files from MinIO
+    location /media/ {
+        proxy_pass https://minio_backend/tenant-media/;
+        proxy_cache media_cache;
+        proxy_cache_valid 200 30d;
+        proxy_cache_valid 404 10m;
+        add_header X-Cache-Status $upstream_cache_status;
+        add_header Cache-Control "public, max-age=2592000";
+    }
+
+    # API requests (no caching)
+    location /api/ {
+        proxy_pass https://api_backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+    }
 }
 ```
 
 #### Cache Invalidation Service
 
 ```csharp
-public interface ICdnInvalidationService
+public interface ICacheInvalidationService
 {
     Task InvalidateCacheAsync(Guid websiteId, List<string> paths);
 }
 
-public class CloudFrontInvalidationService : ICdnInvalidationService
+public class NginxCacheInvalidationService : ICacheInvalidationService
 {
-    private readonly IAmazonCloudFront _cloudFront;
-    private readonly ILogger<CloudFrontInvalidationService> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<NginxCacheInvalidationService> _logger;
+    private readonly string _nginxPurgeEndpoint;
 
     public async Task InvalidateCacheAsync(Guid websiteId, List<string> paths)
     {
-        _logger.LogInformation("Invalidating CDN cache for website {WebsiteId}", websiteId);
+        _logger.LogInformation("Invalidating Nginx cache for website {WebsiteId}", websiteId);
 
-        var request = new CreateInvalidationRequest
+        var httpClient = _httpClientFactory.CreateClient();
+
+        // Option 1: Use nginx_cache_purge module
+        // Send PURGE requests to Nginx with special header
+        foreach (var path in paths)
         {
-            DistributionId = GetDistributionId(websiteId),
-            InvalidationBatch = new InvalidationBatch
-            {
-                Paths = new Paths
-                {
-                    Quantity = paths.Count,
-                    Items = paths
-                },
-                CallerReference = Guid.NewGuid().ToString()
-            }
-        };
+            var purgeUrl = $"{_nginxPurgeEndpoint}{path}";
+            var request = new HttpRequestMessage(new HttpMethod("PURGE"), purgeUrl);
+            await httpClient.SendAsync(request);
+        }
 
-        await _cloudFront.CreateInvalidationAsync(request);
+        // Option 2: Delete cache files directly from filesystem
+        // var cacheDir = "/var/cache/nginx/static";
+        // foreach (var path in paths)
+        // {
+        //     var cacheKey = GenerateCacheKey(path);
+        //     var cacheFile = Path.Combine(cacheDir, cacheKey);
+        //     if (File.Exists(cacheFile))
+        //         File.Delete(cacheFile);
+        // }
     }
 }
 ```
@@ -183,7 +205,8 @@ public class DatabaseConnectionFactory
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/backups"
-S3_BUCKET="s3://platform-backups"
+MINIO_BUCKET="platform-backups"
+MINIO_ALIAS="minio-prod"
 
 # Full database backup
 pg_dump -h localhost -U postgres -Fc platform_db > "${BACKUP_DIR}/platform_${TIMESTAMP}.dump"
@@ -193,8 +216,9 @@ for schema in $(psql -h localhost -U postgres -t -c "SELECT nspname FROM pg_name
   pg_dump -h localhost -U postgres -n $schema -Fc platform_db > "${BACKUP_DIR}/${schema}_${TIMESTAMP}.dump"
 done
 
-# Upload to S3
-aws s3 sync ${BACKUP_DIR} ${S3_BUCKET}/$(date +%Y/%m/%d)/
+# Upload to MinIO using mc (MinIO client)
+# Configure MinIO alias: mc alias set minio-prod https://minio.example.com:9000 ACCESS_KEY SECRET_KEY
+mc mirror ${BACKUP_DIR} ${MINIO_ALIAS}/${MINIO_BUCKET}/$(date +%Y/%m/%d)/
 
 # Cleanup old backups (30 days retention)
 find ${BACKUP_DIR} -name "*.dump" -mtime +30 -delete
@@ -382,9 +406,9 @@ public class MetricsCollector
 
 All advanced features are architected and documented. Implementation requires:
 
-1. **CDN Integration**: AWS CloudFront or Cloudflare setup
+1. **CDN Integration**: Nginx or Varnish caching proxy setup
 2. **Database Replication**: PostgreSQL streaming replication
-3. **Backup Automation**: Cron jobs + S3 storage
+3. **Backup Automation**: Cron jobs + MinIO object storage
 4. **Rate Limiting**: Redis-based implementation
 5. **API Gateway**: Custom middleware or Kong/Tyk
 6. **Monitoring**: Grafana + Prometheus deployment
