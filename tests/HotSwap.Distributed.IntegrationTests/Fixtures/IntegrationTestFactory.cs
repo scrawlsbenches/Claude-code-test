@@ -145,6 +145,15 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
             // Add deterministic metrics provider for consistent test behavior
             services.AddSingleton<IMetricsProvider, DeterministicMetricsProvider>();
 
+            // Replace SignalRDeploymentNotifier with no-op implementation for tests
+            // SignalR notifications can block pipeline execution in test environment
+            var notifierDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IDeploymentNotifier));
+            if (notifierDescriptor != null)
+            {
+                services.Remove(notifierDescriptor);
+            }
+            services.AddSingleton<IDeploymentNotifier, NoOpDeploymentNotifier>();
+
             // Configure MemoryCache with larger size limit for integration tests
             // Default MemoryCache can evict entries under memory pressure, causing deployment results
             // to disappear before rollback tests can access them
