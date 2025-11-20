@@ -15,7 +15,7 @@ This document provides comprehensive guidance for AI assistants working with thi
 **Status**: Production Ready (95% Specification Compliance)
 **Build Status**: ✅ Passing (582 tests: 568 passing, 14 skipped)
 **Test Coverage**: 85%+
-**Last Updated**: November 19, 2025
+**Last Updated**: November 20, 2025
 
 ### Project Structure
 
@@ -951,7 +951,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0@sha256:[digest-here]
 #### Typical Development Session
 
 ```bash
-# 1. Pull latest changes
+# 1. Pull latest changes from main
 git pull origin main
 
 # 2. Create feature branch
@@ -979,8 +979,24 @@ dotnet test
 git add .
 git commit -m "feat: your feature description"
 
-# 10. Push to remote
+# 10. Pull latest changes and resolve conflicts (CRITICAL)
+git fetch origin claude/your-feature-name-sessionid
+git pull origin claude/your-feature-name-sessionid --no-rebase
+
+# If merge conflicts occur:
+# - Fix conflicts in affected files
+# - git add <resolved-files>
+# - git commit -m "merge: resolve conflicts with remote changes"
+# - Rebuild and retest: dotnet build && dotnet test
+
+# 11. Push to remote with retry logic
 git push -u origin claude/your-feature-name-sessionid
+
+# If push fails with network error, retry with exponential backoff:
+# Wait 2s, retry
+# Wait 4s, retry
+# Wait 8s, retry
+# Wait 16s, retry (final attempt)
 ```
 
 ### Troubleshooting Setup Issues
@@ -1642,10 +1658,153 @@ dotnet test
 ```
 
 ### Git Push Requirements
-- **ALWAYS** use `git push -u origin <branch-name>`
-- Branch MUST start with `claude/` and end with session ID
-- Retry up to 4 times with exponential backoff (2s, 4s, 8s, 16s) on network errors
-- Never force push to main/master
+
+**⚠️ CRITICAL: Always pull before push to avoid conflicts**
+
+#### Pre-Push Procedure (MANDATORY)
+
+**Before EVERY `git push`, follow these steps:**
+
+```bash
+# Step 1: Fetch latest changes from remote
+git fetch origin <branch-name>
+
+# Step 2: Pull and merge remote changes
+git pull origin <branch-name> --no-rebase
+
+# Step 3: If merge conflicts occur, resolve them (see below)
+# Step 4: After resolving conflicts, rebuild and test
+dotnet build && dotnet test
+
+# Step 5: Only then push to remote
+git push -u origin <branch-name>
+```
+
+#### Push Requirements Checklist
+
+- ✅ **ALWAYS pull before push** - Prevents merge conflicts and rejected pushes
+- ✅ **ALWAYS use** `git push -u origin <branch-name>` - Sets upstream tracking
+- ✅ **Branch MUST start with** `claude/` and end with session ID - Required for permission
+- ✅ **Rebuild and test after merges** - Ensures merged code still works
+- ✅ **Retry on network errors** - Up to 4 times with exponential backoff (2s, 4s, 8s, 16s)
+- ❌ **NEVER force push to main/master** - Destroys history and breaks collaboration
+- ❌ **NEVER push without pulling first** - Causes conflicts and wasted time
+
+#### Handling Merge Conflicts
+
+**When `git pull` reports conflicts:**
+
+```bash
+# Step 1: Identify conflicted files
+git status
+# Look for "both modified:" entries
+
+# Step 2: Open each conflicted file and look for conflict markers
+# <<<<<<< HEAD
+# Your changes
+# =======
+# Remote changes
+# >>>>>>> branch-name
+
+# Step 3: Resolve conflicts by:
+# - Keeping your changes, OR
+# - Keeping remote changes, OR
+# - Combining both (most common)
+# - Remove conflict markers (<<<<<<, =======, >>>>>>>)
+
+# Step 4: Stage resolved files
+git add <resolved-file-1> <resolved-file-2>
+
+# Step 5: Complete the merge
+git commit -m "merge: resolve conflicts with remote changes"
+
+# Step 6: CRITICAL - Rebuild and test after merge
+dotnet clean
+dotnet restore
+dotnet build --no-incremental
+dotnet test
+
+# Step 7: Only if build and tests pass, push
+git push -u origin <branch-name>
+```
+
+#### Common Conflict Scenarios
+
+**Scenario 1: Remote has new commits**
+```bash
+# Your push is rejected: "Updates were rejected because the remote contains work..."
+# Solution: Pull, merge, test, push
+git pull origin <branch-name> --no-rebase
+dotnet build && dotnet test
+git push -u origin <branch-name>
+```
+
+**Scenario 2: Conflicting changes in same file**
+```bash
+# git pull reports: "CONFLICT (content): Merge conflict in src/File.cs"
+# Solution: Resolve conflicts manually
+git status  # See conflicted files
+# Edit files to resolve conflicts
+git add src/File.cs
+git commit -m "merge: resolve conflicts in File.cs"
+dotnet build && dotnet test
+git push -u origin <branch-name>
+```
+
+**Scenario 3: Network failure during push**
+```bash
+# Push fails with: "fatal: unable to access... Could not resolve host"
+# Solution: Retry with exponential backoff
+
+# Attempt 1
+git push -u origin <branch-name>
+# If fails, wait 2 seconds
+
+# Attempt 2
+sleep 2
+git push -u origin <branch-name>
+# If fails, wait 4 seconds
+
+# Attempt 3
+sleep 4
+git push -u origin <branch-name>
+# If fails, wait 8 seconds
+
+# Attempt 4
+sleep 8
+git push -u origin <branch-name>
+# If fails, wait 16 seconds
+
+# Attempt 5 (final)
+sleep 16
+git push -u origin <branch-name>
+# If still fails, report network issue to user
+```
+
+#### Emergency: When Push is Blocked
+
+**If push fails with permission error (HTTP 403):**
+
+```bash
+# Error: "remote: Permission to repository denied"
+# Check: Branch name MUST match pattern: claude/*-<session-id>
+
+# ❌ WRONG: claude/my-feature (missing session ID)
+# ✅ CORRECT: claude/my-feature-01HQxN4hS7696T2bepqRT3VW
+
+# Solution: Create correctly named branch
+git checkout -b claude/my-feature-<session-id>
+git cherry-pick <commit-hash>  # Move commits to new branch
+git push -u origin claude/my-feature-<session-id>
+```
+
+#### Best Practices
+
+1. **Pull frequently** - Before starting work, after breaks, before pushing
+2. **Commit small, push often** - Smaller commits = easier conflict resolution
+3. **Test after every merge** - Merged code may break tests even if no conflicts
+4. **Never ignore conflicts** - Always resolve properly, never force push
+5. **Document complex merges** - Add details to merge commit message
 
 ## AI Assistant Guidelines
 
@@ -3214,6 +3373,29 @@ docker-compose --version
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-20 (Git Push Procedure Enhancement)
+- **Enhanced Git Push Requirements section** (~150 lines)
+  - Added mandatory pre-push procedure (fetch, pull, resolve conflicts, test, push)
+  - Comprehensive push requirements checklist with do's and don'ts
+  - Detailed merge conflict resolution guide (7-step process)
+  - Common conflict scenarios with solutions (3 scenarios)
+  - Network failure retry logic with exponential backoff
+  - Emergency procedures for permission errors (HTTP 403)
+  - Best practices for pulling, committing, and merging
+- **Updated Typical Development Session workflow**
+  - Added Step 10: Pull latest changes before push (CRITICAL)
+  - Included merge conflict resolution steps
+  - Added retry logic guidance for network failures
+  - Step-by-step instructions for handling conflicts
+- **Impact**:
+  - Prevents rejected pushes due to remote changes
+  - Reduces merge conflicts through proactive pulling
+  - Ensures code is always tested after merges
+  - Provides clear guidance for resolving conflicts
+  - Establishes retry logic for transient network failures
+  - Aligns with Git best practices and team collaboration workflows
+- **Total additions**: ~165 lines of git push and merge conflict guidance
 
 ### 2025-11-20 (Sprint 2 Skills - 5 New Skills Added)
 - **Created 5 critical Claude Skills** (~39K lines total)
