@@ -711,8 +711,8 @@ This task has been broken down into 8 smaller, manageable sub-tasks (16.1 - 16.8
 ---
 
 #### 16.2 Implement VaultSecretService with HashiCorp Vault SDK
-**Status:** ⚠️ **Partial** (2025-11-20)
-**Effort:** 1 day (In Progress - 0.5 days)
+**Status:** ⚠️ **Partial** (2025-11-20) - **Vault Verified Working, API Updates Needed**
+**Effort:** 1 day (In Progress - 0.75 days)
 **Dependencies:** Task 16.1
 **Description:** Implement HashiCorp Vault integration using VaultSharp .NET SDK for secret storage and retrieval.
 
@@ -721,7 +721,8 @@ This task has been broken down into 8 smaller, manageable sub-tasks (16.1 - 16.8
 - [x] Add Polly NuGet package for retry logic (v8.6.4)
 - [x] Create VaultConfiguration model
 - [x] Implement `InMemorySecretService : ISecretService` (complete, working)
-- [ ] Implement `VaultSecretService : ISecretService` (WIP, needs Vault API corrections)
+- [x] Verify HashiCorp Vault runs in this environment (✅ Confirmed working)
+- [ ] Implement `VaultSecretService : ISecretService` (WIP, API compatibility fixes needed)
 - [x] Configure Vault connection (URL, token, namespace, auth methods)
 - [x] Add retry logic and error handling (Polly integration)
 
@@ -730,22 +731,34 @@ This task has been broken down into 8 smaller, manageable sub-tasks (16.1 - 16.8
   - Complete ISecretService implementation
   - Supports versioning, rotation, expiration tracking
   - Thread-safe using ConcurrentDictionary
+  - Production warning logged when used
   - Build: ✅ Clean (0 errors, 0 warnings)
 
-- ⚠️ **VaultSecretService**: Partial implementation (saved as `.wip`)
-  - Comprehensive implementation with all ISecretService methods
-  - **Blockers**: VaultSharp API methods differ from documentation
-  - Needs: Access to actual Vault instance for API verification
-  - Requires: Correction of method signatures and parameter names
+- ✅ **Vault Environment Verified**: HashiCorp Vault confirmed working
+  - Downloaded and tested Vault v1.15.4 binary
+  - Dev mode starts successfully on http://127.0.0.1:8200
+  - API responds to health checks and authentication
+  - Ready for VaultSecretService testing once API fixed
+
+- ⚠️ **VaultSecretService**: Architecture complete, API compatibility pending (saved as `.wip`)
+  - Comprehensive 654-line implementation with all 9 ISecretService methods
+  - **API Incompatibilities Identified** (VaultSharp 1.17.5.1):
+    1. `VaultApiException` - Namespace/type not found (5 locations)
+    2. `ReadSecretVersionAsync` - Method doesn't exist in IKeyValueSecretsEngineV2
+    3. `result.Data.CreatedTime` - Already DateTime, not string (type mismatch)
+    4. `WriteSecretMetadataAsync` - Parameter name mismatch (`customMetadata` vs actual API)
+  - **Documentation**: Created `VAULT_API_NOTES.md` with detailed fix instructions
+  - **Integration Tests**: 10-test suite written (skipped until API fixed)
 
 - ✅ **VaultConfiguration**: Complete with multiple auth methods (Token, AppRole, Kubernetes, UserPass)
 - ✅ **Dependencies**: VaultSharp 1.17.5.1 and Polly 8.6.4 added successfully
 
 **Next Steps for Full Completion:**
-1. Set up HashiCorp Vault test instance
-2. Verify VaultSharp SDK API methods against actual Vault
-3. Complete VaultSecretService implementation
-4. Add integration tests with Vault
+1. ~~Set up HashiCorp Vault test instance~~ ✅ Done - Vault binary works
+2. Fix VaultSharp API compatibility issues (see `VAULT_API_NOTES.md`)
+3. Rename `VaultSecretService.cs.wip` to `.cs` after fixes
+4. Run integration tests against live Vault instance
+5. Document production deployment with Vault
 
 ---
 
