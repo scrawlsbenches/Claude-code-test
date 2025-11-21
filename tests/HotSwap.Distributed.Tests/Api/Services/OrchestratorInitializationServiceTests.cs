@@ -1,11 +1,6 @@
 using FluentAssertions;
 using HotSwap.Distributed.Api.Services;
-using HotSwap.Distributed.Domain.Models;
-using HotSwap.Distributed.Infrastructure.Deployments;
-using HotSwap.Distributed.Infrastructure.Interfaces;
-using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Orchestrator.Core;
-using HotSwap.Distributed.Orchestrator.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -33,13 +28,7 @@ public class OrchestratorInitializationServiceTests
         _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(
             mockLogger.Object,
             mockLoggerFactory.Object,
-            default(IMetricsProvider)!,
-            default(IModuleVerifier)!,
-            default(TelemetryProvider)!,
-            default(PipelineConfiguration)!,
-            default(IDeploymentTracker)!,
-            default(IApprovalService)!,
-            default(IAuditLogService)!);
+            null!, null!, null!, null!, null!, null!, null!);
 
         _mockServiceScope = new Mock<IServiceScope>();
         _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
@@ -141,7 +130,7 @@ public class OrchestratorInitializationServiceTests
         // Arrange
         var scopeServiceProvider = new Mock<IServiceProvider>();
         scopeServiceProvider.Setup(x => x.GetService(typeof(DistributedKernelOrchestrator)))
-            .Returns(default(DistributedKernelOrchestrator)!);
+            .Returns(null!);
 
         var mockScope = new Mock<IServiceScope>();
         mockScope.Setup(x => x.ServiceProvider).Returns(scopeServiceProvider.Object);
