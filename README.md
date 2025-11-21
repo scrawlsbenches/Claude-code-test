@@ -85,14 +85,32 @@ dotnet restore
 # Build solution
 dotnet build
 
-# Run tests
+# Run tests (standard - ~3 minutes)
 dotnet test
+
+# ⚡ Run tests FAST (60% faster - ~1.5 minutes)
+./test-fast.sh
 
 # Run API
 dotnet run --project src/HotSwap.Distributed.Api
 
 # API available at http://localhost:5000
 ```
+
+### ⚡ Performance Tip
+
+Tests run **60% faster** with optimized logging configuration:
+
+```bash
+# Fast tests (recommended for development)
+./test-fast.sh
+
+# Or manually
+export DOTNET_ENVIRONMENT=Test
+dotnet test
+```
+
+**Why?** Debug logging to console is slow. Test environment uses Warning/Error only, reducing test time from ~3 minutes to ~1.5 minutes. See [BUILD_PERFORMANCE_ANALYSIS.md](BUILD_PERFORMANCE_ANALYSIS.md) for details.
 
 ---
 
