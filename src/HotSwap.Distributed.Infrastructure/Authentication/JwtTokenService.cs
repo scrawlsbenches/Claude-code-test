@@ -82,7 +82,7 @@ public class JwtTokenService : IJwtTokenService
             var currentSecretVersion = _secretService.GetSecretAsync(JWT_SIGNING_KEY_ID, CancellationToken.None)
                 .GetAwaiter().GetResult();
 
-            if (string.IsNullOrWhiteSpace(currentSecretVersion.Value) || currentSecretVersion.Value.Length < 32)
+            if (currentSecretVersion == null || string.IsNullOrWhiteSpace(currentSecretVersion.Value) || currentSecretVersion.Value.Length < 32)
             {
                 throw new InvalidOperationException($"JWT signing key '{JWT_SIGNING_KEY_ID}' must be at least 32 characters long");
             }
@@ -96,7 +96,7 @@ public class JwtTokenService : IJwtTokenService
             var validationKeys = new List<SymmetricSecurityKey> { _currentSigningKey };
 
             // If in rotation window, also add previous version for validation
-            if (metadata.IsInRotationWindow && metadata.CurrentVersion > 1)
+            if (metadata != null && metadata.IsInRotationWindow && metadata.CurrentVersion > 1)
             {
                 _logger.LogInformation("JWT signing key is in rotation window - loading previous key version {PreviousVersion} for validation",
                     metadata.CurrentVersion - 1);
@@ -107,7 +107,7 @@ public class JwtTokenService : IJwtTokenService
                         CancellationToken.None)
                     .GetAwaiter().GetResult();
 
-                if (!string.IsNullOrWhiteSpace(previousSecretVersion.Value) && previousSecretVersion.Value.Length >= 32)
+                if (previousSecretVersion != null && !string.IsNullOrWhiteSpace(previousSecretVersion.Value) && previousSecretVersion.Value.Length >= 32)
                 {
                     var previousKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(previousSecretVersion.Value));
                     validationKeys.Add(previousKey);
