@@ -123,7 +123,7 @@ public class JwtTokenService : IJwtTokenService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to refresh JWT signing keys from secret service - falling back to configuration");
+            _logger.LogWarning(ex, "JWT signing key not found in secret service - using configuration fallback");
 
             // Fallback to configuration if secret service fails
             if (string.IsNullOrWhiteSpace(_config.SecretKey) || _config.SecretKey.Length < 32)
