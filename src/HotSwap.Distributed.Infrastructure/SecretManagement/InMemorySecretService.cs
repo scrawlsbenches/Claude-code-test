@@ -21,6 +21,20 @@ public class InMemorySecretService : ISecretService
         _logger.LogWarning("Using InMemorySecretService - NOT suitable for production");
     }
 
+    /// <summary>
+    /// Seeds the secret service with initial secrets for testing or development.
+    /// This is useful for pre-populating secrets like JWT signing keys.
+    /// </summary>
+    /// <param name="secrets">Dictionary of secret IDs to their initial values.</param>
+    public async Task SeedSecretsAsync(Dictionary<string, string> secrets)
+    {
+        foreach (var (secretId, value) in secrets)
+        {
+            await SetSecretAsync(secretId, value);
+            _logger.LogDebug("Seeded secret {SecretId}", secretId);
+        }
+    }
+
     public Task<SecretVersion?> GetSecretAsync(string secretId, CancellationToken cancellationToken = default)
     {
         if (!_secrets.TryGetValue(secretId, out var versions) || versions.Count == 0)
