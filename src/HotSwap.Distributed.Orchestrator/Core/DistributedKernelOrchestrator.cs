@@ -65,7 +65,7 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
     /// <summary>
     /// Initializes all environment clusters with nodes.
     /// </summary>
-    public async Task InitializeClustersAsync(CancellationToken cancellationToken = default)
+    public virtual async Task InitializeClustersAsync(CancellationToken cancellationToken = default)
     {
         if (_initialized)
         {

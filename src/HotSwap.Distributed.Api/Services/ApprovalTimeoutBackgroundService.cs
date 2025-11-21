@@ -1,4 +1,5 @@
 using HotSwap.Distributed.Orchestrator.Interfaces;
+using Microsoft.Extensions.Configuration;
 
 namespace HotSwap.Distributed.Api.Services;
 
@@ -9,14 +10,20 @@ public class ApprovalTimeoutBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ApprovalTimeoutBackgroundService> _logger;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(5); // Check every 5 minutes
+    private readonly TimeSpan _checkInterval;
 
     public ApprovalTimeoutBackgroundService(
         IServiceProvider serviceProvider,
-        ILogger<ApprovalTimeoutBackgroundService> logger)
+        ILogger<ApprovalTimeoutBackgroundService> logger,
+        IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+
+        // Read check interval from configuration, default to 5 minutes
+        var config = new ApprovalTimeoutConfiguration();
+        configuration.GetSection("ApprovalTimeout").Bind(config);
+        _checkInterval = TimeSpan.FromMinutes(config.CheckIntervalMinutes);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,22 +32,25 @@ public class ApprovalTimeoutBackgroundService : BackgroundService
             "Approval Timeout Background Service starting. Will check for expired approvals every {Interval}",
             _checkInterval);
 
-        while (!stoppingToken.IsCancellationRequested)
+        using var timer = new PeriodicTimer(_checkInterval);
+
+        try
         {
-            try
+            // Wait for first interval before checking (no immediate check on startup)
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 await ProcessExpiredApprovalsAsync(stoppingToken);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing expired approvals");
-            }
-
-            // Wait before next check
-            await Task.Delay(_checkInterval, stoppingToken);
         }
-
-        _logger.LogInformation("Approval Timeout Background Service stopping");
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Approval Timeout Background Service stopping");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fatal error in Approval Timeout Background Service");
+            throw;
+        }
     }
 
     private async Task ProcessExpiredApprovalsAsync(CancellationToken cancellationToken)
@@ -68,6 +78,20 @@ public class ApprovalTimeoutBackgroundService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process expired approvals");
+            // Don't throw - allow service to continue on next interval
         }
     }
+}
+
+/// <summary>
+/// Configuration for approval timeout background service.
+/// </summary>
+public class ApprovalTimeoutConfiguration
+{
+    /// <summary>
+    /// Interval in minutes between approval timeout checks.
+    /// Default: 5 minutes.
+    /// Supports fractional minutes for testing (e.g., 0.00017 = ~10ms).
+    /// </summary>
+    public double CheckIntervalMinutes { get; set; } = 5;
 }
