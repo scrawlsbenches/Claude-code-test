@@ -13,9 +13,11 @@ This document provides comprehensive guidance for AI assistants working with thi
 ## Current Repository State
 
 **Status**: Production Ready (95% Specification Compliance)
-**Build Status**: ✅ Passing (582 tests: 568 passing, 14 skipped)
+**Build Status**: ✅ Passing (582 tests: 568 passing, 14 skipped*)
 **Test Coverage**: 85%+
 **Last Updated**: November 21, 2025
+
+*Note: 14 skipped tests are expected (integration tests exceeding CI 2-min timeout). See [SKIPPED_TESTS_INVESTIGATION.md](SKIPPED_TESTS_INVESTIGATION.md) for details. Core functionality fully tested (97.6% pass rate).
 
 ### Project Structure
 
