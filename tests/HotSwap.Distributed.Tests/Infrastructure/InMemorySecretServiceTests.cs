@@ -610,4 +610,110 @@ public class InMemorySecretServiceTests
         metadata.PreviousVersion.Should().Be(2);
         metadata.IsInRotationWindow.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task SeedSecretsAsync_WithMultipleSecrets_ShouldCreateAllSecretsCorrectly()
+    {
+        // Arrange
+        var secrets = new Dictionary<string, string>
+        {
+            ["jwt-signing-key"] = "my-jwt-secret-key-minimum-32-chars-long",
+            ["database-password"] = "super-secure-db-password-12345",
+            ["api-key"] = "api-key-value-for-external-service"
+        };
+
+        // Act
+        await _secretService.SeedSecretsAsync(secrets);
+
+        // Assert - All secrets should be retrievable
+        var jwtSecret = await _secretService.GetSecretAsync("jwt-signing-key");
+        jwtSecret.Should().NotBeNull();
+        jwtSecret!.SecretId.Should().Be("jwt-signing-key");
+        jwtSecret.Value.Should().Be("my-jwt-secret-key-minimum-32-chars-long");
+        jwtSecret.Version.Should().Be(1);
+
+        var dbPassword = await _secretService.GetSecretAsync("database-password");
+        dbPassword.Should().NotBeNull();
+        dbPassword!.Value.Should().Be("super-secure-db-password-12345");
+
+        var apiKey = await _secretService.GetSecretAsync("api-key");
+        apiKey.Should().NotBeNull();
+        apiKey!.Value.Should().Be("api-key-value-for-external-service");
+
+        // Verify all secrets have metadata
+        var jwtMetadata = await _secretService.GetSecretMetadataAsync("jwt-signing-key");
+        jwtMetadata.Should().NotBeNull();
+        jwtMetadata!.CurrentVersion.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SeedSecretsAsync_WithEmptyDictionary_ShouldCompleteWithoutError()
+    {
+        // Arrange
+        var emptySecrets = new Dictionary<string, string>();
+
+        // Act
+        var act = async () => await _secretService.SeedSecretsAsync(emptySecrets);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+
+        // Verify no secrets were created
+        var allSecrets = await _secretService.ListSecretsAsync();
+        allSecrets.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SeedSecretsAsync_ShouldAllowRetrievalImmediately()
+    {
+        // Arrange
+        var secretId = "immediate-retrieval-test";
+        var secretValue = "test-value-for-immediate-retrieval";
+        var secrets = new Dictionary<string, string>
+        {
+            [secretId] = secretValue
+        };
+
+        // Act
+        await _secretService.SeedSecretsAsync(secrets);
+        var retrievedSecret = await _secretService.GetSecretAsync(secretId);
+
+        // Assert
+        retrievedSecret.Should().NotBeNull();
+        retrievedSecret!.SecretId.Should().Be(secretId);
+        retrievedSecret.Value.Should().Be(secretValue);
+        retrievedSecret.Version.Should().Be(1);
+        retrievedSecret.IsActive.Should().BeTrue();
+        retrievedSecret.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SeedSecretsAsync_ShouldCreateSecretsInCorrectOrder()
+    {
+        // Arrange
+        var secrets = new Dictionary<string, string>
+        {
+            ["first-secret"] = "first-value",
+            ["second-secret"] = "second-value",
+            ["third-secret"] = "third-value"
+        };
+
+        // Act
+        await _secretService.SeedSecretsAsync(secrets);
+
+        // Assert - All should exist and be retrievable
+        var allSecrets = await _secretService.ListSecretsAsync();
+        allSecrets.Should().HaveCount(3);
+        allSecrets.Select(m => m.SecretId).Should().Contain(new[] { "first-secret", "second-secret", "third-secret" });
+
+        // Verify each secret has correct value
+        var first = await _secretService.GetSecretAsync("first-secret");
+        first!.Value.Should().Be("first-value");
+
+        var second = await _secretService.GetSecretAsync("second-secret");
+        second!.Value.Should().Be("second-value");
+
+        var third = await _secretService.GetSecretAsync("third-secret");
+        third!.Value.Should().Be("third-value");
+    }
 }
