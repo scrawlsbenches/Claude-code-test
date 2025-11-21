@@ -35,9 +35,38 @@ jobs:
         files: '**/coverage.cobertura.xml'
         fail_ci_if_error: false
 
-  integration-tests:
+  code-coverage:
     runs-on: ubuntu-latest
     needs: build-and-test
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Install bc for coverage calculation
+      run: sudo apt-get update && sudo apt-get install -y bc
+
+    - name: Check code coverage
+      run: |
+        chmod +x check-coverage.sh
+        ./check-coverage.sh
+
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: TestResults/**/coverage.cobertura.xml
+        if-no-files-found: warn
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: code-coverage
     timeout-minutes: 15
 
     steps:
