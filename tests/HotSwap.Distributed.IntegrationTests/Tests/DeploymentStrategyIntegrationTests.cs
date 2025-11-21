@@ -1,7 +1,7 @@
+using System.Net;
 using FluentAssertions;
 using HotSwap.Distributed.IntegrationTests.Fixtures;
 using HotSwap.Distributed.IntegrationTests.Helpers;
-using System.Net;
 using Xunit;
 
 namespace HotSwap.Distributed.IntegrationTests.Tests;

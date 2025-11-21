@@ -1,5 +1,5 @@
-using HotSwap.Distributed.Domain.Enums;
 using System.Text.RegularExpressions;
+using HotSwap.Distributed.Domain.Enums;
 
 namespace HotSwap.Distributed.Domain.Models;
 
