@@ -10,15 +10,18 @@ namespace HotSwap.Distributed.Api.Services;
 public class SecretRotationBackgroundService : BackgroundService
 {
     private readonly ISecretService _secretService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<SecretRotationBackgroundService> _logger;
     private readonly SecretRotationConfiguration _config;
 
     public SecretRotationBackgroundService(
         ISecretService secretService,
+        INotificationService notificationService,
         ILogger<SecretRotationBackgroundService> logger,
         IConfiguration configuration)
     {
         _secretService = secretService ?? throw new ArgumentNullException(nameof(secretService));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _config = new SecretRotationConfiguration();
@@ -151,50 +154,63 @@ public class SecretRotationBackgroundService : BackgroundService
         return DateTime.UtcNow >= rotationDue;
     }
 
-    private Task SendRotationNotificationAsync(
+    private async Task SendRotationNotificationAsync(
         SecretMetadata metadata,
         SecretRotationResult result,
         CancellationToken cancellationToken)
     {
         var recipients = metadata.RotationPolicy?.NotificationRecipients;
         if (recipients == null || !recipients.Any())
-            return Task.CompletedTask;
+            return;
 
-        var message = $"Secret '{metadata.SecretId}' has been automatically rotated. " +
-                     $"Old Version: {result.PreviousVersion}, New Version: {result.NewVersion}, " +
-                     $"Rotation Window Ends: {result.RotationWindowEndsAt:yyyy-MM-dd HH:mm:ss} UTC. " +
-                     $"Both versions are valid until the rotation window ends.";
+        try
+        {
+            await _notificationService.SendSecretRotationNotificationAsync(
+                recipients,
+                metadata.SecretId,
+                result.PreviousVersion ?? 0,
+                result.NewVersion,
+                result.RotationWindowEndsAt,
+                cancellationToken);
 
-        _logger.LogWarning("NOTIFICATION REQUIRED: {Message} | Recipients: {Recipients}",
-            message, string.Join(", ", recipients));
-
-        // TODO: Integrate with actual notification service (email, Slack, etc.)
-        // For now, notifications are logged for administrators to monitor
-
-        return Task.CompletedTask;
+            _logger.LogInformation("Secret rotation notification sent for {SecretId} to {Recipients}",
+                metadata.SecretId, string.Join(", ", recipients));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send secret rotation notification for {SecretId}", metadata.SecretId);
+            // Don't throw - notification failure shouldn't stop rotation process
+        }
     }
 
-    private Task SendExpirationWarningAsync(
+    private async Task SendExpirationWarningAsync(
         SecretMetadata metadata,
         CancellationToken cancellationToken)
     {
         var recipients = metadata.RotationPolicy?.NotificationRecipients;
         if (recipients == null || !recipients.Any())
-            return Task.CompletedTask;
+            return;
 
         var daysRemaining = metadata.DaysUntilExpiration ?? 0;
-        var message = $"Secret '{metadata.SecretId}' is approaching expiration. " +
-                     $"Days Remaining: {daysRemaining}, " +
-                     $"Expiration Date: {metadata.ExpiresAt:yyyy-MM-dd HH:mm:ss} UTC. " +
-                     $"Please rotate this secret soon to avoid service interruption.";
+        var expiresAt = metadata.ExpiresAt ?? DateTime.UtcNow;
 
-        _logger.LogWarning("NOTIFICATION REQUIRED: {Message} | Recipients: {Recipients}",
-            message, string.Join(", ", recipients));
+        try
+        {
+            await _notificationService.SendSecretExpirationWarningAsync(
+                recipients,
+                metadata.SecretId,
+                daysRemaining,
+                expiresAt,
+                cancellationToken);
 
-        // TODO: Integrate with actual notification service (email, Slack, etc.)
-        // For now, notifications are logged for administrators to monitor
-
-        return Task.CompletedTask;
+            _logger.LogInformation("Secret expiration warning sent for {SecretId} to {Recipients}",
+                metadata.SecretId, string.Join(", ", recipients));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send secret expiration warning for {SecretId}", metadata.SecretId);
+            // Don't throw - notification failure shouldn't stop monitoring process
+        }
     }
 }
 
