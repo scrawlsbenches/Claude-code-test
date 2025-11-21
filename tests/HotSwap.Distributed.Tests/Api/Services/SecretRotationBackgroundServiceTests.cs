@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using System.Collections.Generic;
 
 namespace HotSwap.Distributed.Tests.Api.Services;
 
@@ -13,20 +14,30 @@ public class SecretRotationBackgroundServiceTests
 {
     private readonly Mock<ISecretService> _mockSecretService;
     private readonly Mock<INotificationService> _mockNotificationService;
-    private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly IConfiguration _configuration;
     private readonly SecretRotationBackgroundService _service;
 
     public SecretRotationBackgroundServiceTests()
     {
         _mockSecretService = new Mock<ISecretService>();
         _mockNotificationService = new Mock<INotificationService>();
-        _mockConfiguration = new Mock<IConfiguration>();
+
+        // Setup configuration to use 10ms check interval for fast testing
+        var inMemorySettings = new Dictionary<string, string>
+        {
+            {"SecretRotation:Enabled", "true"},
+            {"SecretRotation:CheckIntervalMinutes", "0.00017"} // ~10ms
+        };
+
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(inMemorySettings!)
+            .Build();
 
         _service = new SecretRotationBackgroundService(
             _mockSecretService.Object,
             _mockNotificationService.Object,
             NullLogger<SecretRotationBackgroundService>.Instance,
-            _mockConfiguration.Object);
+            _configuration);
     }
 
     private SecretMetadata CreateSecretMetadata(
@@ -64,7 +75,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        await Task.Delay(5); // Wait less than check interval (10ms)
 
         // Assert
         cts.Cancel();
@@ -89,7 +100,7 @@ public class SecretRotationBackgroundServiceTests
         await _service.StopAsync(CancellationToken.None);
 
         callCountBeforeStop = _mockSecretService.Invocations.Count;
-        await Task.Delay(TimeSpan.FromHours(2)); // Wait longer than check interval (1 hour)
+        await Task.Delay(50); // Wait longer than check interval (10ms)
 
         // Assert
         var callCountAfterStop = _mockSecretService.Invocations.Count;
@@ -122,7 +133,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(50); // Wait for check interval (10ms) plus buffer
 
         // Assert
         cts.Cancel();
@@ -157,7 +168,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
 
         // Assert
         cts.Cancel();
@@ -185,7 +196,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
 
         // Assert
         cts.Cancel();
@@ -207,7 +218,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
 
         // Assert
         cts.Cancel();
@@ -243,7 +254,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
 
         // Assert
         cts.Cancel();
@@ -288,7 +299,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
 
         // Assert
         cts.Cancel();
@@ -331,7 +342,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
 
         // Assert
         cts.Cancel();
@@ -353,7 +364,7 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(2).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
         cts.Cancel();
         await _service.StopAsync(CancellationToken.None);
 
@@ -374,17 +385,17 @@ public class SecretRotationBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromHours(2).Add(TimeSpan.FromSeconds(1))); // Wait for 2+ check intervals
+        await Task.Delay(TimeSpan.FromMilliseconds(100)); // Wait for 2+ check intervals
         cts.Cancel();
         await _service.StopAsync(CancellationToken.None);
 
-        // Assert - should execute approximately every 1 hour
+        // Assert - should execute approximately every 10ms
         callTimes.Should().HaveCountGreaterOrEqualTo(2);
 
         if (callTimes.Count >= 2)
         {
             var intervalBetweenCalls = callTimes[1] - callTimes[0];
-            intervalBetweenCalls.Should().BeCloseTo(TimeSpan.FromHours(1), TimeSpan.FromMinutes(2));
+            intervalBetweenCalls.Should().BeCloseTo(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(5));
         }
     }
 }

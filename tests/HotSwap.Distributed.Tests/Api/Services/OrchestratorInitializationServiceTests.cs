@@ -2,6 +2,7 @@ using FluentAssertions;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Orchestrator.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -18,7 +19,17 @@ public class OrchestratorInitializationServiceTests
 
     public OrchestratorInitializationServiceTests()
     {
-        _mockOrchestrator = new Mock<DistributedKernelOrchestrator>();
+        // Create mock orchestrator with required constructor parameters
+        var mockLogger = new Mock<ILogger<DistributedKernelOrchestrator>>();
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
+            .Returns(NullLogger.Instance);
+
+        _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(
+            mockLogger.Object,
+            mockLoggerFactory.Object,
+            null, null, null, null, null, null, null);
+
         _mockServiceScope = new Mock<IServiceScope>();
         _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         _mockServiceProvider = new Mock<IServiceProvider>();
