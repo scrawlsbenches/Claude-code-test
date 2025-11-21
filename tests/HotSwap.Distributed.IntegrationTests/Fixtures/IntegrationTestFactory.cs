@@ -66,9 +66,14 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // CORS - allow test origins
                 ["Cors:AllowedOrigins:0"] = "http://localhost",
 
+                // Deployment tracking - prevent cache eviction under memory pressure in CI/CD
+                // NeverRemove ensures deployment results remain in cache even under extreme memory pressure
+                ["DeploymentTracking:CachePriority"] = "NeverRemove",
+
                 // Pipeline configuration - use FAST timeouts for integration tests
                 ["Pipeline:MaxConcurrentPipelines"] = "10",
                 ["Pipeline:QaMaxConcurrentNodes"] = "4",
+                ["Pipeline:RollingHealthCheckDelay"] = "00:00:01", // 1 SECOND (vs 30 seconds default) - CRITICAL for fast tests
                 ["Pipeline:StagingSmokeTestTimeout"] = "00:00:10", // 10 seconds (vs 5 minutes production)
                 ["Pipeline:CanaryInitialPercentage"] = "10",
                 ["Pipeline:CanaryIncrementPercentage"] = "50", // Faster rollout: 50% increments vs 20% production
@@ -140,6 +145,35 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
             // Add deterministic metrics provider for consistent test behavior
             services.AddSingleton<IMetricsProvider, DeterministicMetricsProvider>();
+
+            // Replace SignalRDeploymentNotifier with no-op implementation for tests
+            // SignalR notifications can block pipeline execution in test environment
+            var notifierDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IDeploymentNotifier));
+            if (notifierDescriptor != null)
+            {
+                services.Remove(notifierDescriptor);
+            }
+            services.AddSingleton<IDeploymentNotifier, NoOpDeploymentNotifier>();
+
+            // Configure MemoryCache with larger size limit for integration tests
+            // Default MemoryCache can evict entries under memory pressure, causing deployment results
+            // to disappear before rollback tests can access them
+            var memoryCacheDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Microsoft.Extensions.Caching.Memory.IMemoryCache));
+            if (memoryCacheDescriptor != null)
+            {
+                services.Remove(memoryCacheDescriptor);
+            }
+            services.AddSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(sp =>
+            {
+                return new Microsoft.Extensions.Caching.Memory.MemoryCache(
+                    new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
+                    {
+                        // Disable size-based eviction for tests - only use time-based expiration
+                        // This prevents deployment results from being evicted before rollback tests complete
+                        SizeLimit = null, // No size limit
+                        CompactionPercentage = 0.0 // Disable memory pressure compaction
+                    });
+            });
         });
 
         builder.UseEnvironment("Development");
