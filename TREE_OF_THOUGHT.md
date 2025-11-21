@@ -539,49 +539,31 @@ GIT WORKFLOW (5 minutes)
 **Use OODA Loop: Observe → Orient → Decide → Act**
 
 ```
-ITERATION CYCLE
+INVESTIGATION CYCLE (Internal - Don't Narrate)
 │
-├─ 1️⃣ OBSERVE (Gather specific data)
-│   ├─ What am I trying to learn in THIS iteration?
-│   ├─ What specific question am I answering?
-│   ├─ Gather ONLY what's needed for this question
-│   └─ Examples:
-│      - "Does this method get called?" → Add logging, run test
-│      - "What's the actual value?" → Check variable in logs
-│      - "How long does this take?" → Add timing, measure
+├─ OBSERVE: Gather specific data for current question
+│  └─ Run test, read code, check logs - get ONE piece of info
 │
-├─ 2️⃣ ORIENT (Make sense of data)
-│   ├─ What did I learn from this observation?
-│   ├─ Does it confirm or refute my hypothesis?
-│   ├─ What new questions does it raise?
-│   └─ Update mental model of the problem
+├─ ORIENT: Update mental model
+│  └─ Does this confirm/refute hypothesis? What's next?
 │
-├─ 3️⃣ DECIDE (Choose next action)
-│   ├─ Have I solved the problem? YES → Implement solution
-│   ├─ Am I making progress? NO → Pivot to different approach
-│   ├─ Do I need more data? YES → Design next observation
-│   └─ Am I stuck? YES → Use escape sequence (see below)
+├─ DECIDE: Choose action
+│  └─ Solved? → Implement. Stuck? → Pivot or escape. Progress? → Continue.
 │
-└─ 4️⃣ ACT (Execute next step)
-    ├─ If implementing solution → Follow TDD workflow
-    ├─ If gathering more data → Design minimal experiment
-    ├─ If pivoting → Prune irrelevant context, start fresh
-    └─ If stuck → Ask user or use escape sequence
+└─ ACT: Execute
+   └─ Write code, run command, read file - DO something
 ```
 
-**Iteration Tracking: Keep log of hypothesis → observation → result**
+**Key Principles:**
+- **Don't narrate**: No "Iteration 1, 2, 3..." in output
+- **Track internally**: Mental log is fine, written log wastes tokens
+- **Deliver results**: Show findings, not investigation process
+- **Set limits**: If >10-15 cycles without progress → Use escape sequence
 
-Example:
-```
-Iteration 1: "Auth fails" → Checked logs → "JWT expired" → Add refresh logic
-Iteration 2: "Refresh fails" → Checked endpoint → "404" → Wrong URL
-Iteration 3: "Still 404" → Checked routing → "Missing route" → Add route
-```
-
-**Set iteration limits:**
-- If stuck after 3-5 iterations without progress → Ask for help
-- If iteration takes >30 minutes → Checkpoint and summarize
-- If total iterations >10 → Step back, rethink entire approach
+**Balancing Speed vs Thoroughness:**
+- **Simple tasks** (80%): Fast path (5 min to first test), minimal narration
+- **Complex investigations** (20%): Take time needed (10-30 min OK), but still deliver concise results
+- **Rule of thumb**: If investigation takes >30 min, create 50-100 line summary (not 300-line play-by-play)
 
 ---
 
@@ -617,48 +599,28 @@ INFORMATION TRIAGE
    └─ Repeated observations → "Consistently seeing X"
 ```
 
-**Pruning Triggers:**
-- After each iteration cycle → Review: What can I discard?
-- When pivoting to new approach → Discard old approach details
-- After 5+ iterations → Checkpoint: Summarize into <10 bullet points
-- When conversation gets long → Create Working Memory Summary
+**Pruning Triggers (Internal - Don't Output):**
+- After finding answer → Discard search details
+- When pivoting → Discard failed approach
+- When overwhelmed → Mental reset (see below)
+- **Don't document pruning process** - just do it
 
 ---
 
-### 📝 Working Memory Summary Template
+### 📝 Mental Reset (When Overwhelmed)
 
-**After 5+ iterations, compress context:**
+**If losing focus after many search cycles, mentally reset (don't write it out):**
 
-```markdown
-## Working Memory Summary (Iteration #N)
-
-### Current Objective
-- [One sentence: What am I trying to accomplish?]
-
-### Confirmed Facts (Ground Truth)
-- [Fact 1: Test/compiler verified]
-- [Fact 2: Direct observation]
-
-### Active Constraints
-- [Constraint 1: Must/cannot do X]
-
-### Current Hypothesis
-- [What I believe the issue is and why]
-
-### Already Tried (Eliminated)
-- ❌ [Approach 1] → [Why it didn't work]
-- ❌ [Approach 2] → [Why it didn't work]
-
-### Next Steps
-1. [Specific next action]
-2. [If that fails, fallback]
-
-### Parked Items (For Later)
-- [Item 1: Might be relevant if X happens]
-
----
-**Discard everything else not listed above.**
 ```
+INTERNAL CHECKPOINT (Keep in your head, don't output)
+├─ Goal: What am I solving?
+├─ Facts: 2-3 confirmed truths
+├─ Dead ends: What failed?
+├─ Next: One specific action
+└─ Discard rest
+```
+
+**Don't create written summaries unless absolutely necessary** - they waste tokens.
 
 ---
 
@@ -941,36 +903,37 @@ Good example:
 
 ---
 
-### 📊 Investigation Log Template
+### 📊 Investigation Documentation (When Needed)
 
-**For investigations spanning >10 iterations:**
+**ONLY create investigation docs for:**
+- User-requested investigations ("why are X tests failing?")
+- Findings that affect future work (documented decisions)
+- Complex root cause analysis that should be referenced later
+
+**DON'T create docs for:**
+- Routine debugging (just fix it)
+- Simple searches (just deliver answer)
+- Code exploration (just write the code)
+
+**If documenting, keep it CONCISE (<100 lines):**
 
 ```markdown
-## Investigation: [Problem Description]
-**Started:** [Date/Time]
-**Goal:** [What I'm trying to accomplish]
-**Status:** [In Progress / Blocked / Solved]
+# [Problem] Investigation
 
-### Timeline
-- **Iteration 1**: [Action] → [Result]
-- **Iteration 2**: [Action] → [Result]
-- ...
+**Root Cause**: [One sentence]
+**Found**: [2-3 key discoveries]
+**Decision**: [What action was taken]
+**Impact**: [Risk level + justification]
 
-### Eliminated Paths
-- ❌ Thought it was X, verified it's not because [evidence]
+## Recommendations
+1. [Action A] - [Effort estimate]
+2. [Action B] - [Effort estimate]
 
-### Key Discoveries
-- ✅ [Important finding 1]
-- ✅ [Important finding 2]
-
-### Current State
-- **Active Hypothesis:** [What I currently believe]
-- **Next Action:** [Specific next step]
-- **Confidence:** [High / Medium / Low]
-
-### Parking Lot
-- [Tangential issue for later]
+## Tasks Created
+- Task #N: [Description] ([Effort])
 ```
+
+**Focus on findings and decisions, NOT investigation process. No "Iteration" logs.**
 
 ---
 
