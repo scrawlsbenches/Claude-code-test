@@ -155,4 +155,77 @@ public class LoggingNotificationService : INotificationService
 
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public Task SendSecretRotationNotificationAsync(
+        IEnumerable<string> recipients,
+        string secretId,
+        int previousVersion,
+        int newVersion,
+        DateTime rotationWindowEndsAt,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning(
+            "📧 [EMAIL] Secret Rotation Notification\n" +
+            "To: {Recipients}\n" +
+            "Subject: IMPORTANT: Secret '{SecretId}' Has Been Automatically Rotated\n" +
+            "---\n" +
+            "A secret has been automatically rotated:\n" +
+            "  Secret ID: {SecretId}\n" +
+            "  Previous Version: {PreviousVersion}\n" +
+            "  New Version: {NewVersion}\n" +
+            "  Rotation Window Ends: {RotationWindowEndsAt:yyyy-MM-dd HH:mm:ss} UTC\n" +
+            "\n" +
+            "ACTION REQUIRED:\n" +
+            "Both secret versions are valid until the rotation window ends.\n" +
+            "Ensure all services are updated to use the new secret version\n" +
+            "before {RotationWindowEndsAt:yyyy-MM-dd HH:mm:ss} UTC.\n" +
+            "\n" +
+            "After the rotation window, only the new version ({NewVersion}) will be valid.\n" +
+            "---",
+            string.Join(", ", recipients),
+            secretId,
+            secretId,
+            previousVersion,
+            newVersion,
+            rotationWindowEndsAt,
+            rotationWindowEndsAt,
+            newVersion);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task SendSecretExpirationWarningAsync(
+        IEnumerable<string> recipients,
+        string secretId,
+        int daysRemaining,
+        DateTime expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning(
+            "📧 [EMAIL] Secret Expiration Warning\n" +
+            "To: {Recipients}\n" +
+            "Subject: WARNING: Secret '{SecretId}' Expires in {DaysRemaining} Days\n" +
+            "---\n" +
+            "A secret is approaching expiration:\n" +
+            "  Secret ID: {SecretId}\n" +
+            "  Days Remaining: {DaysRemaining}\n" +
+            "  Expiration Date: {ExpiresAt:yyyy-MM-dd HH:mm:ss} UTC\n" +
+            "\n" +
+            "ACTION REQUIRED:\n" +
+            "Please rotate this secret before it expires to avoid service interruption.\n" +
+            "\n" +
+            "You can manually rotate the secret using the secret management API,\n" +
+            "or enable automatic rotation by configuring a rotation policy.\n" +
+            "---",
+            string.Join(", ", recipients),
+            secretId,
+            daysRemaining,
+            secretId,
+            daysRemaining,
+            expiresAt);
+
+        return Task.CompletedTask;
+    }
 }
