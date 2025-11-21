@@ -15,7 +15,7 @@ This document provides comprehensive guidance for AI assistants working with thi
 **Status**: Production Ready (95% Specification Compliance)
 **Build Status**: ✅ Passing (582 tests: 568 passing, 14 skipped)
 **Test Coverage**: 85%+
-**Last Updated**: November 20, 2025
+**Last Updated**: November 21, 2025
 
 ### Project Structure
 
@@ -57,6 +57,7 @@ Claude-code-test/
 │   ├── docker-helper.md                      # Docker configuration management
 │   └── database-migration-helper.md          # EF Core migrations for PostgreSQL
 ├── CLAUDE.md                                 # This file (AI assistant guide)
+├── TREE_OF_THOUGHT.md                        # Tree-of-thought prompt (systematic problem-solving)
 ├── SKILLS.md                                 # Claude Skills documentation
 ├── TASK_LIST.md                              # Comprehensive task roadmap (20+ tasks)
 ├── ENHANCEMENTS.md                           # Recent enhancements documentation
@@ -124,6 +125,7 @@ Claude-code-test/
 | Run API locally | `dotnet run --project src/HotSwap.Distributed.Api/` | [Running](#running-the-application) |
 | Pre-commit check | `dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test` | [Pre-Commit](#️-critical-pre-commit-checklist) |
 | **Use Claude Skills** | `/tdd-helper`, `/precommit-check`, `/doc-sync-check`, etc. | **[SKILLS.md](SKILLS.md)** ⭐ |
+| **Tree-of-Thought Workflow** | Systematic problem-solving framework with escape sequences | **[TREE_OF_THOUGHT.md](TREE_OF_THOUGHT.md)** ⭐ |
 | Create feature branch | `git checkout -b claude/feature-name-sessionid` | [Git Workflow](#git-workflow) |
 | Push changes | `git push -u origin claude/branch-name` | [Git Push](#git-push-requirements) |
 
@@ -3373,6 +3375,34 @@ docker-compose --version
 - [Unit Testing Best Practices](https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Changelog
+
+### 2025-11-21 (Tree-of-Thought Framework with Execution Bias)
+- **Created comprehensive TREE_OF_THOUGHT.md** (~1,040 lines)
+  - **Phase -1: Execution Bias** - Prevents analysis paralysis with hard time limits
+    - Rule 1: START FAST - If task is clear (>80% confidence), start immediately
+    - Rule 2: PHASE TIME LIMITS - Max 5 minutes planning, unlimited execution
+    - Rule 3: "When in doubt" defaults - Make reasonable assumptions, proceed
+    - Rule 4: STOP SIGNALS - Catch yourself overthinking, write code NOW
+    - Rule 5: DONE IS BETTER THAN PERFECT - Ship iteratively
+  - **Quick Reference: 80% of Tasks** - Fast path from request to first test in 5 minutes
+  - **Documentation Skepticism** - Trust code over docs, classify errors by severity
+  - **Iteration & Context Management** - OODA loop, context pruning, breadth-first vs depth-first
+  - **Deadlock Detection & Escape Sequences** - 7 deadlock patterns with specific escapes
+    - Circular reasoning, analysis paralysis, missing information, tool limitations
+    - Complexity overflow, conflicting constraints, false assumptions
+    - 5 universal escape sequences (Reset, Ask for Help, Simplify, Change Perspective, Divide & Conquer)
+  - **Prevention Strategies** - Checklist to prevent deadlocks before they occur
+- **Updated CLAUDE.md**
+  - Added TREE_OF_THOUGHT.md to Project Structure
+  - Added reference in Quick Reference table
+- **Impact**:
+  - Prevents AI assistant from getting stuck in planning loops
+  - Biases toward action: "Code is cheap, overthinking is expensive"
+  - Provides systematic escape routes when investigation stalls
+  - 80/20 rule: Fast path for straightforward tasks, full framework for complex debugging
+  - Addresses user feedback: "Our prompt is getting you stuck"
+  - Speeds up execution by timeboxing planning phases
+- **Total additions**: ~1,040 lines of systematic problem-solving framework
 
 ### 2025-11-20 (Git Push Procedure Enhancement)
 - **Enhanced Git Push Requirements section** (~150 lines)
