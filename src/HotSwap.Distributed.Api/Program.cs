@@ -263,7 +263,21 @@ builder.Services.AddSingleton<ITenantProvisioningService, TenantProvisioningServ
 builder.Services.AddHostedService<RateLimitCleanupService>();
 
 // Register secret management services
-builder.Services.AddSingleton<ISecretService, HotSwap.Distributed.Infrastructure.SecretManagement.InMemorySecretService>();
+builder.Services.AddSingleton<ISecretService>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<HotSwap.Distributed.Infrastructure.SecretManagement.InMemorySecretService>>();
+    var secretService = new HotSwap.Distributed.Infrastructure.SecretManagement.InMemorySecretService(logger);
+
+    // Seed JWT signing key so JwtTokenService can load it from secret service
+    // This prevents the "JWT signing key not found" warning during startup
+    var jwtConfig = sp.GetRequiredService<JwtConfiguration>();
+    secretService.SeedSecretsAsync(new Dictionary<string, string>
+    {
+        { "jwt-signing-key", jwtConfig.SecretKey }
+    }).GetAwaiter().GetResult();
+
+    return secretService;
+});
 builder.Services.AddHostedService<SecretRotationBackgroundService>();
 
 // Note: Orchestrator initialization now happens synchronously after app.Build()
