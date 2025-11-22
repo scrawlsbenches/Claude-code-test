@@ -10,7 +10,7 @@ namespace HotSwap.Distributed.Tests.Infrastructure;
 /// </summary>
 public class InMemoryIdempotencyStoreTests
 {
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task HasBeenProcessedAsync_WithNonExistentKey_ReturnsFalse()
     {
         // Arrange
@@ -24,7 +24,7 @@ public class InMemoryIdempotencyStoreTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task HasBeenProcessedAsync_WithExistingKey_ReturnsTrue()
     {
         // Arrange
@@ -40,7 +40,7 @@ public class InMemoryIdempotencyStoreTests
         result.Should().BeTrue();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task HasBeenProcessedAsync_WithExpiredKey_ReturnsFalseAndRemovesKey()
     {
         // Arrange
@@ -65,7 +65,7 @@ public class InMemoryIdempotencyStoreTests
         secondCheck.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task HasBeenProcessedAsync_WithNullKey_ThrowsArgumentNullException()
     {
         // Arrange
@@ -79,7 +79,7 @@ public class InMemoryIdempotencyStoreTests
             .WithParameterName("idempotencyKey");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task MarkAsProcessedAsync_WithValidParameters_MarksKeyAsProcessed()
     {
         // Arrange
@@ -98,7 +98,7 @@ public class InMemoryIdempotencyStoreTests
         retrievedMessageId.Should().Be(messageId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task MarkAsProcessedAsync_WithNullKey_ThrowsArgumentNullException()
     {
         // Arrange
@@ -112,7 +112,7 @@ public class InMemoryIdempotencyStoreTests
             .WithParameterName("idempotencyKey");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task MarkAsProcessedAsync_WithNullMessageId_ThrowsArgumentNullException()
     {
         // Arrange
@@ -126,7 +126,7 @@ public class InMemoryIdempotencyStoreTests
             .WithParameterName("messageId");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task MarkAsProcessedAsync_WithSameKeyTwice_OnlyFirstCallStored()
     {
         // Arrange
@@ -144,7 +144,7 @@ public class InMemoryIdempotencyStoreTests
         retrievedMessageId.Should().Be(firstMessageId, "TryAdd only adds if key doesn't exist");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetMessageIdAsync_WithNonExistentKey_ReturnsNull()
     {
         // Arrange
@@ -158,7 +158,7 @@ public class InMemoryIdempotencyStoreTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetMessageIdAsync_WithExistingKey_ReturnsMessageId()
     {
         // Arrange
@@ -174,7 +174,7 @@ public class InMemoryIdempotencyStoreTests
         result.Should().Be(messageId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetMessageIdAsync_WithExpiredKey_ReturnsNullAndRemovesKey()
     {
         // Arrange
@@ -199,7 +199,7 @@ public class InMemoryIdempotencyStoreTests
         secondCheck.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetMessageIdAsync_WithNullKey_ThrowsArgumentNullException()
     {
         // Arrange
@@ -213,7 +213,7 @@ public class InMemoryIdempotencyStoreTests
             .WithParameterName("idempotencyKey");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RemoveAsync_WithExistingKey_RemovesKey()
     {
         // Arrange
@@ -233,7 +233,7 @@ public class InMemoryIdempotencyStoreTests
         retrievedMessageId.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RemoveAsync_WithNonExistentKey_DoesNotThrow()
     {
         // Arrange
@@ -247,7 +247,7 @@ public class InMemoryIdempotencyStoreTests
         await act.Should().NotThrowAsync("removing non-existent key should be idempotent");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RemoveAsync_WithNullKey_ThrowsArgumentNullException()
     {
         // Arrange
@@ -261,7 +261,7 @@ public class InMemoryIdempotencyStoreTests
             .WithParameterName("idempotencyKey");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithCustomExpirationTime_UsesProvidedExpiration()
     {
         // Arrange
@@ -275,7 +275,7 @@ public class InMemoryIdempotencyStoreTests
         // Expiration behavior tested in other tests
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullExpirationTime_UsesDefaultExpiration()
     {
         // Arrange & Act
@@ -285,7 +285,7 @@ public class InMemoryIdempotencyStoreTests
         store.Should().NotBeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ConcurrentAccess_MultipleThreads_HandlesCorrectly()
     {
         // Arrange
@@ -312,7 +312,7 @@ public class InMemoryIdempotencyStoreTests
         }
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ExpirationTime_BeforeExpiration_KeyStillValid()
     {
         // Arrange
@@ -335,7 +335,7 @@ public class InMemoryIdempotencyStoreTests
         retrievedMessageId.Should().Be(messageId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task MultipleOperations_OnSameKey_WorkCorrectly()
     {
         // Arrange

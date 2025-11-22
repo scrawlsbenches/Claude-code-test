@@ -24,7 +24,7 @@ public class WebsiteProvisioningServiceTests
         _service = new WebsiteProvisioningService(_mockWebsiteRepository.Object, _mockThemeRepository.Object, _mockLogger.Object);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ProvisionWebsiteAsync_WithValidWebsite_SuccessfullyProvisions()
     {
         // Arrange
@@ -57,7 +57,7 @@ public class WebsiteProvisioningServiceTests
         _mockWebsiteRepository.Verify(r => r.UpdateAsync(It.IsAny<Website>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ProvisionWebsiteAsync_WithInvalidWebsite_ThrowsInvalidOperationException()
     {
         // Arrange
@@ -78,7 +78,7 @@ public class WebsiteProvisioningServiceTests
             .WithMessage("Website validation failed:*");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ProvisionWebsiteAsync_WithoutDefaultTheme_KeepsExistingTheme()
     {
         // Arrange
@@ -102,7 +102,7 @@ public class WebsiteProvisioningServiceTests
         result.CurrentThemeId.Should().Be(originalThemeId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeprovisionWebsiteAsync_WithExistingWebsite_SuccessfullyDeprovisions()
     {
         // Arrange
@@ -123,7 +123,7 @@ public class WebsiteProvisioningServiceTests
         _mockWebsiteRepository.Verify(r => r.DeleteAsync(websiteId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeprovisionWebsiteAsync_WithNonExistentWebsite_ReturnsFalse()
     {
         // Arrange
@@ -139,7 +139,7 @@ public class WebsiteProvisioningServiceTests
         _mockWebsiteRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithValidWebsite_ReturnsSuccess()
     {
         // Arrange
@@ -154,7 +154,7 @@ public class WebsiteProvisioningServiceTests
         result.Errors.Should().BeEmpty();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithMissingName_ReturnsFailure()
     {
         // Arrange
@@ -169,7 +169,7 @@ public class WebsiteProvisioningServiceTests
         result.Errors.Should().Contain("Website name is required");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithMissingSubdomain_ReturnsFailure()
     {
         // Arrange
@@ -184,7 +184,7 @@ public class WebsiteProvisioningServiceTests
         result.Errors.Should().Contain("Website subdomain is required");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithInvalidSubdomainFormat_ReturnsFailure()
     {
         // Arrange
@@ -199,7 +199,7 @@ public class WebsiteProvisioningServiceTests
         result.Errors.Should().Contain("Subdomain must contain only lowercase letters, numbers, and hyphens");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithEmptyTenantId_ReturnsFailure()
     {
         // Arrange
@@ -214,7 +214,7 @@ public class WebsiteProvisioningServiceTests
         result.Errors.Should().Contain("Tenant ID is required");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullWebsiteRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -223,7 +223,7 @@ public class WebsiteProvisioningServiceTests
             .WithParameterName("websiteRepository");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullThemeRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -232,7 +232,7 @@ public class WebsiteProvisioningServiceTests
             .WithParameterName("themeRepository");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert

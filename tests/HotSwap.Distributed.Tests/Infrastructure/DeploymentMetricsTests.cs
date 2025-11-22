@@ -16,7 +16,7 @@ public class DeploymentMetricsTests
         _metrics = new DeploymentMetrics();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_InitializesMeterWithCorrectNameAndVersion()
     {
         // Arrange & Act
@@ -26,21 +26,21 @@ public class DeploymentMetricsTests
         metrics.Should().NotBeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void MeterName_ReturnsExpectedValue()
     {
         // Assert
         DeploymentMetrics.MeterName.Should().Be("HotSwap.Distributed.Orchestrator");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void MeterVersion_ReturnsExpectedValue()
     {
         // Assert
         DeploymentMetrics.MeterVersion.Should().Be("1.0.0");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentStarted_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -55,7 +55,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentStarted_CanBeCalledMultipleTimes()
     {
         // Arrange
@@ -75,7 +75,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentCompleted_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -91,7 +91,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentCompleted_WithZeroDuration_DoesNotThrow()
     {
         // Arrange
@@ -107,7 +107,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentCompleted_WithLargeDuration_DoesNotThrow()
     {
         // Arrange
@@ -123,7 +123,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentFailed_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -140,7 +140,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentFailed_WithDifferentReasons_DoesNotThrow()
     {
         // Arrange
@@ -159,7 +159,7 @@ public class DeploymentMetricsTests
         act3.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentRolledBack_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -174,7 +174,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentRolledBack_WithZeroNodesAffected_DoesNotThrow()
     {
         // Arrange
@@ -189,7 +189,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentRolledBack_WithManyNodesAffected_DoesNotThrow()
     {
         // Arrange
@@ -204,7 +204,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordApprovalRequest_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -218,7 +218,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordApprovalRequest_CanBeCalledMultipleTimes()
     {
         // Arrange
@@ -237,7 +237,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordApprovalGranted_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -252,7 +252,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordApprovalGranted_WithDifferentApprovers_DoesNotThrow()
     {
         // Arrange
@@ -269,7 +269,7 @@ public class DeploymentMetricsTests
         act3.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordApprovalRejected_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -285,7 +285,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordApprovalRejected_WithDifferentReasons_DoesNotThrow()
     {
         // Arrange
@@ -303,7 +303,7 @@ public class DeploymentMetricsTests
         act3.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordModulesDeployed_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -318,7 +318,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordModulesDeployed_WithZeroCount_DoesNotThrow()
     {
         // Arrange
@@ -333,7 +333,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordModulesDeployed_WithLargeCount_DoesNotThrow()
     {
         // Arrange
@@ -348,7 +348,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordNodesUpdated_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -363,7 +363,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordNodesUpdated_WithDefaultOperation_DoesNotThrow()
     {
         // Arrange
@@ -377,7 +377,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordNodesUpdated_WithRollbackOperation_DoesNotThrow()
     {
         // Arrange
@@ -392,7 +392,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordNodesUpdated_WithZeroCount_DoesNotThrow()
     {
         // Arrange
@@ -407,7 +407,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordNodesUpdated_WithLargeCount_DoesNotThrow()
     {
         // Arrange
@@ -422,7 +422,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void CompleteDeploymentWorkflow_RecordsAllMetrics_DoesNotThrow()
     {
         // Arrange
@@ -443,7 +443,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void FailedDeploymentWorkflow_RecordsAllMetrics_DoesNotThrow()
     {
         // Arrange
@@ -466,7 +466,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ApprovalWorkflow_RecordsAllMetrics_DoesNotThrow()
     {
         // Arrange
@@ -484,7 +484,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RejectedApprovalWorkflow_RecordsAllMetrics_DoesNotThrow()
     {
         // Arrange
@@ -503,7 +503,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void MultipleEnvironments_RecordsMetrics_DoesNotThrow()
     {
         // Arrange
@@ -525,7 +525,7 @@ public class DeploymentMetricsTests
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void MultipleStrategies_RecordsMetrics_DoesNotThrow()
     {
         // Arrange

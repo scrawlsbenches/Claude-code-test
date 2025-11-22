@@ -23,7 +23,7 @@ public class ContentServiceTests
         _service = new ContentService(_mockPageRepository.Object, _mockMediaRepository.Object, _mockLogger.Object);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task UploadMediaAsync_WithValidFile_UploadsSuccessfully()
     {
         // Arrange
@@ -56,7 +56,7 @@ public class ContentServiceTests
         _mockMediaRepository.Verify(r => r.CreateAsync(It.IsAny<MediaAsset>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task UploadMediaAsync_WithEmptyFile_UploadsWithZeroSize()
     {
         // Arrange
@@ -75,7 +75,7 @@ public class ContentServiceTests
         result.SizeBytes.Should().Be(0);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task UploadMediaAsync_WithLargeFile_UploadsSuccessfully()
     {
         // Arrange
@@ -95,7 +95,7 @@ public class ContentServiceTests
         result.SizeBytes.Should().Be(fileContent.Length);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeleteMediaAsync_WithExistingMedia_DeletesSuccessfully()
     {
         // Arrange
@@ -125,7 +125,7 @@ public class ContentServiceTests
         _mockMediaRepository.Verify(r => r.DeleteAsync(mediaId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeleteMediaAsync_WithNonExistentMedia_ReturnsFalse()
     {
         // Arrange
@@ -142,7 +142,7 @@ public class ContentServiceTests
         _mockMediaRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullPageRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -151,7 +151,7 @@ public class ContentServiceTests
             .WithParameterName("pageRepository");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullMediaRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -160,7 +160,7 @@ public class ContentServiceTests
             .WithParameterName("mediaRepository");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert

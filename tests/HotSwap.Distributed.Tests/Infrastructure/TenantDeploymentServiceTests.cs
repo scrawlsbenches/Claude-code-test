@@ -36,7 +36,7 @@ public class TenantDeploymentServiceTests
 
     #region Constructor Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullWebsiteRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -51,7 +51,7 @@ public class TenantDeploymentServiceTests
             .WithParameterName("websiteRepository");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullThemeService_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -66,7 +66,7 @@ public class TenantDeploymentServiceTests
             .WithParameterName("themeService");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullPluginService_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -81,7 +81,7 @@ public class TenantDeploymentServiceTests
             .WithParameterName("pluginService");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullQuotaService_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -96,7 +96,7 @@ public class TenantDeploymentServiceTests
             .WithParameterName("quotaService");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -115,7 +115,7 @@ public class TenantDeploymentServiceTests
 
     #region DeployAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_WhenQuotaExceeded_ReturnsFailureResult()
     {
         // Arrange
@@ -143,7 +143,7 @@ public class TenantDeploymentServiceTests
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_WhenNoWebsitesFound_ReturnsFailureResult()
     {
         // Arrange
@@ -170,7 +170,7 @@ public class TenantDeploymentServiceTests
         result.Errors.Should().Contain("Deployment scope did not match any websites");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_ThemeToSingleWebsite_SuccessfullyDeploys()
     {
         // Arrange
@@ -215,7 +215,7 @@ public class TenantDeploymentServiceTests
         _mockThemeService.Verify(t => t.ActivateThemeAsync(websiteId, themeId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_ThemeToAllTenantWebsites_SuccessfullyDeploys()
     {
         // Arrange
@@ -261,7 +261,7 @@ public class TenantDeploymentServiceTests
             It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_ThemeWithoutThemeId_ReturnsFailure()
     {
         // Arrange
@@ -284,7 +284,7 @@ public class TenantDeploymentServiceTests
         result.Message.Should().Be("Theme ID not provided in metadata");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_PluginToAllWebsites_SuccessfullyDeploys()
     {
         // Arrange
@@ -328,7 +328,7 @@ public class TenantDeploymentServiceTests
             It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_PluginWithoutPluginId_ReturnsFailure()
     {
         // Arrange
@@ -351,7 +351,7 @@ public class TenantDeploymentServiceTests
         result.Message.Should().Be("Plugin ID not provided in metadata");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_ContentToWebsites_SuccessfullyDeploys()
     {
         // Arrange
@@ -379,7 +379,7 @@ public class TenantDeploymentServiceTests
         result.AffectedWebsites.Should().HaveCount(2);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_UnsupportedModuleType_ReturnsFailure()
     {
         // Arrange
@@ -401,7 +401,7 @@ public class TenantDeploymentServiceTests
         result.Message.Should().Contain("Unsupported module type");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_WhenThemeServiceThrows_RecordsError()
     {
         // Arrange
@@ -444,7 +444,7 @@ public class TenantDeploymentServiceTests
         result.Errors[0].Should().Contain("Theme activation failed");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeployAsync_WhenExceptionThrown_ReturnsFailureResult()
     {
         // Arrange
@@ -471,7 +471,7 @@ public class TenantDeploymentServiceTests
 
     #region GetDeploymentStatusAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetDeploymentStatusAsync_WithExistingDeployment_ReturnsResult()
     {
         // Arrange
@@ -502,7 +502,7 @@ public class TenantDeploymentServiceTests
         result.TenantId.Should().Be(request.TenantId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetDeploymentStatusAsync_WithNonExistentDeployment_ReturnsNull()
     {
         // Arrange
@@ -519,7 +519,7 @@ public class TenantDeploymentServiceTests
 
     #region GetDeploymentsForTenantAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetDeploymentsForTenantAsync_ReturnsDeploymentsInDescendingOrder()
     {
         // Arrange
@@ -552,7 +552,7 @@ public class TenantDeploymentServiceTests
         results[1].DeploymentId.Should().Be(deployment1.DeploymentId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetDeploymentsForTenantAsync_WithNoDeployments_ReturnsEmptyList()
     {
         // Arrange
@@ -569,7 +569,7 @@ public class TenantDeploymentServiceTests
 
     #region RollbackDeploymentAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RollbackDeploymentAsync_WithExistingDeployment_ReturnsTrue()
     {
         // Arrange
@@ -598,7 +598,7 @@ public class TenantDeploymentServiceTests
         result.Should().BeTrue();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RollbackDeploymentAsync_WithNonExistentDeployment_ReturnsFalse()
     {
         // Arrange

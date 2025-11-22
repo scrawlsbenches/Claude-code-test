@@ -24,7 +24,7 @@ public class TelemetryProviderTests : IDisposable
         _provider.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_InitializesSuccessfully()
     {
         // Arrange & Act
@@ -34,21 +34,21 @@ public class TelemetryProviderTests : IDisposable
         provider.Should().NotBeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ServiceName_ReturnsExpectedValue()
     {
         // Assert
         TelemetryProvider.ServiceName.Should().Be("HotSwap.DistributedKernel");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ServiceVersion_ReturnsExpectedValue()
     {
         // Assert
         TelemetryProvider.ServiceVersion.Should().Be("1.0.0");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartDeploymentActivity_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -64,7 +64,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartNodeActivity_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -79,7 +79,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartStageActivity_WithStageNameOnly_DoesNotThrow()
     {
         // Arrange
@@ -92,7 +92,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartStageActivity_WithEnvironment_DoesNotThrow()
     {
         // Arrange
@@ -106,7 +106,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartHealthCheckActivity_WithNodeId_DoesNotThrow()
     {
         // Arrange
@@ -119,7 +119,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartRollbackActivity_WithValidParameters_DoesNotThrow()
     {
         // Arrange
@@ -133,7 +133,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentSuccess_WithValidResult_DoesNotThrow()
     {
         // Arrange
@@ -164,7 +164,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentSuccess_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -185,7 +185,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentFailure_WithValidResult_DoesNotThrow()
     {
         // Arrange
@@ -213,7 +213,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentFailure_WithNullException_DoesNotThrow()
     {
         // Arrange
@@ -239,7 +239,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeploymentFailure_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -261,7 +261,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordRollback_WithSuccessfulRollback_DoesNotThrow()
     {
         // Arrange
@@ -279,7 +279,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordRollback_WithFailedRollback_DoesNotThrow()
     {
         // Arrange
@@ -297,7 +297,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordRollback_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -312,7 +312,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordHealthCheck_WithHealthyNode_DoesNotThrow()
     {
         // Arrange
@@ -329,7 +329,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordHealthCheck_WithUnhealthyNode_DoesNotThrow()
     {
         // Arrange
@@ -346,7 +346,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordHealthCheck_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -359,7 +359,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ExtractTraceContext_WithValidTraceparent_ReturnsContext()
     {
         // Arrange
@@ -376,7 +376,7 @@ public class TelemetryProviderTests : IDisposable
         context!.Value.TraceId.Should().NotBe(ActivityTraceId.CreateRandom());
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ExtractTraceContext_WithoutTraceparent_ReturnsNull()
     {
         // Arrange
@@ -392,7 +392,7 @@ public class TelemetryProviderTests : IDisposable
         context.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ExtractTraceContext_WithInvalidTraceparent_ReturnsNull()
     {
         // Arrange
@@ -408,7 +408,7 @@ public class TelemetryProviderTests : IDisposable
         context.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ExtractTraceContext_WithEmptyDictionary_ReturnsNull()
     {
         // Arrange
@@ -421,7 +421,7 @@ public class TelemetryProviderTests : IDisposable
         context.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void InjectTraceContext_WithValidActivity_DoesNotThrow()
     {
         // Arrange
@@ -437,7 +437,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void InjectTraceContext_WithNullActivity_DoesNotModifyHeaders()
     {
         // Arrange
@@ -450,7 +450,7 @@ public class TelemetryProviderTests : IDisposable
         headers.Should().BeEmpty();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void InjectTraceContext_WithActivityWithTraceState_DoesNotThrow()
     {
         // Arrange
@@ -471,7 +471,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void SetBaggage_WithValidKeyValue_DoesNotThrow()
     {
         // Arrange
@@ -485,7 +485,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GetBaggage_WithNonExistentKey_ReturnsNull()
     {
         // Arrange
@@ -498,7 +498,7 @@ public class TelemetryProviderTests : IDisposable
         value.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void SetBaggage_ThenGetBaggage_DoesNotThrow()
     {
         // Arrange
@@ -519,7 +519,7 @@ public class TelemetryProviderTests : IDisposable
         activity?.Dispose();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Dispose_CanBeCalledMultipleTimes()
     {
         // Arrange
@@ -537,7 +537,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void CompleteWorkflow_CreatesAndRecordsDeployment_DoesNotThrow()
     {
         // Arrange
@@ -572,7 +572,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void FailedWorkflow_CreatesAndRecordsFailure_DoesNotThrow()
     {
         // Arrange
@@ -606,7 +606,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RollbackWorkflow_CreatesAndRecordsRollback_DoesNotThrow()
     {
         // Arrange
@@ -626,7 +626,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void HealthCheckWorkflow_CreatesAndRecordsHealthCheck_DoesNotThrow()
     {
         // Arrange
@@ -645,7 +645,7 @@ public class TelemetryProviderTests : IDisposable
         act.Should().NotThrow();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void TraceContextPropagation_InjectAndExtract_DoesNotThrow()
     {
         // Arrange

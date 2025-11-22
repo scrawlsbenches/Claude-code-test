@@ -36,7 +36,7 @@ public class TenantContextServiceTests
 
     #region Constructor Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullHttpContextAccessor_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -49,7 +49,7 @@ public class TenantContextServiceTests
             .WithParameterName("httpContextAccessor");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullTenantRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -62,7 +62,7 @@ public class TenantContextServiceTests
             .WithParameterName("tenantRepository");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -79,7 +79,7 @@ public class TenantContextServiceTests
 
     #region GetCurrentTenantAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCurrentTenantAsync_WithNoHttpContext_ReturnsNull()
     {
         // Arrange
@@ -92,7 +92,7 @@ public class TenantContextServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCurrentTenantAsync_WithCachedTenant_ReturnsCachedValue()
     {
         // Arrange
@@ -107,7 +107,7 @@ public class TenantContextServiceTests
         _mockTenantRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCurrentTenantAsync_WithXTenantIDHeader_LoadsTenantFromRepository()
     {
         // Arrange
@@ -128,7 +128,7 @@ public class TenantContextServiceTests
         _httpContext.Items["TenantId"].Should().Be(tenantId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCurrentTenantAsync_WithJWTClaim_LoadsTenantFromRepository()
     {
         // Arrange
@@ -150,7 +150,7 @@ public class TenantContextServiceTests
         result!.TenantId.Should().Be(tenantId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCurrentTenantAsync_WithSubdomain_LoadsTenantFromSubdomain()
     {
         // Arrange
@@ -172,7 +172,7 @@ public class TenantContextServiceTests
         result.Subdomain.Should().Be("acme");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCurrentTenantAsync_WithNoTenantIdentifier_ReturnsNull()
     {
         // Arrange
@@ -186,7 +186,7 @@ public class TenantContextServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCurrentTenantAsync_WithNonExistentTenant_ReturnsNull()
     {
         // Arrange
@@ -207,7 +207,7 @@ public class TenantContextServiceTests
 
     #region GetCurrentTenantId Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GetCurrentTenantId_WithNoHttpContext_ReturnsNull()
     {
         // Arrange
@@ -220,7 +220,7 @@ public class TenantContextServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GetCurrentTenantId_WithCachedTenantId_ReturnsCachedValue()
     {
         // Arrange
@@ -235,7 +235,7 @@ public class TenantContextServiceTests
         _mockTenantRepository.Verify(r => r.GetBySubdomainAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GetCurrentTenantId_WithXTenantIDHeader_ReturnsExtractedId()
     {
         // Arrange
@@ -249,7 +249,7 @@ public class TenantContextServiceTests
         result.Should().Be(tenantId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GetCurrentTenantId_WithInvalidHeader_ReturnsNull()
     {
         // Arrange
@@ -262,7 +262,7 @@ public class TenantContextServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GetCurrentTenantId_WithJWTClaim_ReturnsExtractedId()
     {
         // Arrange
@@ -282,7 +282,7 @@ public class TenantContextServiceTests
 
     #region SetCurrentTenant Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void SetCurrentTenant_WithNullTenant_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -291,7 +291,7 @@ public class TenantContextServiceTests
             .WithParameterName("tenant");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void SetCurrentTenant_WithNoHttpContext_ThrowsInvalidOperationException()
     {
         // Arrange
@@ -304,7 +304,7 @@ public class TenantContextServiceTests
             .WithMessage("HttpContext is not available");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void SetCurrentTenant_WithValidTenant_SetsCacheInHttpContext()
     {
         // Arrange
@@ -322,7 +322,7 @@ public class TenantContextServiceTests
 
     #region ValidateCurrentTenantAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateCurrentTenantAsync_WithNoTenant_ReturnsFalse()
     {
         // Arrange
@@ -336,7 +336,7 @@ public class TenantContextServiceTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateCurrentTenantAsync_WithActiveTenant_ReturnsTrue()
     {
         // Arrange
@@ -355,7 +355,7 @@ public class TenantContextServiceTests
         result.Should().BeTrue();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateCurrentTenantAsync_WithSuspendedTenant_ReturnsFalse()
     {
         // Arrange
@@ -374,7 +374,7 @@ public class TenantContextServiceTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateCurrentTenantAsync_WithDeletedTenant_ReturnsFalse()
     {
         // Arrange

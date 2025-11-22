@@ -34,7 +34,7 @@ public class LoggingNotificationServiceTests
         TimeoutAt = DateTime.UtcNow.AddHours(24)
     };
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalRequestNotificationAsync_LogsInformation()
     {
         // Arrange
@@ -55,7 +55,7 @@ public class LoggingNotificationServiceTests
             "Should log approval request notification");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalRequestNotificationAsync_WithEmptyApprovers_CompletesSuccessfully()
     {
         // Arrange
@@ -69,7 +69,7 @@ public class LoggingNotificationServiceTests
         await act.Should().NotThrowAsync("should handle empty approver list gracefully");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalRequestNotificationAsync_WithCancellationToken_CompletesSuccessfully()
     {
         // Arrange
@@ -90,7 +90,7 @@ public class LoggingNotificationServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalGrantedNotificationAsync_LogsInformation()
     {
         // Arrange
@@ -113,7 +113,7 @@ public class LoggingNotificationServiceTests
             "Should log approval granted notification");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalGrantedNotificationAsync_WithNullResponderAndReason_UsesDefaults()
     {
         // Arrange
@@ -128,7 +128,7 @@ public class LoggingNotificationServiceTests
         await act.Should().NotThrowAsync("should handle null responder email and reason gracefully");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalGrantedNotificationAsync_WithCancellationToken_CompletesSuccessfully()
     {
         // Arrange
@@ -149,7 +149,7 @@ public class LoggingNotificationServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalRejectedNotificationAsync_LogsWarning()
     {
         // Arrange
@@ -172,7 +172,7 @@ public class LoggingNotificationServiceTests
             "Should log approval rejected notification as warning");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalRejectedNotificationAsync_WithNullResponderAndReason_UsesDefaults()
     {
         // Arrange
@@ -187,7 +187,7 @@ public class LoggingNotificationServiceTests
         await act.Should().NotThrowAsync("should handle null responder email and reason gracefully");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalRejectedNotificationAsync_WithCancellationToken_CompletesSuccessfully()
     {
         // Arrange
@@ -208,7 +208,7 @@ public class LoggingNotificationServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalExpiredNotificationAsync_LogsWarning()
     {
         // Arrange
@@ -230,7 +230,7 @@ public class LoggingNotificationServiceTests
             "Should log approval expired notification as warning");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendApprovalExpiredNotificationAsync_WithCancellationToken_CompletesSuccessfully()
     {
         // Arrange
@@ -251,7 +251,7 @@ public class LoggingNotificationServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendSecretRotationNotificationAsync_LogsWarning()
     {
         // Arrange
@@ -281,7 +281,7 @@ public class LoggingNotificationServiceTests
             "Should log secret rotation notification as warning");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendSecretRotationNotificationAsync_WithSingleRecipient_CompletesSuccessfully()
     {
         // Arrange
@@ -300,7 +300,7 @@ public class LoggingNotificationServiceTests
         await act.Should().NotThrowAsync();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendSecretRotationNotificationAsync_WithCancellationToken_CompletesSuccessfully()
     {
         // Arrange
@@ -327,7 +327,7 @@ public class LoggingNotificationServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendSecretExpirationWarningAsync_LogsWarning()
     {
         // Arrange
@@ -355,7 +355,7 @@ public class LoggingNotificationServiceTests
             "Should log secret expiration warning as warning");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendSecretExpirationWarningAsync_WithOneDayRemaining_CompletesSuccessfully()
     {
         // Arrange
@@ -373,7 +373,7 @@ public class LoggingNotificationServiceTests
         await act.Should().NotThrowAsync();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SendSecretExpirationWarningAsync_WithCancellationToken_CompletesSuccessfully()
     {
         // Arrange
@@ -399,7 +399,7 @@ public class LoggingNotificationServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithValidLogger_CreatesInstance()
     {
         // Act
@@ -409,7 +409,7 @@ public class LoggingNotificationServiceTests
         service.Should().NotBeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task AllNotificationMethods_CompleteSuccessfully_ReturningCompletedTask()
     {
         // Arrange
