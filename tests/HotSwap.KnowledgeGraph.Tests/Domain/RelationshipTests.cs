@@ -339,7 +339,9 @@ public class RelationshipTests
 
         // Act & Assert
         relationship.Equals(relationship).Should().BeTrue();
+#pragma warning disable CS1718 // Comparison made to same variable - intentional for testing reference equality
         (relationship == relationship).Should().BeTrue();
+#pragma warning restore CS1718
     }
 
     [Fact]

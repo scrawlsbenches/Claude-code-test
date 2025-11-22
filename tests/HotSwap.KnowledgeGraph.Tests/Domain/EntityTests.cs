@@ -284,7 +284,9 @@ public class EntityTests
 
         // Act & Assert
         entity.Equals(entity).Should().BeTrue();
+#pragma warning disable CS1718 // Comparison made to same variable - intentional for testing reference equality
         (entity == entity).Should().BeTrue();
+#pragma warning restore CS1718
     }
 
     [Fact]
