@@ -3,14 +3,14 @@
 # Ensures code coverage meets the mandated threshold
 # Works in local development environments and CI/CD pipelines
 #
-# All tests now enabled (1,344 passing, 0 skipped).
-# Current coverage: 58.36% (Line: 56.83%, Branch: 60.65%)
-# Includes 45 deployment strategy tests with 76-100% coverage.
+# All tests now enabled (1,418 passing, 0 skipped).
+# Current coverage: 69.35% (Line: 69.37%, Branch: 69.33%)
+# Includes 74 integration tests with merged coverage from all test projects.
 
 set -e  # Exit on error
 
 # Configuration
-COVERAGE_THRESHOLD=58  # Current achievable with all tests enabled including deployment strategies
+COVERAGE_THRESHOLD=69  # Current achievable with all 1,418 tests enabled and merged coverage
 SOLUTION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COVERAGE_OUTPUT_DIR="$SOLUTION_DIR/TestResults"
 
