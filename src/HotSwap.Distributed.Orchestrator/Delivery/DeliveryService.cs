@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Domain.Enums;
+using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging;
 

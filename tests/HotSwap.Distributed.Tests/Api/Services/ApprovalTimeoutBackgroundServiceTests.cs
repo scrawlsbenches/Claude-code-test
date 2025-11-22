@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FluentAssertions;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
-using System.Collections.Generic;
 
 namespace HotSwap.Distributed.Tests.Api.Services;
 

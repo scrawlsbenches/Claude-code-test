@@ -1,11 +1,11 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.IntegrationTests.Fixtures;
 using HotSwap.Distributed.IntegrationTests.Helpers;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Xunit;
 
 namespace HotSwap.Distributed.IntegrationTests.Tests;

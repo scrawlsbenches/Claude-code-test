@@ -1,8 +1,8 @@
+using System.Collections.Concurrent;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 namespace HotSwap.Distributed.Infrastructure.Tenants;
 

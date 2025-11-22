@@ -1,6 +1,6 @@
 using FluentAssertions;
-using HotSwap.KnowledgeGraph.Domain.Models;
 using HotSwap.KnowledgeGraph.Domain.Enums;
+using HotSwap.KnowledgeGraph.Domain.Models;
 
 namespace HotSwap.KnowledgeGraph.Tests.Domain;
 

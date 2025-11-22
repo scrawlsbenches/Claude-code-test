@@ -1,6 +1,6 @@
-using HotSwap.Distributed.Api.Validation;
 using System.Net;
 using System.Text.Json;
+using HotSwap.Distributed.Api.Validation;
 
 namespace HotSwap.Distributed.Api.Middleware;
 

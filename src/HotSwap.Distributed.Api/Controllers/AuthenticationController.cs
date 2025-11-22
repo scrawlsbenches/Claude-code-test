@@ -1,10 +1,10 @@
+using System.Diagnostics;
 using HotSwap.Distributed.Api.Models;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 
 namespace HotSwap.Distributed.Api.Controllers;
 

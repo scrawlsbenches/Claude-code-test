@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Data.Entities;
@@ -7,7 +8,6 @@ using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Strategies;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace HotSwap.Distributed.Orchestrator.Pipeline;
 

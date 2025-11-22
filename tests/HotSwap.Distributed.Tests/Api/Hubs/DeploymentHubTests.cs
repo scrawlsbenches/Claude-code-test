@@ -1,8 +1,8 @@
+using FluentAssertions;
 using HotSwap.Distributed.Api.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
 using Xunit;
-using FluentAssertions;
 
 namespace HotSwap.Distributed.Tests.Api.Hubs;
 
