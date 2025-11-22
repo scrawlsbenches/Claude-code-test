@@ -10,6 +10,7 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Api.Services;
 
+[Collection("BackgroundService Sequential")]
 public class SecretRotationBackgroundServiceTests
 {
     private readonly Mock<ISecretService> _mockSecretService;
@@ -65,7 +66,7 @@ public class SecretRotationBackgroundServiceTests
         };
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task StartAsync_StartsService()
     {
         // Arrange
@@ -84,7 +85,7 @@ public class SecretRotationBackgroundServiceTests
         _mockSecretService.Verify(x => x.ListSecretsAsync(It.IsAny<Dictionary<string, string>?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task StopAsync_StopsService()
     {
         // Arrange
@@ -107,7 +108,7 @@ public class SecretRotationBackgroundServiceTests
         callCountAfterStop.Should().Be(callCountBeforeStop);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_RotatesExpiredSecrets()
     {
         // Arrange
@@ -142,7 +143,7 @@ public class SecretRotationBackgroundServiceTests
         _mockSecretService.Verify(x => x.RotateSecretAsync("jwt-signing-key", null, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_SendsNotificationOnRotation()
     {
         // Arrange
@@ -183,7 +184,7 @@ public class SecretRotationBackgroundServiceTests
             It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_SkipsSecretsWithoutAutomaticRotation()
     {
         // Arrange
@@ -205,7 +206,7 @@ public class SecretRotationBackgroundServiceTests
         _mockSecretService.Verify(x => x.RotateSecretAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_SkipsSecretsNotDueForRotation()
     {
         // Arrange
@@ -227,7 +228,7 @@ public class SecretRotationBackgroundServiceTests
         _mockSecretService.Verify(x => x.RotateSecretAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_SendsExpirationWarningNotifications()
     {
         // Arrange
@@ -268,7 +269,7 @@ public class SecretRotationBackgroundServiceTests
             It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_ProcessesMultipleSecrets()
     {
         // Arrange
@@ -310,7 +311,7 @@ public class SecretRotationBackgroundServiceTests
         _mockSecretService.Verify(x => x.RotateSecretAsync("secret-3", null, It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_WithRotationFailure_ContinuesProcessingOtherSecrets()
     {
         // Arrange
@@ -351,7 +352,7 @@ public class SecretRotationBackgroundServiceTests
         _mockSecretService.Verify(x => x.RotateSecretAsync("working-secret", null, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_WithException_ContinuesRunning()
     {
         // Arrange
@@ -372,7 +373,7 @@ public class SecretRotationBackgroundServiceTests
         callCount.Should().BeGreaterThan(1);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_UsesCorrectCheckInterval()
     {
         // Arrange

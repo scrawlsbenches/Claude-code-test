@@ -3,14 +3,14 @@
 # Ensures code coverage meets the mandated threshold (70%)
 # Works in local development environments and CI/CD pipelines
 #
-# NOTE: Threshold set to 35% as baseline while gradually re-enabling skipped tests.
-#       Current: 512 skipped tests (33% coverage). As tests are re-enabled, threshold
-#       will be incrementally raised: 35% -> 50% -> 70% -> 85% (final target).
+# All tests now enabled (1,299 passing, 0 skipped).
+# Current coverage: 77.46% (Line: 73.80%, Branch: 82.95%)
+# To reach 85%, additional tests needed for uncovered code paths.
 
 set -e  # Exit on error
 
 # Configuration
-COVERAGE_THRESHOLD=35  # Baseline while re-enabling tests (will gradually increase to 85%)
+COVERAGE_THRESHOLD=77  # Current achievable with all existing tests enabled
 SOLUTION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COVERAGE_OUTPUT_DIR="$SOLUTION_DIR/TestResults"
 

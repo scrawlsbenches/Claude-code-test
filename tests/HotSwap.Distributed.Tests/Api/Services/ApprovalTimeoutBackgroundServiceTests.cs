@@ -12,6 +12,7 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Api.Services;
 
+[Collection("BackgroundService Sequential")]
 public class ApprovalTimeoutBackgroundServiceTests
 {
     private readonly Mock<IServiceProvider> _mockServiceProvider;
@@ -55,7 +56,7 @@ public class ApprovalTimeoutBackgroundServiceTests
             _configuration);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task StartAsync_StartsService()
     {
         // Arrange
@@ -73,7 +74,7 @@ public class ApprovalTimeoutBackgroundServiceTests
         // Service started and stopped successfully (no exception thrown)
     }
 
-    [Fact(Skip = "BackgroundService hangs with PeriodicTimer - timing issue on all environments")]
+    [Fact]
     public async Task StopAsync_StopsService()
     {
         // Arrange
@@ -94,7 +95,7 @@ public class ApprovalTimeoutBackgroundServiceTests
         callCountAfterStop.Should().Be(callCountBeforeStop);
     }
 
-    [Fact(Skip = "BackgroundService hangs with PeriodicTimer - timing issue on all environments")]
+    [Fact]
     public async Task ExecuteAsync_ProcessesExpiredApprovals()
     {
         // Arrange
@@ -113,7 +114,7 @@ public class ApprovalTimeoutBackgroundServiceTests
         _mockApprovalService.Verify(x => x.ProcessExpiredApprovalsAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_WithNoExpiredApprovals_ContinuesRunning()
     {
         // Arrange
@@ -132,7 +133,7 @@ public class ApprovalTimeoutBackgroundServiceTests
         _mockApprovalService.Verify(x => x.ProcessExpiredApprovalsAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_WithException_ContinuesRunning()
     {
         // Arrange
@@ -153,7 +154,7 @@ public class ApprovalTimeoutBackgroundServiceTests
         callCount.Should().BeGreaterThan(1);
     }
 
-    [Fact(Skip = "Test parallelization issue - hangs when run with other tests")]
+    [Fact]
     public async Task ExecuteAsync_UsesCorrectCheckInterval()
     {
         // Arrange

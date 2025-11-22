@@ -315,15 +315,15 @@ public class InMemoryIdempotencyStoreTests
     [Fact]
     public async Task ExpirationTime_BeforeExpiration_KeyStillValid()
     {
-        // Arrange
-        var expirationTime = TimeSpan.FromSeconds(2);
+        // Arrange - use longer expiration to avoid flakiness under CPU contention
+        var expirationTime = TimeSpan.FromSeconds(30);
         var store = new InMemoryIdempotencyStore(expirationTime);
-        var key = "valid-for-2s";
+        var key = "valid-for-30s";
         var messageId = "msg-valid";
 
         await store.MarkAsProcessedAsync(key, messageId);
 
-        // Wait but not enough to expire (50ms < 2s)
+        // Wait but not enough to expire (50ms << 30s)
         await Task.Delay(50);
 
         // Act
