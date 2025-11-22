@@ -30,7 +30,7 @@ public class TenantContextMiddlewareTests
         _httpContext.Request.Path = "/api/v1/deployments";
     }
 
-    [Theory(Skip = "Temporarily disabled - investigating test hang")]
+    [Theory]
     [InlineData("/health")]
     [InlineData("/health/ready")]
     [InlineData("/swagger")]
@@ -312,7 +312,7 @@ public class TenantContextMiddlewareTests
             Times.Once);
     }
 
-    [Theory(Skip = "Temporarily disabled - investigating test hang")]
+    [Theory]
     [InlineData("/HEALTH")]
     [InlineData("/Swagger")]
     [InlineData("/API/V1/ADMIN")]
