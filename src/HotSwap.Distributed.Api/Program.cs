@@ -235,13 +235,23 @@ builder.Services.AddSingleton(sp =>
 // Register approval workflow services
 builder.Services.AddSingleton<INotificationService, LoggingNotificationService>();
 builder.Services.AddSingleton<IApprovalService, ApprovalService>();
-builder.Services.AddHostedService<ApprovalTimeoutBackgroundService>();
+
+// Skip background services in Test environment to prevent test hangs
+if (builder.Environment.EnvironmentName != "Test")
+{
+    builder.Services.AddHostedService<ApprovalTimeoutBackgroundService>();
+}
 
 // Register audit log service only if PostgreSQL is configured
 if (!string.IsNullOrEmpty(builder.Configuration["ConnectionStrings:PostgreSql"]))
 {
     builder.Services.AddSingleton<IAuditLogService, HotSwap.Distributed.Infrastructure.Services.AuditLogService>();
-    builder.Services.AddHostedService<AuditLogRetentionBackgroundService>();
+
+    // Skip background services in Test environment to prevent test hangs
+    if (builder.Environment.EnvironmentName != "Test")
+    {
+        builder.Services.AddHostedService<AuditLogRetentionBackgroundService>();
+    }
 }
 else
 {
@@ -260,7 +270,11 @@ builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
 builder.Services.AddSingleton<ITenantProvisioningService, TenantProvisioningService>();
 
 // Register rate limit cleanup service
-builder.Services.AddHostedService<RateLimitCleanupService>();
+// Skip background services in Test environment to prevent test hangs
+if (builder.Environment.EnvironmentName != "Test")
+{
+    builder.Services.AddHostedService<RateLimitCleanupService>();
+}
 
 // Register secret management services
 builder.Services.AddSingleton<ISecretService>(sp =>
@@ -278,7 +292,12 @@ builder.Services.AddSingleton<ISecretService>(sp =>
 
     return secretService;
 });
-builder.Services.AddHostedService<SecretRotationBackgroundService>();
+
+// Skip background services in Test environment to prevent test hangs
+if (builder.Environment.EnvironmentName != "Test")
+{
+    builder.Services.AddHostedService<SecretRotationBackgroundService>();
+}
 
 // Note: Orchestrator initialization now happens synchronously after app.Build()
 // to ensure it's ready before accepting requests (removed background service)

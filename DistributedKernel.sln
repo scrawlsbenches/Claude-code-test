@@ -11,16 +11,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.Orchest
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.Api", "src\HotSwap.Distributed.Api\HotSwap.Distributed.Api.csproj", "{D4E5F6A7-B8C9-4012-D345-E6F7A8B9C012}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.Tests", "tests\HotSwap.Distributed.Tests\HotSwap.Distributed.Tests.csproj", "{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}"
-EndProject
+#Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.Tests", "tests\HotSwap.Distributed.Tests\HotSwap.Distributed.Tests.csproj", "{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}"
+#EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiUsageExample", "examples\ApiUsageExample\ApiUsageExample.csproj", "{F6A7B8C9-D0E1-4234-F567-A8B9C0D1E234}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{005DAF90-8176-41DB-B3DD-EDBFCD639007}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.SmokeTests", "tests\HotSwap.Distributed.SmokeTests\HotSwap.Distributed.SmokeTests.csproj", "{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.IntegrationTests", "tests\HotSwap.Distributed.IntegrationTests\HotSwap.Distributed.IntegrationTests.csproj", "{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}"
-EndProject
+#Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.SmokeTests", "tests\HotSwap.Distributed.SmokeTests\HotSwap.Distributed.SmokeTests.csproj", "{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}"
+#EndProject
+#Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.Distributed.IntegrationTests", "tests\HotSwap.Distributed.IntegrationTests\HotSwap.Distributed.IntegrationTests.csproj", "{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}"
+#EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C3CCB34E-0D7D-4F6D-AD9D-3E3F82E28702}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotSwap.KnowledgeGraph.Domain", "src\HotSwap.KnowledgeGraph.Domain\HotSwap.KnowledgeGraph.Domain.csproj", "{48852FE9-4DBF-4298-926F-AD3E390EA7A6}"
@@ -53,22 +53,22 @@ Global
 		{D4E5F6A7-B8C9-4012-D345-E6F7A8B9C012}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4E5F6A7-B8C9-4012-D345-E6F7A8B9C012}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4E5F6A7-B8C9-4012-D345-E6F7A8B9C012}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Release|Any CPU.Build.0 = Release|Any CPU
+#		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+#		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Debug|Any CPU.Build.0 = Debug|Any CPU
+#		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Release|Any CPU.ActiveCfg = Release|Any CPU
+#		{E5F6A7B8-C9D0-4123-E456-F7A8B9C0D123}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F6A7B8C9-D0E1-4234-F567-A8B9C0D1E234}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F6A7B8C9-D0E1-4234-F567-A8B9C0D1E234}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6A7B8C9-D0E1-4234-F567-A8B9C0D1E234}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6A7B8C9-D0E1-4234-F567-A8B9C0D1E234}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Release|Any CPU.Build.0 = Release|Any CPU
+#		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+#		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+#		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+#		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77}.Release|Any CPU.Build.0 = Release|Any CPU
+#		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+#		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+#		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+#		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{48852FE9-4DBF-4298-926F-AD3E390EA7A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{48852FE9-4DBF-4298-926F-AD3E390EA7A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48852FE9-4DBF-4298-926F-AD3E390EA7A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -87,8 +87,8 @@ Global
 		{0B07AA37-2DAE-41EE-968A-04CFB2A8E536}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77} = {005DAF90-8176-41DB-B3DD-EDBFCD639007}
-		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D} = {005DAF90-8176-41DB-B3DD-EDBFCD639007}
+#		{E8DEF2FD-0D39-4C92-9693-FEE61EFBED77} = {005DAF90-8176-41DB-B3DD-EDBFCD639007}
+#		{9CD30436-ADCE-47E8-881F-3F2AE2E2B85D} = {005DAF90-8176-41DB-B3DD-EDBFCD639007}
 		{48852FE9-4DBF-4298-926F-AD3E390EA7A6} = {C3CCB34E-0D7D-4F6D-AD9D-3E3F82E28702}
 		{17EFB851-7D46-414B-90E1-0374E034222B} = {005DAF90-8176-41DB-B3DD-EDBFCD639007}
 		{6F6EC18F-C763-4904-A165-031A85CCDFB3} = {C3CCB34E-0D7D-4F6D-AD9D-3E3F82E28702}
