@@ -23,7 +23,7 @@ public class CostAttributionServiceTests
 
     #region Constructor Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullQuotaService_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -32,7 +32,7 @@ public class CostAttributionServiceTests
             .WithParameterName("quotaService");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -45,7 +45,7 @@ public class CostAttributionServiceTests
 
     #region CalculateCostsAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task CalculateCostsAsync_WithUsageData_CalculatesCorrectCosts()
     {
         // Arrange
@@ -88,7 +88,7 @@ public class CostAttributionServiceTests
         result.TotalCost.Should().Be(expectedTotalCost);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task CalculateCostsAsync_WithNoUsage_ReturnsOnlyComputeCost()
     {
         // Arrange
@@ -121,7 +121,7 @@ public class CostAttributionServiceTests
         result.TotalCost.Should().Be(result.ComputeCost);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task CalculateCostsAsync_WithOneHourPeriod_CalculatesCorrectComputeCost()
     {
         // Arrange
@@ -143,7 +143,7 @@ public class CostAttributionServiceTests
         result.TotalCost.Should().Be(0.05m);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task CalculateCostsAsync_WithLargeUsage_HandlesCorrectly()
     {
         // Arrange
@@ -179,7 +179,7 @@ public class CostAttributionServiceTests
 
     #region GetCostBreakdownAsync Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCostBreakdownAsync_ReturnsCorrectBreakdown()
     {
         // Arrange
@@ -214,7 +214,7 @@ public class CostAttributionServiceTests
         breakdown["Compute"].Should().BeGreaterThan(0);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCostBreakdownAsync_WithZeroUsage_ReturnsComputeOnly()
     {
         // Arrange
@@ -238,7 +238,7 @@ public class CostAttributionServiceTests
         breakdown["Bandwidth"].Should().Be(0);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetCostBreakdownAsync_ConsistentWithCalculateCosts()
     {
         // Arrange

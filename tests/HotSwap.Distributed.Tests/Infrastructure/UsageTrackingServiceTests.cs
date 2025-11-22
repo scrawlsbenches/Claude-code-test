@@ -17,7 +17,7 @@ public class UsageTrackingServiceTests
         _service = new UsageTrackingService(_mockLogger.Object);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RecordPageViewAsync_WithValidData_RecordsPageView()
     {
         // Arrange
@@ -35,7 +35,7 @@ public class UsageTrackingServiceTests
         analytics.TotalPageViews.Should().Be(1);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RecordPageViewAsync_MultipleViews_AggregatesCorrectly()
     {
         // Arrange
@@ -53,7 +53,7 @@ public class UsageTrackingServiceTests
         analytics.UniqueVisitors.Should().Be(3); // 3 different IP+UA combinations
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RecordPageViewAsync_SameVisitorMultipleTimes_CountsAsOneUniqueVisitor()
     {
         // Arrange
@@ -72,7 +72,7 @@ public class UsageTrackingServiceTests
         analytics.UniqueVisitors.Should().Be(1); // Same visitor (IP+UA hash)
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RecordBandwidthUsageAsync_WithValidData_RecordsBandwidth()
     {
         // Arrange
@@ -86,7 +86,7 @@ public class UsageTrackingServiceTests
         // Bandwidth is tracked internally
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RecordBandwidthUsageAsync_MultipleCalls_AggregatesBytes()
     {
         // Arrange
@@ -101,7 +101,7 @@ public class UsageTrackingServiceTests
         // Verification would require GetBandwidthUsageAsync method
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RecordStorageUsageAsync_WithValidData_RecordsStorage()
     {
         // Arrange
@@ -114,7 +114,7 @@ public class UsageTrackingServiceTests
         // Assert - Should complete without error
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RecordStorageUsageAsync_MultipleCalls_AggregatesBytes()
     {
         // Arrange
@@ -128,7 +128,7 @@ public class UsageTrackingServiceTests
         // Assert - Total should be 1000000 bytes
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetTrafficAnalyticsAsync_WithNoData_ReturnsZeroMetrics()
     {
         // Arrange
@@ -147,7 +147,7 @@ public class UsageTrackingServiceTests
         analytics.TopPages.Should().BeEmpty();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetTrafficAnalyticsAsync_WithData_ReturnsCorrectMetrics()
     {
         // Arrange
@@ -171,7 +171,7 @@ public class UsageTrackingServiceTests
         analytics.TopPages["/home"].Should().Be(2); // Most visited page
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetTrafficAnalyticsAsync_ReturnsTopPagesOrderedByViews()
     {
         // Arrange
@@ -199,7 +199,7 @@ public class UsageTrackingServiceTests
         analytics.TopPages.Last().Value.Should().Be(1);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert

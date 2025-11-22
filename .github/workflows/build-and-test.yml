@@ -19,6 +19,15 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    - name: Environment diagnostics
+      run: |
+        echo "=== CI/CD Environment Info ==="
+        echo "OS: $(uname -a)"
+        echo "CPU cores: $(nproc)"
+        echo "Memory: $(free -h | grep Mem | awk '{print $2}')"
+        echo ".NET version: $(dotnet --version)"
+        echo "=============================="
+
     - name: Restore dependencies
       run: dotnet restore DistributedKernel.sln
 
@@ -26,7 +35,10 @@ jobs:
       run: dotnet build DistributedKernel.sln --configuration Release --no-restore
 
     - name: Run tests
-      run: dotnet test DistributedKernel.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+      run: |
+        echo "Starting tests at $(date)"
+        dotnet test DistributedKernel.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+        echo "Tests completed at $(date)"
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3

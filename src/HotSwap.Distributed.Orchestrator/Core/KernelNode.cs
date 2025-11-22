@@ -96,6 +96,26 @@ public class KernelNode : IAsyncDisposable
             _logger.LogInformation("Deploying module {ModuleName} v{Version} to node {NodeId}",
                 request.ModuleName, request.Version, NodeId);
 
+            // Test simulation: throw exception if configured
+            if (_config.SimulateException)
+            {
+                throw new InvalidOperationException("Simulated exception for testing");
+            }
+
+            // Test simulation: fail deployment if configured
+            if (_config.SimulateDeploymentFailure)
+            {
+                return new NodeDeploymentResult
+                {
+                    NodeId = NodeId,
+                    Hostname = Hostname,
+                    Success = false,
+                    Message = "Simulated deployment failure for testing",
+                    Timestamp = DateTime.UtcNow,
+                    Duration = DateTime.UtcNow - startTime
+                };
+            }
+
             // Simulate module deployment (hot swap)
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
 
@@ -149,6 +169,19 @@ public class KernelNode : IAsyncDisposable
             _logger.LogInformation("Rolling back module {ModuleName} on node {NodeId}",
                 moduleName, NodeId);
 
+            // Test simulation: fail rollback if configured
+            if (_config.SimulateRollbackFailure)
+            {
+                return new NodeRollbackResult
+                {
+                    NodeId = NodeId,
+                    Hostname = Hostname,
+                    Success = false,
+                    Message = "Simulated rollback failure for testing",
+                    Timestamp = DateTime.UtcNow
+                };
+            }
+
             // Simulate rollback
             await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
@@ -198,7 +231,15 @@ public class KernelNode : IAsyncDisposable
             LastHeartbeat = LastHeartbeat
         };
 
-        health.EvaluateHealth();
+        // Test simulation: mark as unhealthy if configured
+        if (_config.SimulateUnhealthy)
+        {
+            health.IsHealthy = false;
+        }
+        else
+        {
+            health.EvaluateHealth();
+        }
 
         return health;
     }

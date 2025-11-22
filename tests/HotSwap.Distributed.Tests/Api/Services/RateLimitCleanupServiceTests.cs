@@ -39,10 +39,16 @@ public class RateLimitCleanupServiceTests
         // Act
         await _service.StartAsync(cts.Token);
         await Task.Delay(50);
-        await _service.StopAsync(CancellationToken.None);
 
-        // Assert - Service should stop gracefully
-        cts.IsCancellationRequested.Should().BeTrue();
+        // StopAsync should complete without hanging
+        var stopTask = _service.StopAsync(CancellationToken.None);
+        var completedInTime = await Task.WhenAny(stopTask, Task.Delay(1000)) == stopTask;
+
+        // Assert - Service should stop gracefully within timeout
+        completedInTime.Should().BeTrue("StopAsync should complete promptly");
+
+        // Clean up
+        cts.Cancel();
     }
 
     [Fact]

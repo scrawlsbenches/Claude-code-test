@@ -43,7 +43,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region StartPublishActivity Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartPublishActivity_WithValidMessage_CreatesActivityWithCorrectTags()
     {
         // Arrange
@@ -62,7 +62,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("message.priority").Should().Be(5);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartPublishActivity_WithNullMessage_ReturnsNull()
     {
         // Act
@@ -76,7 +76,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region StartRouteActivity Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartRouteActivity_WithValidMessage_CreatesActivityWithCorrectTags()
     {
         // Arrange
@@ -95,7 +95,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("partition").Should().Be(3);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartRouteActivity_WithoutPartition_CreatesActivityWithoutPartitionTag()
     {
         // Arrange
@@ -110,7 +110,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity!.GetTagItem("partition").Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartRouteActivity_WithNullMessage_ReturnsNull()
     {
         // Act
@@ -124,7 +124,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region StartDeliverActivity Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartDeliverActivity_WithValidMessage_CreatesActivityWithCorrectTags()
     {
         // Arrange
@@ -143,7 +143,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("delivery.attempts").Should().Be(2);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartDeliverActivity_WithTraceContext_LinksToParentSpan()
     {
         // Arrange
@@ -161,7 +161,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity!.ParentId.Should().Be(parentActivity!.Id);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartDeliverActivity_WithNullMessage_ReturnsNull()
     {
         // Act
@@ -175,7 +175,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region StartAckActivity Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartAckActivity_WithSuccess_CreatesActivityWithCorrectTags()
     {
         // Arrange
@@ -192,7 +192,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("ack.status").Should().Be("success");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartAckActivity_WithFailure_SetsFailureStatus()
     {
         // Arrange
@@ -206,7 +206,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity!.GetTagItem("ack.status").Should().Be("failure");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void StartAckActivity_WithNullMessage_ReturnsNull()
     {
         // Act
@@ -220,7 +220,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region InjectTraceContext Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void InjectTraceContext_WithActivity_AddsTraceparentHeader()
     {
         // Arrange
@@ -235,7 +235,7 @@ public class MessageTelemetryProviderTests : IDisposable
         message.Headers["traceparent"].Should().Be(activity!.Id);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void InjectTraceContext_WithTraceState_AddsTracestateHeader()
     {
         // Arrange
@@ -251,7 +251,7 @@ public class MessageTelemetryProviderTests : IDisposable
         message.Headers["tracestate"].Should().Be("vendor1=value1,vendor2=value2");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void InjectTraceContext_WithNullActivity_DoesNotModifyHeaders()
     {
         // Arrange
@@ -265,7 +265,7 @@ public class MessageTelemetryProviderTests : IDisposable
         message.Headers.Count.Should().Be(originalCount);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void InjectTraceContext_OverwritesExistingHeaders()
     {
         // Arrange
@@ -285,7 +285,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region ExtractTraceContext Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ExtractTraceContext_WithValidTraceparent_ReturnsActivityContext()
     {
         // Arrange
@@ -301,7 +301,7 @@ public class MessageTelemetryProviderTests : IDisposable
         context!.Value.TraceId.Should().Be(sourceActivity.TraceId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ExtractTraceContext_WithoutTraceparent_ReturnsNull()
     {
         // Arrange
@@ -314,7 +314,7 @@ public class MessageTelemetryProviderTests : IDisposable
         context.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ExtractTraceContext_WithInvalidTraceparent_ReturnsNull()
     {
         // Arrange
@@ -332,7 +332,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region RecordMessagePublished Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessagePublished_WithActivity_SetsStatusToOk()
     {
         // Arrange
@@ -347,7 +347,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("message.published").Should().Be(true);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessagePublished_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -364,7 +364,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region RecordMessageDelivered Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessageDelivered_WithActivity_SetsStatusToOk()
     {
         // Arrange
@@ -381,7 +381,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("delivery.duration_ms").Should().Be(150.0);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessageDelivered_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -399,7 +399,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region RecordMessageAcknowledged Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessageAcknowledged_WithActivity_SetsStatusToOk()
     {
         // Arrange
@@ -414,7 +414,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("message.acknowledged").Should().Be(true);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessageAcknowledged_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -431,7 +431,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region RecordMessageFailed Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessageFailed_WithException_SetsStatusToError()
     {
         // Arrange
@@ -448,7 +448,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.GetTagItem("message.failed").Should().Be(true);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessageFailed_WithoutException_SetsGenericError()
     {
         // Arrange
@@ -463,7 +463,7 @@ public class MessageTelemetryProviderTests : IDisposable
         activity.StatusDescription.Should().Be("Message delivery failed");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordMessageFailed_WithNullActivity_DoesNotThrow()
     {
         // Arrange
@@ -481,7 +481,7 @@ public class MessageTelemetryProviderTests : IDisposable
 
     #region Integration Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void CompleteMessageFlow_PropagatesTraceContext()
     {
         // Arrange
@@ -511,7 +511,7 @@ public class MessageTelemetryProviderTests : IDisposable
         ackActivity!.TraceId.Should().Be(publishActivity.TraceId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Dispose_DisposesActivitySourceAndMeter()
     {
         // Arrange

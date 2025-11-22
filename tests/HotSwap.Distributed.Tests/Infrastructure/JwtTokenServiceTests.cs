@@ -26,7 +26,7 @@ public class JwtTokenServiceTests
         };
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithValidConfig_ShouldInitialize()
     {
         // Act
@@ -36,7 +36,7 @@ public class JwtTokenServiceTests
         service.Should().NotBeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullConfig_ShouldThrowArgumentNullException()
     {
         // Act
@@ -47,7 +47,7 @@ public class JwtTokenServiceTests
             .WithParameterName("config");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithShortSecretKey_ShouldThrowArgumentException()
     {
         // Arrange
@@ -66,7 +66,7 @@ public class JwtTokenServiceTests
             .WithMessage("*32 characters*");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GenerateToken_WithValidUser_ShouldReturnTokenAndExpiration()
     {
         // Arrange
@@ -88,7 +88,7 @@ public class JwtTokenServiceTests
         expiresAt.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(60), TimeSpan.FromSeconds(5));
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GenerateToken_WithMultipleRoles_ShouldIncludeAllRolesInToken()
     {
         // Arrange
@@ -110,7 +110,7 @@ public class JwtTokenServiceTests
         // Token should contain all roles (verified in validation test)
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GenerateToken_WithNullUser_ShouldThrowArgumentNullException()
     {
         // Arrange
@@ -124,7 +124,7 @@ public class JwtTokenServiceTests
             .WithParameterName("user");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_WithValidToken_ShouldReturnUserId()
     {
         // Arrange
@@ -148,7 +148,7 @@ public class JwtTokenServiceTests
         result.Should().Be(userId);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_WithInvalidToken_ShouldReturnNull()
     {
         // Arrange
@@ -162,7 +162,7 @@ public class JwtTokenServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_WithNullOrEmptyToken_ShouldReturnNull()
     {
         // Arrange
@@ -179,7 +179,7 @@ public class JwtTokenServiceTests
         resultWhitespace.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_WithExpiredToken_ShouldReturnNull()
     {
         // Arrange
@@ -213,7 +213,7 @@ public class JwtTokenServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_WithDifferentIssuer_ShouldReturnNull()
     {
         // Arrange
@@ -247,7 +247,7 @@ public class JwtTokenServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GenerateToken_ConsecutiveCalls_ShouldGenerateDifferentTokens()
     {
         // Arrange
@@ -272,7 +272,7 @@ public class JwtTokenServiceTests
 
     #region Secret Rotation Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithSecretService_ShouldLoadKeysFromSecretService()
     {
         // Arrange
@@ -307,7 +307,7 @@ public class JwtTokenServiceTests
         secretServiceMock.Verify(x => x.GetSecretAsync("jwt-signing-key", It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithSecretServiceReturningNull_ShouldFallBackToConfiguration()
     {
         // Arrange
@@ -336,7 +336,7 @@ public class JwtTokenServiceTests
         secretServiceMock.Verify(x => x.GetSecretAsync("jwt-signing-key", It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_DuringRotationWindow_ShouldAcceptTokensSignedWithPreviousKey()
     {
         // Arrange - Setup secret service with rotation window (both current and previous keys)
@@ -407,7 +407,7 @@ public class JwtTokenServiceTests
         secretServiceMock.Verify(x => x.GetSecretVersionAsync("jwt-signing-key", 1, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void GenerateToken_WithSecretService_ShouldAlwaysUseCurrentKey()
     {
         // Arrange
@@ -466,7 +466,7 @@ public class JwtTokenServiceTests
         validationResult.Should().Be(userId, "Token should be signed with current key");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RefreshKeys_WhenCalled_ShouldReloadKeysFromSecretService()
     {
         // Arrange
@@ -560,7 +560,7 @@ public class JwtTokenServiceTests
         secretServiceMock.Verify(x => x.GetSecretAsync("jwt-signing-key", It.IsAny<CancellationToken>()), Times.AtLeast(2));
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_AfterRotationWindowEnds_ShouldRejectTokensSignedWithOldKey()
     {
         // Arrange - Setup secret service with NO rotation window (only current key)
@@ -619,7 +619,7 @@ public class JwtTokenServiceTests
         result.Should().BeNull("Token signed with old key should be rejected after rotation window ends");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithSecretServiceThrowingException_ShouldFallBackToConfiguration()
     {
         // Arrange
@@ -649,7 +649,7 @@ public class JwtTokenServiceTests
         validationResult.Should().NotBeNull("Service should fall back to configuration key when secret service fails");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RefreshKeys_WithoutSecretService_ShouldLogDebugAndDoNothing()
     {
         // Arrange - Service without secret service
@@ -678,7 +678,7 @@ public class JwtTokenServiceTests
         resultAfter.Should().Be(user.Id);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void ValidateToken_WithMultipleKeysInRotationWindow_ShouldTryCurrentKeyFirst()
     {
         // Arrange

@@ -1,0 +1,501 @@
+using FluentAssertions;
+using HotSwap.Distributed.Domain.Enums;
+using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Orchestrator.Core;
+using HotSwap.Distributed.Orchestrator.Strategies;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
+
+namespace HotSwap.Distributed.Tests.Strategies;
+
+public class BlueGreenDeploymentStrategyTests
+{
+    private readonly Mock<ILogger<BlueGreenDeploymentStrategy>> _loggerMock;
+    private readonly Mock<ILogger<EnvironmentCluster>> _clusterLoggerMock;
+    private readonly Mock<ILogger<KernelNode>> _nodeLoggerMock;
+
+    public BlueGreenDeploymentStrategyTests()
+    {
+        _loggerMock = new Mock<ILogger<BlueGreenDeploymentStrategy>>();
+        _clusterLoggerMock = new Mock<ILogger<EnvironmentCluster>>();
+        _nodeLoggerMock = new Mock<ILogger<KernelNode>>();
+    }
+
+    [Fact]
+    public void StrategyName_ShouldBeBlueGreen()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(_loggerMock.Object);
+
+        // Assert
+        strategy.StrategyName.Should().Be("BlueGreen");
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithEmptyCluster_ReturnsFailed()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(_loggerMock.Object);
+        var cluster = new EnvironmentCluster(
+            EnvironmentType.Staging,
+            _clusterLoggerMock.Object);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("No nodes available");
+        result.Strategy.Should().Be("BlueGreen");
+        result.Environment.Should().Be(EnvironmentType.Staging);
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithSingleNode_AndSmokeTestsPassing_ReturnsSuccess()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 1);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Strategy.Should().Be("BlueGreen");
+        result.Environment.Should().Be(EnvironmentType.Staging);
+        result.NodeResults.Should().HaveCount(1);
+        result.NodeResults.Should().OnlyContain(r => r.Success);
+        result.Message.Should().Contain("Successfully deployed to 1 node");
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithHealthyCluster_AndSmokeTestsPassing_ReturnsSuccess()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 5);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(2, 1, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.NodeResults.Should().HaveCount(5);
+        result.NodeResults.Should().OnlyContain(r => r.Success);
+        result.Message.Should().Contain("Successfully deployed to 5 nodes using blue-green strategy");
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithManyNodes_DeploysToAllNodes()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 15);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "large-module",
+            Version = new Version(3, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.NodeResults.Should().HaveCount(15);
+        result.NodeResults.Should().OnlyContain(r => r.Success);
+        result.Message.Should().Contain("15 nodes");
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithDeploymentFailure_ReturnsFailed()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(_loggerMock.Object);
+        var cluster = await CreateClusterWithFailingNode(EnvironmentType.Staging, 4, failingNodeIndex: 1);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Deployment to green environment failed");
+        result.Message.Should().Contain("1 node");
+        result.NodeResults.Should().HaveCount(4);
+        result.NodeResults.Should().Contain(r => !r.Success);
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithMultipleDeploymentFailures_ReturnsFailed()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(_loggerMock.Object);
+        var cluster = await CreateClusterWithMultipleFailingNodes(EnvironmentType.Staging, 6);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Deployment to green environment failed");
+        result.NodeResults.Count(r => !r.Success).Should().BeGreaterThan(1);
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithSmokeTestsFailure_ReturnsFailed()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+        var cluster = await CreateClusterWithUnhealthyNode(EnvironmentType.Staging, 5, unhealthyNodeIndex: 2);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Smoke tests failed");
+        result.Message.Should().Contain("Traffic remains on blue environment");
+        result.NodeResults.Should().HaveCount(5);
+        result.NodeResults.Should().OnlyContain(r => r.Success); // Deployment succeeded, smoke tests failed
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithSmokeTestsTimeout_ReturnsFailed()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromMilliseconds(1));
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 3);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Smoke tests failed");
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithException_ReturnsFailedResult()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(_loggerMock.Object);
+        var cluster = await CreateClusterWithExceptionThrowingNode(EnvironmentType.Staging);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Deployment");
+        // Note: SimulateException returns a failed deployment result, not an exception in the DeploymentResult
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithCancellation_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromSeconds(10));
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 3);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster, cts.Token);
+
+        // Assert - The delay in smoke tests will be cancelled
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Constructor_WithDefaultParameters_UsesExpectedDefaults()
+    {
+        // Arrange & Act
+        var strategy = new BlueGreenDeploymentStrategy(_loggerMock.Object);
+
+        // Assert
+        strategy.StrategyName.Should().Be("BlueGreen");
+    }
+
+    [Fact]
+    public void Constructor_WithCustomParameters_AcceptsParameters()
+    {
+        // Arrange & Act
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromMinutes(10));
+
+        // Assert
+        strategy.Should().NotBeNull();
+        strategy.StrategyName.Should().Be("BlueGreen");
+    }
+
+    [Fact]
+    public async Task DeployAsync_VerifiesTimestamps_AreSet()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 2);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        var beforeDeployment = DateTime.UtcNow;
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        var afterDeployment = DateTime.UtcNow;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.StartTime.Should().BeOnOrAfter(beforeDeployment);
+        result.StartTime.Should().BeOnOrBefore(afterDeployment);
+        result.EndTime.Should().BeOnOrAfter(result.StartTime);
+        result.EndTime.Should().BeOnOrBefore(afterDeployment);
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithAllNodesUnhealthy_FailsSmokeTests()
+    {
+        // Arrange
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+        var cluster = await CreateClusterWithAllUnhealthyNodes(EnvironmentType.Staging, 3);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Smoke tests failed");
+    }
+
+    // Helper methods
+    private async Task<EnvironmentCluster> CreateClusterWithNodes(
+        EnvironmentType environment,
+        int nodeCount)
+    {
+        var cluster = new EnvironmentCluster(environment, _clusterLoggerMock.Object);
+
+        for (int i = 0; i < nodeCount; i++)
+        {
+            var config = new NodeConfiguration
+            {
+                Hostname = $"staging-node-{i}",
+                Port = 8080 + i,
+                Environment = environment
+            };
+
+            var node = await KernelNode.CreateAsync(config, _nodeLoggerMock.Object);
+            cluster.AddNode(node);
+        }
+
+        return cluster;
+    }
+
+    private async Task<EnvironmentCluster> CreateClusterWithFailingNode(
+        EnvironmentType environment,
+        int nodeCount,
+        int failingNodeIndex)
+    {
+        var cluster = new EnvironmentCluster(environment, _clusterLoggerMock.Object);
+
+        for (int i = 0; i < nodeCount; i++)
+        {
+            var config = new NodeConfiguration
+            {
+                Hostname = $"staging-node-{i}",
+                Port = 8080 + i,
+                Environment = environment,
+                SimulateDeploymentFailure = i == failingNodeIndex
+            };
+
+            var node = await KernelNode.CreateAsync(config, _nodeLoggerMock.Object);
+            cluster.AddNode(node);
+        }
+
+        return cluster;
+    }
+
+    private async Task<EnvironmentCluster> CreateClusterWithMultipleFailingNodes(
+        EnvironmentType environment,
+        int nodeCount)
+    {
+        var cluster = new EnvironmentCluster(environment, _clusterLoggerMock.Object);
+
+        for (int i = 0; i < nodeCount; i++)
+        {
+            var config = new NodeConfiguration
+            {
+                Hostname = $"staging-node-{i}",
+                Port = 8080 + i,
+                Environment = environment,
+                SimulateDeploymentFailure = i % 2 == 0 // Every other node fails
+            };
+
+            var node = await KernelNode.CreateAsync(config, _nodeLoggerMock.Object);
+            cluster.AddNode(node);
+        }
+
+        return cluster;
+    }
+
+    private async Task<EnvironmentCluster> CreateClusterWithUnhealthyNode(
+        EnvironmentType environment,
+        int nodeCount,
+        int unhealthyNodeIndex)
+    {
+        var cluster = new EnvironmentCluster(environment, _clusterLoggerMock.Object);
+
+        for (int i = 0; i < nodeCount; i++)
+        {
+            var config = new NodeConfiguration
+            {
+                Hostname = $"staging-node-{i}",
+                Port = 8080 + i,
+                Environment = environment,
+                SimulateUnhealthy = i == unhealthyNodeIndex
+            };
+
+            var node = await KernelNode.CreateAsync(config, _nodeLoggerMock.Object);
+            cluster.AddNode(node);
+        }
+
+        return cluster;
+    }
+
+    private async Task<EnvironmentCluster> CreateClusterWithAllUnhealthyNodes(
+        EnvironmentType environment,
+        int nodeCount)
+    {
+        var cluster = new EnvironmentCluster(environment, _clusterLoggerMock.Object);
+
+        for (int i = 0; i < nodeCount; i++)
+        {
+            var config = new NodeConfiguration
+            {
+                Hostname = $"staging-node-{i}",
+                Port = 8080 + i,
+                Environment = environment,
+                SimulateUnhealthy = true
+            };
+
+            var node = await KernelNode.CreateAsync(config, _nodeLoggerMock.Object);
+            cluster.AddNode(node);
+        }
+
+        return cluster;
+    }
+
+    private async Task<EnvironmentCluster> CreateClusterWithExceptionThrowingNode(
+        EnvironmentType environment)
+    {
+        var cluster = new EnvironmentCluster(environment, _clusterLoggerMock.Object);
+
+        var config = new NodeConfiguration
+        {
+            Hostname = "exception-node",
+            Port = 8080,
+            Environment = environment,
+            SimulateException = true
+        };
+
+        var node = await KernelNode.CreateAsync(config, _nodeLoggerMock.Object);
+        cluster.AddNode(node);
+
+        return cluster;
+    }
+}

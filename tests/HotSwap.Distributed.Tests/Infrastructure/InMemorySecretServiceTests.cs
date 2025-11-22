@@ -18,7 +18,7 @@ public class InMemorySecretServiceTests
         _secretService = new InMemorySecretService(_loggerMock.Object);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
     {
         // Arrange & Act & Assert
@@ -26,7 +26,7 @@ public class InMemorySecretServiceTests
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_ShouldLogWarningAboutProductionUse()
     {
         // Arrange - Use fresh logger mock to avoid counting constructor initialization
@@ -46,7 +46,7 @@ public class InMemorySecretServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretAsync_WhenSecretDoesNotExist_ShouldReturnNull()
     {
         // Act
@@ -56,7 +56,7 @@ public class InMemorySecretServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretAsync_WhenSecretExists_ShouldReturnCurrentVersion()
     {
         // Arrange
@@ -77,7 +77,7 @@ public class InMemorySecretServiceTests
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretAsync_WithMultipleVersions_ShouldReturnLatestVersion()
     {
         // Arrange
@@ -95,7 +95,7 @@ public class InMemorySecretServiceTests
         result.Value.Should().Be("version-3");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretVersionAsync_WhenSecretDoesNotExist_ShouldReturnNull()
     {
         // Act
@@ -105,7 +105,7 @@ public class InMemorySecretServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretVersionAsync_WhenVersionDoesNotExist_ShouldReturnNull()
     {
         // Arrange
@@ -119,7 +119,7 @@ public class InMemorySecretServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretVersionAsync_WhenVersionExists_ShouldReturnSpecificVersion()
     {
         // Arrange
@@ -137,7 +137,7 @@ public class InMemorySecretServiceTests
         result.Value.Should().Be("version-2");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretMetadataAsync_WhenSecretDoesNotExist_ShouldReturnNull()
     {
         // Act
@@ -147,7 +147,7 @@ public class InMemorySecretServiceTests
         result.Should().BeNull();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task GetSecretMetadataAsync_WhenSecretExists_ShouldReturnMetadata()
     {
         // Arrange
@@ -165,7 +165,7 @@ public class InMemorySecretServiceTests
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SetSecretAsync_WithBasicValues_ShouldCreateSecret()
     {
         // Arrange
@@ -194,7 +194,7 @@ public class InMemorySecretServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SetSecretAsync_WithRotationPolicy_ShouldSetExpirationAndNextRotation()
     {
         // Arrange
@@ -219,7 +219,7 @@ public class InMemorySecretServiceTests
         metadata.RotationPolicy.Should().Be(rotationPolicy);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SetSecretAsync_WithTags_ShouldStoreTagsInMetadata()
     {
         // Arrange
@@ -240,7 +240,7 @@ public class InMemorySecretServiceTests
         metadata!.Tags.Should().BeEquivalentTo(tags);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SetSecretAsync_MultipleVersions_ShouldIncrementVersionNumber()
     {
         // Arrange
@@ -261,7 +261,7 @@ public class InMemorySecretServiceTests
         metadata.PreviousVersion.Should().Be(2);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RotateSecretAsync_WhenSecretDoesNotExist_ShouldReturnFailure()
     {
         // Act
@@ -273,7 +273,7 @@ public class InMemorySecretServiceTests
         result.ErrorMessage.Should().Be("Secret not found");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RotateSecretAsync_WithCustomValue_ShouldCreateNewVersionWithProvidedValue()
     {
         // Arrange
@@ -301,7 +301,7 @@ public class InMemorySecretServiceTests
         oldVersion!.Value.Should().Be("original-value");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RotateSecretAsync_WithoutCustomValue_ShouldGenerateRandomSecret()
     {
         // Arrange
@@ -321,7 +321,7 @@ public class InMemorySecretServiceTests
         newSecret.Value.Should().MatchRegex(@"^[A-Za-z0-9!@#$%^&*()\-_=+\[\]{}|;:,.<>?]+$");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task RotateSecretAsync_ShouldUpdateMetadataWithRotationInfo()
     {
         // Arrange
@@ -355,7 +355,7 @@ public class InMemorySecretServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeleteSecretAsync_WhenSecretDoesNotExist_ShouldReturnFalse()
     {
         // Act
@@ -365,7 +365,7 @@ public class InMemorySecretServiceTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeleteSecretAsync_WhenSecretExists_ShouldDeleteAndReturnTrue()
     {
         // Arrange
@@ -394,7 +394,7 @@ public class InMemorySecretServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ListSecretsAsync_WhenNoSecrets_ShouldReturnEmptyList()
     {
         // Act
@@ -405,7 +405,7 @@ public class InMemorySecretServiceTests
         result.Should().BeEmpty();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ListSecretsAsync_WithMultipleSecrets_ShouldReturnAllSecrets()
     {
         // Arrange
@@ -421,7 +421,7 @@ public class InMemorySecretServiceTests
         result.Select(m => m.SecretId).Should().Contain(new[] { "secret-1", "secret-2", "secret-3" });
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ListSecretsAsync_WithTagFilter_ShouldReturnOnlyMatchingSecrets()
     {
         // Arrange
@@ -462,7 +462,7 @@ public class InMemorySecretServiceTests
         platformProductionSecrets.First().SecretId.Should().Be("prod-secret-1");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task IsSecretExpiringAsync_WhenSecretDoesNotExist_ShouldReturnFalse()
     {
         // Act
@@ -472,7 +472,7 @@ public class InMemorySecretServiceTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task IsSecretExpiringAsync_WhenSecretHasNoExpiration_ShouldReturnFalse()
     {
         // Arrange
@@ -486,7 +486,7 @@ public class InMemorySecretServiceTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task IsSecretExpiringAsync_WhenSecretExpiresWithinThreshold_ShouldReturnTrue()
     {
         // Arrange
@@ -505,7 +505,7 @@ public class InMemorySecretServiceTests
         result.Should().BeTrue(); // 5 days until expiration <= 7 day threshold
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task IsSecretExpiringAsync_WhenSecretExpiresBeyondThreshold_ShouldReturnFalse()
     {
         // Arrange
@@ -524,7 +524,7 @@ public class InMemorySecretServiceTests
         result.Should().BeFalse(); // 30 days until expiration > 7 day threshold
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ExtendRotationWindowAsync_WhenSecretDoesNotExist_ShouldReturnFalse()
     {
         // Act
@@ -534,7 +534,7 @@ public class InMemorySecretServiceTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ExtendRotationWindowAsync_WhenNotInRotationWindow_ShouldReturnFalse()
     {
         // Arrange
@@ -548,7 +548,7 @@ public class InMemorySecretServiceTests
         result.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ExtendRotationWindowAsync_WhenInRotationWindow_ShouldExtendWindowAndReturnTrue()
     {
         // Arrange
@@ -579,7 +579,7 @@ public class InMemorySecretServiceTests
             Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SecretVersioning_CompleteWorkflow_ShouldMaintainVersionHistory()
     {
         // Arrange
@@ -611,7 +611,7 @@ public class InMemorySecretServiceTests
         metadata.IsInRotationWindow.Should().BeTrue();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SeedSecretsAsync_WithMultipleSecrets_ShouldCreateAllSecretsCorrectly()
     {
         // Arrange
@@ -646,7 +646,7 @@ public class InMemorySecretServiceTests
         jwtMetadata!.CurrentVersion.Should().Be(1);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SeedSecretsAsync_WithEmptyDictionary_ShouldCompleteWithoutError()
     {
         // Arrange
@@ -663,7 +663,7 @@ public class InMemorySecretServiceTests
         allSecrets.Should().BeEmpty();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SeedSecretsAsync_ShouldAllowRetrievalImmediately()
     {
         // Arrange
@@ -687,7 +687,7 @@ public class InMemorySecretServiceTests
         retrievedSecret.IsDeleted.Should().BeFalse();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SeedSecretsAsync_ShouldCreateSecretsInCorrectOrder()
     {
         // Arrange

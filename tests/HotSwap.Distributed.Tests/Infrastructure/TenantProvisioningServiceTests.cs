@@ -22,7 +22,7 @@ public class TenantProvisioningServiceTests
         _service = new TenantProvisioningService(_mockTenantRepository.Object, _mockLogger.Object);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ProvisionTenantAsync_WithValidTenant_SuccessfullyProvisions()
     {
         // Arrange
@@ -47,7 +47,7 @@ public class TenantProvisioningServiceTests
         _mockTenantRepository.Verify(r => r.UpdateAsync(It.IsAny<Tenant>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ProvisionTenantAsync_WithInvalidTenant_ThrowsInvalidOperationException()
     {
         // Arrange
@@ -68,7 +68,7 @@ public class TenantProvisioningServiceTests
             .WithMessage("Provisioning validation failed:*");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ProvisionTenantAsync_WhenRepositoryThrows_RollsBackAndRethrows()
     {
         // Arrange
@@ -89,7 +89,7 @@ public class TenantProvisioningServiceTests
         _mockTenantRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeprovisionTenantAsync_WithExistingTenant_SuccessfullyDeprovisions()
     {
         // Arrange
@@ -115,7 +115,7 @@ public class TenantProvisioningServiceTests
         _mockTenantRepository.Verify(r => r.DeleteAsync(tenantId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task DeprovisionTenantAsync_WithNonExistentTenant_ReturnsFalse()
     {
         // Arrange
@@ -131,7 +131,7 @@ public class TenantProvisioningServiceTests
         _mockTenantRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithValidTenant_ReturnsSuccess()
     {
         // Arrange
@@ -146,7 +146,7 @@ public class TenantProvisioningServiceTests
         result.Errors.Should().BeEmpty();
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithMissingName_ReturnsFailure()
     {
         // Arrange
@@ -161,7 +161,7 @@ public class TenantProvisioningServiceTests
         result.Errors.Should().Contain("Tenant name is required");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithMissingSubdomain_ReturnsFailure()
     {
         // Arrange
@@ -176,7 +176,7 @@ public class TenantProvisioningServiceTests
         result.Errors.Should().Contain("Tenant subdomain is required");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithInvalidSubdomainFormat_ReturnsFailure()
     {
         // Arrange
@@ -191,7 +191,7 @@ public class TenantProvisioningServiceTests
         result.Errors.Should().Contain("Subdomain must contain only lowercase letters, numbers, and hyphens");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ValidateProvisioningAsync_WithNullResourceQuota_ReturnsFailure()
     {
         // Arrange
@@ -206,7 +206,7 @@ public class TenantProvisioningServiceTests
         result.Errors.Should().Contain("Resource quota is required");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SuspendTenantAsync_WithExistingTenant_SuccessfullySuspends()
     {
         // Arrange
@@ -231,7 +231,7 @@ public class TenantProvisioningServiceTests
             t.Metadata["suspension_reason"] == "Non-payment"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task SuspendTenantAsync_WithNonExistentTenant_ReturnsFalse()
     {
         // Arrange
@@ -247,7 +247,7 @@ public class TenantProvisioningServiceTests
         _mockTenantRepository.Verify(r => r.UpdateAsync(It.IsAny<Tenant>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ActivateTenantAsync_WithSuspendedTenant_SuccessfullyActivates()
     {
         // Arrange
@@ -274,7 +274,7 @@ public class TenantProvisioningServiceTests
             !t.Metadata.ContainsKey("suspension_reason")), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ActivateTenantAsync_WithNonExistentTenant_ReturnsFalse()
     {
         // Arrange
@@ -290,7 +290,7 @@ public class TenantProvisioningServiceTests
         _mockTenantRepository.Verify(r => r.UpdateAsync(It.IsAny<Tenant>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -299,7 +299,7 @@ public class TenantProvisioningServiceTests
             .WithParameterName("tenantRepository");
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert

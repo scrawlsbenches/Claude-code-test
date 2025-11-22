@@ -71,7 +71,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Counter Tests - Published
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void IncrementPublished_IncrementsCounter()
     {
         // Act
@@ -88,7 +88,7 @@ public class MessageMetricsProviderTests : IDisposable
         _counterValues["messages.published.total"].Should().Be(3);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void IncrementPublished_WithDifferentTopics_CountsSeparately()
     {
         // Act
@@ -108,7 +108,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Counter Tests - Delivered
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void IncrementDelivered_IncrementsCounter()
     {
         // Act
@@ -124,7 +124,7 @@ public class MessageMetricsProviderTests : IDisposable
         _counterValues["messages.delivered.total"].Should().Be(2);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void IncrementDelivered_WithPriority_IncludesTag()
     {
         // Act
@@ -143,7 +143,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Counter Tests - Failed
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void IncrementFailed_IncrementsCounter()
     {
         // Act
@@ -159,7 +159,7 @@ public class MessageMetricsProviderTests : IDisposable
         _counterValues["messages.failed.total"].Should().Be(2);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void IncrementFailed_WithDifferentReasons_CountsAll()
     {
         // Act
@@ -179,7 +179,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Histogram Tests - Publish Duration
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordPublishDuration_RecordsHistogram()
     {
         // Act
@@ -198,7 +198,7 @@ public class MessageMetricsProviderTests : IDisposable
         _histogramValues["message.publish.duration"].Should().Contain(100.0);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordPublishDuration_CalculatesAverageCorrectly()
     {
         // Act
@@ -216,7 +216,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Histogram Tests - Delivery Duration
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeliveryDuration_RecordsHistogram()
     {
         // Act
@@ -233,7 +233,7 @@ public class MessageMetricsProviderTests : IDisposable
         _histogramValues["message.delivery.duration"].Should().Contain(180.0);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void RecordDeliveryDuration_WithMultipleTopics_RecordsAll()
     {
         // Act
@@ -252,7 +252,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Gauge Tests - Queue Depth
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void UpdateQueueDepth_UpdatesGauge()
     {
         // Act
@@ -267,7 +267,7 @@ public class MessageMetricsProviderTests : IDisposable
         _gaugeValues["queue.depth"].Should().Be(150);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void UpdateQueueDepth_WithZero_SetsGaugeToZero()
     {
         // Arrange
@@ -285,7 +285,7 @@ public class MessageMetricsProviderTests : IDisposable
         _gaugeValues["queue.depth"].Should().Be(0);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void UpdateQueueDepth_WithMultipleTopics_TracksLatestForEach()
     {
         // Act
@@ -307,7 +307,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Gauge Tests - Consumer Lag
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void UpdateConsumerLag_UpdatesGauge()
     {
         // Act
@@ -322,7 +322,7 @@ public class MessageMetricsProviderTests : IDisposable
         _gaugeValues["consumer.lag"].Should().Be(25);
     }
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void UpdateConsumerLag_WithZeroLag_SetsGaugeToZero()
     {
         // Arrange
@@ -344,7 +344,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Thread Safety Tests
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public async Task ConcurrentMetricUpdates_ThreadSafe()
     {
         // Act - Simulate concurrent metric updates
@@ -378,7 +378,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Integration Test
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void CompleteMessageFlow_RecordsAllMetrics()
     {
         // Act: Simulate complete message flow
@@ -413,7 +413,7 @@ public class MessageMetricsProviderTests : IDisposable
 
     #region Dispose Test
 
-    [Fact(Skip = "Temporarily disabled - investigating test hang")]
+    [Fact]
     public void Dispose_DisposesMeters()
     {
         // Arrange

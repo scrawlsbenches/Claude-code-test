@@ -42,6 +42,27 @@ public class NodeConfiguration
     /// </summary>
     public Dictionary<string, string> Tags { get; set; } = new();
 
+    // Test simulation properties
+    /// <summary>
+    /// (Test only) Simulates deployment failures for testing.
+    /// </summary>
+    public bool SimulateDeploymentFailure { get; set; }
+
+    /// <summary>
+    /// (Test only) Simulates unhealthy node status for testing.
+    /// </summary>
+    public bool SimulateUnhealthy { get; set; }
+
+    /// <summary>
+    /// (Test only) Simulates exceptions during operations for testing.
+    /// </summary>
+    public bool SimulateException { get; set; }
+
+    /// <summary>
+    /// (Test only) Simulates rollback failures for testing.
+    /// </summary>
+    public bool SimulateRollbackFailure { get; set; }
+
     /// <summary>
     /// Gets the full endpoint URL for the node.
     /// </summary>
