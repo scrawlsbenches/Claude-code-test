@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Increased: 1,113 tests (was 586) + coverage collection overhead
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
   code-coverage:
     runs-on: ubuntu-latest
     needs: build-and-test
-    timeout-minutes: 15  # Increased: re-enabled 527 tests, needs more time for coverage
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
