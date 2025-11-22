@@ -214,4 +214,208 @@ public class EntityTests
         // Assert
         entity.UpdatedAt.Should().Be(newUpdatedAt);
     }
+
+    [Fact]
+    public void UpdatedBy_CanBeModified()
+    {
+        // Arrange
+        var entity = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act
+        entity.UpdatedBy = "updater@example.com";
+
+        // Assert
+        entity.UpdatedBy.Should().Be("updater@example.com");
+    }
+
+    [Fact]
+    public void Version_CanBeModified()
+    {
+        // Arrange
+        var entity = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act
+        entity.Version = 5;
+
+        // Assert
+        entity.Version.Should().Be(5);
+    }
+
+    [Fact]
+    public void Equals_WithNull_ReturnsFalse()
+    {
+        // Arrange
+        var entity = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act & Assert
+        entity.Equals(null).Should().BeFalse();
+        (entity == null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Equals_WithSameReference_ReturnsTrue()
+    {
+        // Arrange
+        var entity = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act & Assert
+        entity.Equals(entity).Should().BeTrue();
+        (entity == entity).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equals_ObjectOverride_WithSameId_ReturnsTrue()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var entity1 = new Entity
+        {
+            Id = id,
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        object entity2 = new Entity
+        {
+            Id = id,
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act & Assert
+        entity1.Equals(entity2).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equals_ObjectOverride_WithNonEntity_ReturnsFalse()
+    {
+        // Arrange
+        var entity = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        object notAnEntity = "not an entity";
+
+        // Act & Assert
+        entity.Equals(notAnEntity).Should().BeFalse();
+    }
+
+    [Fact]
+    public void OperatorEquals_WithBothNull_ReturnsTrue()
+    {
+        // Arrange
+        Entity? entity1 = null;
+        Entity? entity2 = null;
+
+        // Act & Assert
+        (entity1 == entity2).Should().BeTrue();
+    }
+
+    [Fact]
+    public void OperatorNotEquals_WithDifferentIds_ReturnsTrue()
+    {
+        // Arrange
+        var entity1 = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        var entity2 = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act & Assert
+        (entity1 != entity2).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToString_ReturnsFormattedString()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var entity = new Entity
+        {
+            Id = id,
+            Type = "Person",
+            Properties = new Dictionary<string, object> { ["name"] = "Alice", ["age"] = 30 },
+            CreatedAt = DateTimeOffset.UtcNow,
+            Version = 3
+        };
+
+        // Act
+        var result = entity.ToString();
+
+        // Assert
+        result.Should().Contain("Person");
+        result.Should().Contain(id.ToString());
+        result.Should().Contain("Properties=2");
+        result.Should().Contain("Version=3");
+    }
+
+    [Fact]
+    public void CreatedBy_CanBeNull()
+    {
+        // Arrange & Act
+        var entity = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Person",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedBy = null
+        };
+
+        // Assert
+        entity.CreatedBy.Should().BeNull();
+    }
+
+    [Fact]
+    public void Type_WithUnderscores_IsValid()
+    {
+        // Arrange & Act
+        var entity = new Entity
+        {
+            Id = Guid.NewGuid(),
+            Type = "Entity_Type_With_Underscores",
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Assert
+        entity.Type.Should().Be("Entity_Type_With_Underscores");
+    }
 }
