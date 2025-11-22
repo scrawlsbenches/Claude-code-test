@@ -370,4 +370,287 @@ public class GraphSchemaTests
         // Assert
         isValid.Should().BeFalse();
     }
+
+    [Fact]
+    public void Version_WithEmptyString_ThrowsArgumentException()
+    {
+        // Arrange & Act
+        Action act = () => new GraphSchema
+        {
+            Version = "",
+            EntityTypes = new Dictionary<string, EntityTypeDefinition>(),
+            RelationshipTypes = new Dictionary<string, RelationshipTypeDefinition>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*version*empty*");
+    }
+
+    [Fact]
+    public void IsCompatibleWith_WithNull_ReturnsFalse()
+    {
+        // Arrange
+        var schema = new GraphSchema
+        {
+            Version = "1.0.0",
+            EntityTypes = new Dictionary<string, EntityTypeDefinition>(),
+            RelationshipTypes = new Dictionary<string, RelationshipTypeDefinition>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act
+        var isCompatible = schema.IsCompatibleWith(null!);
+
+        // Assert
+        isCompatible.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ValidateEntity_WithNull_ReturnsFalse()
+    {
+        // Arrange
+        var schema = new GraphSchema
+        {
+            Version = "1.0.0",
+            EntityTypes = new Dictionary<string, EntityTypeDefinition>(),
+            RelationshipTypes = new Dictionary<string, RelationshipTypeDefinition>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act
+        var isValid = schema.ValidateEntity(null!);
+
+        // Assert
+        isValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ValidateRelationship_WithNull_ReturnsFalse()
+    {
+        // Arrange
+        var schema = new GraphSchema
+        {
+            Version = "1.0.0",
+            EntityTypes = new Dictionary<string, EntityTypeDefinition>(),
+            RelationshipTypes = new Dictionary<string, RelationshipTypeDefinition>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act
+        var isValid = schema.ValidateRelationship(null!, "Person", "Person");
+
+        // Assert
+        isValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ValidateRelationship_WithUndefinedType_ReturnsFalse()
+    {
+        // Arrange
+        var schema = new GraphSchema
+        {
+            Version = "1.0.0",
+            EntityTypes = new Dictionary<string, EntityTypeDefinition>(),
+            RelationshipTypes = new Dictionary<string, RelationshipTypeDefinition>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        var relationship = new Relationship
+        {
+            Id = Guid.NewGuid(),
+            Type = "UNDEFINED_TYPE",
+            SourceEntityId = Guid.NewGuid(),
+            TargetEntityId = Guid.NewGuid(),
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act
+        var isValid = schema.ValidateRelationship(relationship, "Person", "Person");
+
+        // Assert
+        isValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ValidateRelationship_WithInvalidTargetType_ReturnsFalse()
+    {
+        // Arrange
+        var schema = new GraphSchema
+        {
+            Version = "1.0.0",
+            EntityTypes = new Dictionary<string, EntityTypeDefinition>(),
+            RelationshipTypes = new Dictionary<string, RelationshipTypeDefinition>
+            {
+                ["KNOWS"] = new RelationshipTypeDefinition
+                {
+                    Name = "KNOWS",
+                    AllowedSourceTypes = new List<string> { "Person" },
+                    AllowedTargetTypes = new List<string> { "Person" }
+                }
+            },
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        var relationship = new Relationship
+        {
+            Id = Guid.NewGuid(),
+            Type = "KNOWS",
+            SourceEntityId = Guid.NewGuid(),
+            TargetEntityId = Guid.NewGuid(),
+            Properties = new Dictionary<string, object>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Act
+        var isValid = schema.ValidateRelationship(relationship, "Person", "Document");
+
+        // Assert
+        isValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CreatedBy_CanBeNull()
+    {
+        // Arrange & Act
+        var schema = new GraphSchema
+        {
+            Version = "1.0.0",
+            EntityTypes = new Dictionary<string, EntityTypeDefinition>(),
+            RelationshipTypes = new Dictionary<string, RelationshipTypeDefinition>(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedBy = null
+        };
+
+        // Assert
+        schema.CreatedBy.Should().BeNull();
+    }
+
+    [Fact]
+    public void PropertyDefinition_WithNumericValidation_StoresRules()
+    {
+        // Arrange & Act
+        var property = new PropertyDefinition
+        {
+            Name = "age",
+            Type = "Integer",
+            IsRequired = true,
+            MinValue = 0,
+            MaxValue = 150
+        };
+
+        // Assert
+        property.MinValue.Should().Be(0);
+        property.MaxValue.Should().Be(150);
+    }
+
+    [Fact]
+    public void PropertyDefinition_WithDescription_StoresDescription()
+    {
+        // Arrange & Act
+        var property = new PropertyDefinition
+        {
+            Name = "email",
+            Type = "String",
+            Description = "User email address"
+        };
+
+        // Assert
+        property.Description.Should().Be("User email address");
+    }
+
+    [Fact]
+    public void EntityTypeDefinition_WithDescription_StoresDescription()
+    {
+        // Arrange & Act
+        var entityType = new EntityTypeDefinition
+        {
+            Name = "Person",
+            Properties = new Dictionary<string, PropertyDefinition>(),
+            Description = "Represents a person entity"
+        };
+
+        // Assert
+        entityType.Description.Should().Be("Represents a person entity");
+    }
+
+    [Fact]
+    public void EntityTypeDefinition_Indexes_CanBeNull()
+    {
+        // Arrange & Act
+        var entityType = new EntityTypeDefinition
+        {
+            Name = "Person",
+            Properties = new Dictionary<string, PropertyDefinition>(),
+            Indexes = null
+        };
+
+        // Assert
+        entityType.Indexes.Should().BeNull();
+    }
+
+    [Fact]
+    public void RelationshipTypeDefinition_WithDescription_StoresDescription()
+    {
+        // Arrange & Act
+        var relType = new RelationshipTypeDefinition
+        {
+            Name = "KNOWS",
+            AllowedSourceTypes = new List<string> { "Person" },
+            AllowedTargetTypes = new List<string> { "Person" },
+            Description = "Represents acquaintance"
+        };
+
+        // Assert
+        relType.Description.Should().Be("Represents acquaintance");
+    }
+
+    [Fact]
+    public void RelationshipTypeDefinition_Properties_CanBeNull()
+    {
+        // Arrange & Act
+        var relType = new RelationshipTypeDefinition
+        {
+            Name = "KNOWS",
+            AllowedSourceTypes = new List<string> { "Person" },
+            AllowedTargetTypes = new List<string> { "Person" },
+            Properties = null
+        };
+
+        // Assert
+        relType.Properties.Should().BeNull();
+    }
+
+    [Fact]
+    public void RelationshipTypeDefinition_IsDirected_DefaultsToTrue()
+    {
+        // Arrange & Act
+        var relType = new RelationshipTypeDefinition
+        {
+            Name = "AUTHORED_BY",
+            AllowedSourceTypes = new List<string> { "Document" },
+            AllowedTargetTypes = new List<string> { "Person" }
+        };
+
+        // Assert
+        relType.IsDirected.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RelationshipTypeDefinition_IsDirected_CanBeFalse()
+    {
+        // Arrange & Act
+        var relType = new RelationshipTypeDefinition
+        {
+            Name = "FRIENDS_WITH",
+            AllowedSourceTypes = new List<string> { "Person" },
+            AllowedTargetTypes = new List<string> { "Person" },
+            IsDirected = false
+        };
+
+        // Assert
+        relType.IsDirected.Should().BeFalse();
+    }
 }
