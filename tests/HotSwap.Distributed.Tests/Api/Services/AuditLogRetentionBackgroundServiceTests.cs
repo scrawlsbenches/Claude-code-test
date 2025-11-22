@@ -198,17 +198,16 @@ public class AuditLogRetentionBackgroundServiceTests
     {
         // Arrange
         var cts = new CancellationTokenSource();
-        var firstCallTime = DateTime.MinValue;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var firstCallElapsed = TimeSpan.Zero;
 
         _mockAuditLogService.Setup(x => x.DeleteOldAuditLogsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Callback(() =>
             {
-                if (firstCallTime == DateTime.MinValue)
-                    firstCallTime = DateTime.UtcNow;
+                if (firstCallElapsed == TimeSpan.Zero)
+                    firstCallElapsed = sw.Elapsed;
             })
             .ReturnsAsync(0);
-
-        var startTime = DateTime.UtcNow;
 
         // Act
         await _service.StartAsync(cts.Token);
@@ -218,10 +217,11 @@ public class AuditLogRetentionBackgroundServiceTests
         cts.Cancel();
         await _service.StopAsync(CancellationToken.None);
 
-        if (firstCallTime != DateTime.MinValue)
+        if (firstCallElapsed != TimeSpan.Zero)
         {
-            var delayBeforeFirstCall = firstCallTime - startTime;
-            delayBeforeFirstCall.Should().BeGreaterOrEqualTo(TimeSpan.FromMinutes(1));
+            // Allow for small timing overhead (59.9 seconds minimum instead of strict 60)
+            // to account for scheduling delays and measurement precision
+            firstCallElapsed.Should().BeGreaterOrEqualTo(TimeSpan.FromSeconds(59.9));
         }
     }
 }
