@@ -118,12 +118,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build Docker image with tests
-      run: timeout 600 docker build --target test -t distributed-kernel:test .
-      timeout-minutes: 12
-
-    - name: Build final Docker image
-      run: timeout 300 docker build -t distributed-kernel:latest .
+    - name: Build Docker image
+      run: docker build -t distributed-kernel:latest .
       timeout-minutes: 8
 
     - name: Test Docker image

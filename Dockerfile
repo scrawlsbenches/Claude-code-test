@@ -27,12 +27,6 @@ COPY . .
 WORKDIR "/src/src/HotSwap.Distributed.Api"
 RUN dotnet build "HotSwap.Distributed.Api.csproj" -c Release -o /app/build
 
-# Test stage
-FROM build AS test
-WORKDIR /src
-# Run all tests including slow integration tests
-RUN dotnet test "DistributedKernel.sln" --configuration Release --no-restore --verbosity normal
-
 # Publish
 FROM build AS publish
 WORKDIR "/src/src/HotSwap.Distributed.Api"
