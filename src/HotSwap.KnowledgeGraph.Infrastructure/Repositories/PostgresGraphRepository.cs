@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using HotSwap.KnowledgeGraph.Domain.Models;
 using HotSwap.KnowledgeGraph.Infrastructure.Data;
-using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 
 namespace HotSwap.KnowledgeGraph.Infrastructure.Repositories;
 

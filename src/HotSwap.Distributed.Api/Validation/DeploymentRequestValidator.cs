@@ -1,6 +1,6 @@
+using System.Text.RegularExpressions;
 using HotSwap.Distributed.Api.Models;
 using HotSwap.Distributed.Domain.Enums;
-using System.Text.RegularExpressions;
 
 namespace HotSwap.Distributed.Api.Validation;
 

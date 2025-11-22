@@ -1,5 +1,5 @@
-using HotSwap.Distributed.Infrastructure.Interfaces;
 using System.Collections.Concurrent;
+using HotSwap.Distributed.Infrastructure.Interfaces;
 
 namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 

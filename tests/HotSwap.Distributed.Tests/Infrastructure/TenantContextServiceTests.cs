@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using FluentAssertions;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
@@ -6,7 +7,6 @@ using HotSwap.Distributed.Infrastructure.Tenants;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Security.Claims;
 using Xunit;
 
 namespace HotSwap.Distributed.Tests.Infrastructure;

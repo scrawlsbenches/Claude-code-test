@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using HotSwap.KnowledgeGraph.Domain.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace HotSwap.KnowledgeGraph.Infrastructure.Data;
 

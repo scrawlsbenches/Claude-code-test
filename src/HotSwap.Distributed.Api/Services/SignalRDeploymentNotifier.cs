@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.SignalR;
 using HotSwap.Distributed.Api.Hubs;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 
 namespace HotSwap.Distributed.Api.Services;
 

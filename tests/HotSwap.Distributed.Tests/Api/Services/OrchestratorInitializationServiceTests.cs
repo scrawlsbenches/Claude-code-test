@@ -28,7 +28,7 @@ public class OrchestratorInitializationServiceTests
         _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(
             mockLogger.Object,
             mockLoggerFactory.Object,
-            null, null, null, null, null, null, null);
+            null!, null!, null!, null!, null!, null!, null!);
 
         _mockServiceScope = new Mock<IServiceScope>();
         _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
@@ -130,7 +130,7 @@ public class OrchestratorInitializationServiceTests
         // Arrange
         var scopeServiceProvider = new Mock<IServiceProvider>();
         scopeServiceProvider.Setup(x => x.GetService(typeof(DistributedKernelOrchestrator)))
-            .Returns(null);
+            .Returns(null!);
 
         var mockScope = new Mock<IServiceScope>();
         mockScope.Setup(x => x.ServiceProvider).Returns(scopeServiceProvider.Object);
