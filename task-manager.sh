@@ -29,6 +29,7 @@ STATUS_PENDING="⏳"
 STATUS_IN_PROGRESS="🔄"
 STATUS_COMPLETED="✅"
 STATUS_BLOCKED="⚠️"
+STATUS_REJECTED="❌"
 
 # Usage information
 usage() {
@@ -39,9 +40,10 @@ Usage: $0 <command> [options]
 
 Commands:
   add              Add a new task interactively
-  list [filter]    List tasks (all, pending, progress, completed, blocked)
+  list [filter]    List tasks (all, pending, progress, completed, blocked, rejected)
   update <id>      Update task status
   complete <id>    Mark task as completed with implementation notes
+  reject <id>      Mark task as rejected/won't do
   search <term>    Search tasks by keyword
   stats            Show task statistics
   pre-push         Interactive pre-push task documentation
@@ -53,6 +55,7 @@ Examples:
   $0 list pending             # List all pending tasks
   $0 update 5                 # Update status of task #5
   $0 complete 3               # Mark task #3 as completed
+  $0 reject 7                 # Mark task #7 as rejected/won't do
   $0 search "authentication"  # Search for authentication tasks
   $0 stats                    # Show task statistics
   $0 pre-push                 # Document work before push
@@ -249,6 +252,10 @@ list_tasks() {
             print_header "Blocked Tasks"
             show_tasks_by_status "$STATUS_BLOCKED"
             ;;
+        rejected|wont-do|wontdo|❌)
+            print_header "Rejected Tasks"
+            show_tasks_by_status "$STATUS_REJECTED"
+            ;;
         critical|🔴)
             print_header "Critical Priority Tasks"
             show_tasks_by_priority "$PRIORITY_CRITICAL"
@@ -267,7 +274,7 @@ list_tasks() {
             ;;
         *)
             print_error "Unknown filter: $filter"
-            echo "Valid filters: all, pending, progress, completed, blocked, critical, high, medium, low"
+            echo "Valid filters: all, pending, progress, completed, blocked, rejected, critical, high, medium, low"
             exit 1
             ;;
     esac
@@ -369,7 +376,8 @@ update_task_status() {
     echo "  2) $STATUS_IN_PROGRESS In Progress"
     echo "  3) $STATUS_COMPLETED Completed"
     echo "  4) $STATUS_BLOCKED Blocked"
-    echo -n "Select (1-4): "
+    echo "  5) $STATUS_REJECTED Rejected/Won't Do"
+    echo -n "Select (1-5): "
     read -r status_choice
 
     case $status_choice in
@@ -377,6 +385,7 @@ update_task_status() {
         2) new_status="$STATUS_IN_PROGRESS In Progress";;
         3) new_status="$STATUS_COMPLETED Completed ($(date +%Y-%m-%d))";;
         4) new_status="$STATUS_BLOCKED Blocked";;
+        5) new_status="$STATUS_REJECTED Rejected ($(date +%Y-%m-%d))";;
         *)
             print_error "Invalid choice"
             exit 1
@@ -477,6 +486,82 @@ complete_task() {
     print_success "Marked task #${task_id} as completed"
 }
 
+# Mark task as rejected/won't do
+reject_task() {
+    check_task_file
+
+    local task_id="$1"
+
+    if [[ -z "$task_id" ]]; then
+        print_error "Task ID required"
+        echo "Usage: $0 reject <task_id>"
+        exit 1
+    fi
+
+    # Find the task
+    if ! grep -q "^### ${task_id}\." "$TASK_PATH"; then
+        print_error "Task #${task_id} not found"
+        exit 1
+    fi
+
+    print_header "Reject Task #${task_id}"
+
+    # Update status to rejected
+    local date_str=$(date +%Y-%m-%d)
+    local new_status="$STATUS_REJECTED **Rejected** (${date_str})"
+
+    awk -v task="### ${task_id}." -v new_status="**Status:** ${new_status}" '
+        /^###/ { in_task = ($0 ~ task) }
+        in_task && /^\*\*Status:\*\*/ {
+            print new_status
+            in_task = 0
+            next
+        }
+        { print }
+    ' "$TASK_PATH" > "${TASK_PATH}.tmp" && mv "${TASK_PATH}.tmp" "$TASK_PATH"
+
+    # Prompt for rejection reason
+    echo ""
+    echo "Add rejection reason (optional, press Ctrl+D when done):"
+    echo "Example: Out of scope for current roadmap, superseded by Task #15"
+    echo ""
+
+    local reason=""
+    while IFS= read -r line; do
+        reason="${reason}${line}\n"
+    done
+
+    if [[ -n "$reason" ]]; then
+        # Find the task and add rejection reason after Status
+        awk -v task="### ${task_id}." -v reason="$reason" '
+            /^###/ { in_task = ($0 ~ task) }
+            in_task && /^\*\*Status:\*\*/ {
+                print $0
+                if (reason != "") {
+                    print ""
+                    print "**Rejection Reason:**"
+                    printf "%b", reason
+                }
+                in_task = 0
+                next
+            }
+            in_task && /^\*\*Rejection Reason:\*\*/ {
+                # Skip old rejection reason
+                while (getline && !/^\*\*[A-Z]/) { }
+                print $0
+                in_task = 0
+                next
+            }
+            { print }
+        ' "$TASK_PATH" > "${TASK_PATH}.tmp" && mv "${TASK_PATH}.tmp" "$TASK_PATH"
+    fi
+
+    # Update last updated date
+    sed -i "s/\*\*Last Updated:\*\*.*/\*\*Last Updated:\*\* ${date_str}/" "$TASK_PATH"
+
+    print_success "Marked task #${task_id} as rejected"
+}
+
 # Search tasks by keyword
 search_tasks() {
     check_task_file
@@ -544,6 +629,7 @@ show_stats() {
     local in_progress=$(grep -c "$STATUS_IN_PROGRESS" "$TASK_PATH" 2>/dev/null || echo "0")
     local completed=$(grep -c "$STATUS_COMPLETED" "$TASK_PATH" 2>/dev/null || echo "0")
     local blocked=$(grep -c "$STATUS_BLOCKED" "$TASK_PATH" 2>/dev/null || echo "0")
+    local rejected=$(grep -c "$STATUS_REJECTED" "$TASK_PATH" 2>/dev/null || echo "0")
 
     local critical=$(grep -c "$PRIORITY_CRITICAL" "$TASK_PATH" 2>/dev/null || echo "0")
     local high=$(grep -c "$PRIORITY_HIGH" "$TASK_PATH" 2>/dev/null || echo "0")
@@ -558,6 +644,7 @@ show_stats() {
     echo "  $STATUS_IN_PROGRESS In Progress:  $in_progress"
     echo "  $STATUS_COMPLETED Completed:    $completed"
     echo "  $STATUS_BLOCKED Blocked:      $blocked"
+    echo "  $STATUS_REJECTED Rejected:     $rejected"
     echo ""
     echo "By Priority:"
     echo "  $PRIORITY_CRITICAL Critical:     $critical"
@@ -717,6 +804,9 @@ main() {
             ;;
         complete|done)
             complete_task "$@"
+            ;;
+        reject|wont-do|wontdo)
+            reject_task "$@"
             ;;
         search|find)
             search_tasks "$@"

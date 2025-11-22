@@ -5,10 +5,11 @@ A bash script for managing `TASK_LIST.md` automatically, helping document work b
 ## Features
 
 - ✅ Add new tasks interactively
-- ✅ List tasks by status (pending, in progress, completed, blocked)
+- ✅ List tasks by status (pending, in progress, completed, blocked, rejected)
 - ✅ List tasks by priority (critical, high, medium, low)
 - ✅ Update task status
 - ✅ Mark tasks as completed with implementation notes
+- ✅ Mark tasks as rejected/won't do with rejection reason
 - ✅ Search tasks by keyword
 - ✅ View task statistics with visual progress bar
 - ✅ Pre-push wizard for documenting work
@@ -77,6 +78,7 @@ Brief description: Add rate limiting to API endpoints to prevent abuse
 ./task-manager.sh list progress
 ./task-manager.sh list completed
 ./task-manager.sh list blocked
+./task-manager.sh list rejected
 
 # List by priority
 ./task-manager.sh list critical
@@ -140,6 +142,27 @@ Updated README with configuration examples
 ✓ Marked task #27 as completed
 ```
 
+### Reject a Task
+
+```bash
+./task-manager.sh reject <task_id>
+```
+
+Marks task as rejected/won't do and prompts for rejection reason:
+
+```bash
+$ ./task-manager.sh reject 28
+=== Reject Task #28 ===
+
+Add rejection reason (optional, press Ctrl+D when done):
+Example: Out of scope for current roadmap, superseded by Task #15
+
+Out of scope - feature not aligned with product roadmap
+Superseded by Task #30 which provides better implementation
+^D
+✓ Marked task #28 as rejected
+```
+
 ### Search Tasks
 
 ```bash
@@ -190,6 +213,7 @@ By Status:
   🔄 In Progress:  1
   ✅ Completed:    12
   ⚠️ Blocked:      0
+  ❌ Rejected:     1
 
 By Priority:
   🔴 Critical:     3
@@ -314,6 +338,7 @@ git commit -m "docs: update TASK_LIST.md - mark rate limiting as completed"
 | 🔄 | In Progress | Currently being worked on |
 | ✅ | Completed | Task finished successfully |
 | ⚠️ | Blocked | Waiting on dependency/decision |
+| ❌ | Rejected | Task rejected/won't do |
 
 ## Priority Levels
 
