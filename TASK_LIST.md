@@ -1,9 +1,9 @@
 # Comprehensive Task List - Distributed Kernel Orchestration System
 
 **Generated:** 2025-11-15
-**Last Updated:** 2025-11-20 (Tasks #23, #24, #26 Completed, Task #25 Added)
-**Source:** Analysis of all project markdown documentation
-**Current Status:** Production Ready (95% Spec Compliance, Green Build, 12/26 Tasks Complete)
+**Last Updated:** 2025-11-21 (Tasks #27, #28 Added - Test Optimization)
+**Source:** Analysis of all project markdown documentation, SKIPPED_TESTS_INVESTIGATION.md
+**Current Status:** Production Ready (95% Spec Compliance, Green Build, 13/28 Tasks Complete)
 
 ---
 
@@ -1454,22 +1454,100 @@ MinIO Integration (Infrastructure layer)
 
 ---
 
+### 27. Optimize Integration Test Timeouts (Reduce Skipped Tests)
+**Priority:** 🟢 Medium
+**Status:** ⏳ Not Implemented
+**Effort:** 2-3 hours
+**References:** SKIPPED_TESTS_INVESTIGATION.md, .github/workflows/build-and-test.yml:90
+
+**Context:**
+Currently 14 tests are skipped out of 582 total tests (2.4% skip rate). Investigation revealed:
+- 16 tests marked with `[Trait("Category", "Slow")]`
+- 7 tests in ApprovalWorkflowIntegrationTests
+- 1 test with 3-minute timeout exceeds CI 2-minute hang limit
+- Multiple tests with 60-90 second timeouts approaching CI limits
+
+**Requirements:**
+- [ ] Reduce `TimeSpan.FromMinutes(3)` to `TimeSpan.FromSeconds(90)` in ApprovalWorkflowIntegrationTests.cs:337
+- [ ] Review all tests with timeouts >60s and reduce to 45s maximum
+- [ ] Remove unnecessary `await Task.Delay(TimeSpan.FromSeconds(2))` calls
+- [ ] Replace fixed delays with polling mechanisms where appropriate
+- [ ] Verify tests complete within 90s locally before committing
+- [ ] Run full integration test suite and verify skip count reduces from 14 to <7
+
+**Target Files:**
+- `tests/HotSwap.Distributed.IntegrationTests/Tests/ApprovalWorkflowIntegrationTests.cs` (7 tests)
+- `tests/HotSwap.Distributed.IntegrationTests/Tests/DeploymentStrategyIntegrationTests.cs` (9 "Slow" tests)
+- `tests/HotSwap.Distributed.IntegrationTests/Tests/ConcurrentDeploymentIntegrationTests.cs` (7 "Slow" tests)
+
+**Acceptance Criteria:**
+- Skipped test count reduces from 14 to ≤7
+- All timeout values ≤90 seconds
+- CI pipeline completes without hanging tests
+- No regression in test quality or coverage
+
+**Impact:** Medium - Improves test reliability and CI visibility (reduces "noise" from expected skips)
+
+---
+
+### 28. Split Integration Tests into Fast/Slow CI Suites
+**Priority:** 🟢 Medium
+**Status:** ⏳ Not Implemented
+**Effort:** 1-2 hours
+**Dependencies:** Task #27 completed
+**References:** .github/workflows/build-and-test.yml, SKIPPED_TESTS_INVESTIGATION.md
+
+**Context:**
+Long-running integration tests slow down CI feedback loop. Splitting into fast/slow suites allows:
+- Fast tests run on every commit (quick feedback)
+- Slow tests run nightly or pre-release (comprehensive coverage)
+- Better resource utilization in CI/CD pipeline
+
+**Requirements:**
+- [ ] Create separate CI workflow for "Slow" integration tests
+- [ ] Update main CI to filter slow tests: `--filter "Category!=Slow"`
+- [ ] Create nightly CI job for slow tests: `--filter "Category=Slow"` with 10-minute timeout
+- [ ] Add "Slow" test badge to README.md
+- [ ] Document when slow tests run (nightly, pre-release)
+- [ ] Verify fast suite completes in <10 minutes
+
+**CI Configuration Changes:**
+```yaml
+# Main CI (every commit)
+- name: Run fast integration tests
+  run: dotnet test tests/HotSwap.Distributed.IntegrationTests/ --filter "Category!=Slow" --no-build
+
+# Nightly CI (separate workflow)
+- name: Run slow integration tests
+  run: dotnet test tests/HotSwap.Distributed.IntegrationTests/ --filter "Category=Slow" --blame-hang-timeout 10m
+```
+
+**Acceptance Criteria:**
+- Main CI completes in ≤15 minutes (down from ~20 minutes)
+- Slow tests run automatically on nightly schedule
+- All 582 tests eventually run (fast in main CI, slow in nightly)
+- Documentation updated with test suite split explanation
+
+**Impact:** Medium - Faster CI feedback loop, better developer experience
+
+---
+
 ## Summary Statistics
 
-**Total Tasks:** 26 (updated 2025-11-21)
+**Total Tasks:** 28 (updated 2025-11-21)
 
 **By Priority:**
-- 🔴 Critical: 3 tasks (12%)
-- 🟡 High: 3 tasks (12%)
-- 🟢 Medium: 16 tasks (62%)
-- ⚪ Low: 4 tasks (15%)
+- 🔴 Critical: 3 tasks (11%)
+- 🟡 High: 3 tasks (11%)
+- 🟢 Medium: 18 tasks (64%) - includes Tasks #27 & #28 (Test Optimization)
+- ⚪ Low: 4 tasks (14%)
 
 **By Status:**
-- ✅ Completed: 13 tasks (50%) - Tasks #1, #2, #3, #4, #5, #7, #15, #17, #21, #22, #23, #24, #26
-- Not Implemented: 11 tasks (42%) - includes Task #25 (MinIO)
-- Partial: 2 tasks (8%) - Task #16 (87.5% complete), Task #4 (integration tests)
+- ✅ Completed: 13 tasks (46%) - Tasks #1, #2, #3, #4, #5, #7, #15, #17, #21, #22, #23, #24, #26
+- Not Implemented: 13 tasks (46%) - includes Tasks #25 (MinIO), #27 & #28 (Test Optimization)
+- Partial: 2 tasks (7%) - Task #16 (87.5% complete), Task #4 (integration tests)
 
-**Estimated Total Effort:** 70-99 days (updated 2025-11-21)
+**Estimated Total Effort:** 73-102 hours (updated 2025-11-21)
 
 **✅ Sprint 1 Completed (2025-11-15):**
 1. ✅ JWT Authentication (2-3 days) - COMPLETED
@@ -1498,14 +1576,17 @@ MinIO Integration (Infrastructure layer)
    - Production deployment security checklist created
 
 **Recommended Next Actions (Sprint 3):**
-1. **Integration Test Completion** (2-3 days):
+1. **Test Quality & Optimization** (3-5 hours):
+   - Task #27: Optimize Integration Test Timeouts (2-3 hours) - Reduce 14 skips to <7
+   - Task #28: Split Integration Tests into Fast/Slow Suites (1-2 hours) - Faster CI feedback
+2. **Integration Test Completion** (2-3 days):
    - Task #23: Verify ApprovalWorkflow Tests Pass (0.5 days) - Root cause fixed, needs test verification
    - Task #24: Optimize Slow Deployment Tests (2-3 days)
-2. **Feature Implementation** (3-4 days):
+3. **Feature Implementation** (3-4 days):
    - Task #22: Implement Multi-Tenant API Endpoints
-3. **Security Enhancement** (2-3 days):
+4. **Security Enhancement** (2-3 days):
    - Task #16: Secret Rotation System (2-3 days)
-4. **Operational Excellence** (2-3 days):
+5. **Operational Excellence** (2-3 days):
    - Task #6: WebSocket Real-Time Updates (2-3 days)
    - Task #8: Helm Charts for Kubernetes (2 days)
 
