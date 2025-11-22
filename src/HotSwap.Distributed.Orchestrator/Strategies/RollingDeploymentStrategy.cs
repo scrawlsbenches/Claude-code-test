@@ -44,7 +44,8 @@ public class RollingDeploymentStrategy : IDeploymentStrategy
             _logger.LogInformation("Starting rolling deployment of {ModuleName} v{Version} to {Environment} (batch size: {BatchSize})",
                 request.ModuleName, request.Version, cluster.Environment, _maxConcurrent);
 
-            var nodes = cluster.Nodes.ToList();
+            // Sort nodes by hostname to ensure deterministic batch ordering across deployments
+            var nodes = cluster.Nodes.OrderBy(n => n.Hostname).ToList();
 
             if (nodes.Count == 0)
             {
