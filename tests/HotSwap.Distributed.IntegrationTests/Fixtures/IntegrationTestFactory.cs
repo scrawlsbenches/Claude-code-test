@@ -122,17 +122,17 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 services.Remove(cacheDescriptor);
             }
 
-            // Add in-memory distributed cache (no Redis needed)
+            // Add in-memory distributed cache
             services.AddDistributedMemoryCache();
 
-            // Replace RedisDistributedLock with InMemoryDistributedLock
+            // Replace with InMemoryDistributedLock (C# in-memory implementation)
             var lockDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IDistributedLock));
             if (lockDescriptor != null)
             {
                 services.Remove(lockDescriptor);
             }
 
-            // Add in-memory distributed lock (no Redis needed)
+            // Add in-memory distributed lock (C# implementation using SemaphoreSlim)
             services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
 
             // Replace InMemoryMetricsProvider with DeterministicMetricsProvider

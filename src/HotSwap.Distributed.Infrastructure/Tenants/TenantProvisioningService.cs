@@ -43,7 +43,7 @@ public class TenantProvisioningService : ITenantProvisioningService
             var tenantIdStr = tenant.TenantId.ToString("N").Substring(0, 8);
             tenant.DatabaseSchema = $"tenant_{tenantIdStr}";
             tenant.KubernetesNamespace = $"tenant-{tenantIdStr}";
-            tenant.RedisKeyPrefix = $"tenant:{tenantIdStr}:";
+            tenant.CacheKeyPrefix = $"tenant:{tenantIdStr}:";
             tenant.StorageBucketPrefix = $"tenant-{tenantIdStr}/";
 
             // Create tenant record
@@ -52,7 +52,7 @@ public class TenantProvisioningService : ITenantProvisioningService
             // Provision resources
             await ProvisionDatabaseSchemaAsync(tenant, cancellationToken);
             await ProvisionKubernetesNamespaceAsync(tenant, cancellationToken);
-            await ProvisionRedisNamespaceAsync(tenant, cancellationToken);
+            await ProvisionCacheNamespaceAsync(tenant, cancellationToken);
             await ProvisionStorageBucketAsync(tenant, cancellationToken);
             await CreateDefaultAdminUserAsync(tenant, cancellationToken);
 
@@ -96,7 +96,7 @@ public class TenantProvisioningService : ITenantProvisioningService
             // Clean up resources
             await CleanupDatabaseSchemaAsync(tenant, cancellationToken);
             await CleanupKubernetesNamespaceAsync(tenant, cancellationToken);
-            await CleanupRedisNamespaceAsync(tenant, cancellationToken);
+            await CleanupCacheNamespaceAsync(tenant, cancellationToken);
             await CleanupStorageBucketAsync(tenant, cancellationToken);
 
             // Soft delete tenant
@@ -241,10 +241,10 @@ public class TenantProvisioningService : ITenantProvisioningService
         }
     }
 
-    private Task ProvisionRedisNamespaceAsync(Tenant tenant, CancellationToken cancellationToken)
+    private Task ProvisionCacheNamespaceAsync(Tenant tenant, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Provisioning Redis namespace: {Prefix}", tenant.RedisKeyPrefix);
-        // Redis namespacing is logical via key prefixes, no provisioning needed
+        _logger.LogInformation("Provisioning cache namespace: {Prefix}", tenant.CacheKeyPrefix);
+        // In-memory cache namespacing is logical via key prefixes, no provisioning needed
         return Task.CompletedTask;
     }
 
@@ -402,32 +402,32 @@ public class TenantProvisioningService : ITenantProvisioningService
         }
     }
 
-    private async Task CleanupRedisNamespaceAsync(Tenant tenant, CancellationToken cancellationToken)
+    private async Task CleanupCacheNamespaceAsync(Tenant tenant, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Cleaning up Redis namespace: {Prefix}", tenant.RedisKeyPrefix);
+        _logger.LogInformation("Cleaning up cache namespace: {Prefix}", tenant.CacheKeyPrefix);
 
         try
         {
-            // Delete all keys with tenant prefix
-            // In production, this would use StackExchange.Redis
-            // Example production code:
-            // var connection = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
-            // var db = connection.GetDatabase();
-            // var server = connection.GetServer(connection.GetEndPoints().First());
-            // await foreach (var key in server.KeysAsync(pattern: $"{tenant.RedisKeyPrefix}*"))
+            // Delete all cache entries with tenant prefix
+            // In production, this would use IDistributedCache with key enumeration
+            // For in-memory cache (MemoryCache), entries expire automatically based on TTL
+            // or can be removed explicitly if keys are tracked
+            // Example production code with distributed cache:
+            // var cacheKeys = await _cacheKeyRepository.GetKeysByPrefixAsync(tenant.CacheKeyPrefix);
+            // foreach (var key in cacheKeys)
             // {
-            //     await db.KeyDeleteAsync(key);
+            //     await _distributedCache.RemoveAsync(key, cancellationToken);
             // }
 
-            _logger.LogInformation("Redis namespace {Prefix} cleaned up for tenant {TenantId}",
-                tenant.RedisKeyPrefix, tenant.TenantId);
+            _logger.LogInformation("Cache namespace {Prefix} cleaned up for tenant {TenantId}",
+                tenant.CacheKeyPrefix, tenant.TenantId);
 
             // Simulate async operation
             await Task.Delay(50, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to cleanup Redis namespace: {Prefix}", tenant.RedisKeyPrefix);
+            _logger.LogError(ex, "Failed to cleanup cache namespace: {Prefix}", tenant.CacheKeyPrefix);
             // Don't rethrow - best effort cleanup
         }
     }
