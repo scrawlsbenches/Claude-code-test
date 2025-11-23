@@ -1,0 +1,19 @@
+apiVersion: v2
+name: hotswap
+description: A Helm chart for HotSwap Distributed Kernel Orchestration System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - hotswap
+  - deployment
+  - orchestration
+  - distributed-systems
+  - kernel-management
+home: https://github.com/yourorg/hotswap-distributed
+sources:
+  - https://github.com/yourorg/hotswap-distributed
+maintainers:
+  - name: HotSwap Team
+    email: team@hotswap.example.com
+icon: https://hotswap.example.com/logo.png

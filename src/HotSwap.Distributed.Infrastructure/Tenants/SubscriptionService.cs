@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
+using HotSwap.Distributed.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace HotSwap.Distributed.Infrastructure.Tenants;
@@ -13,6 +14,7 @@ namespace HotSwap.Distributed.Infrastructure.Tenants;
 public class SubscriptionService : ISubscriptionService
 {
     private readonly ITenantRepository _tenantRepository;
+    private readonly IObjectStorageService? _storageService;
     private readonly ILogger<SubscriptionService> _logger;
     private readonly ConcurrentDictionary<Guid, TenantSubscription> _subscriptions = new();
     private readonly ConcurrentDictionary<Guid, List<UsageReport>> _usageReports = new();
@@ -21,10 +23,12 @@ public class SubscriptionService : ISubscriptionService
 
     public SubscriptionService(
         ITenantRepository tenantRepository,
-        ILogger<SubscriptionService> logger)
+        ILogger<SubscriptionService> logger,
+        IObjectStorageService? storageService = null)
     {
         _tenantRepository = tenantRepository ?? throw new ArgumentNullException(nameof(tenantRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _storageService = storageService; // Optional - falls back to simulated metrics if not provided
     }
 
     public async Task<TenantSubscription> CreateSubscriptionAsync(Guid tenantId, SubscriptionTier tier, CancellationToken cancellationToken = default)
@@ -163,7 +167,7 @@ public class SubscriptionService : ISubscriptionService
         // - Bandwidth: Nginx access logs or Varnish cache statistics
         // - Deployments: Deployment history from database
 
-        var storageUsedGB = CalculateStorageUsage(tenantId, periodStart, periodEnd);
+        var storageUsedGB = await CalculateStorageUsageAsync(tenantId, periodStart, periodEnd, cancellationToken);
         var bandwidthUsedGB = CalculateBandwidthUsage(tenantId, periodStart, periodEnd);
         var deploymentsCount = CountDeployments(tenantId, periodStart, periodEnd);
 
@@ -182,8 +186,8 @@ public class SubscriptionService : ISubscriptionService
             TenantId = tenantId,
             PeriodStart = periodStart,
             PeriodEnd = periodEnd,
-            StorageUsedGB = (long)storageUsedGB,
-            BandwidthUsedGB = (long)bandwidthUsedGB,
+            StorageUsedGB = (decimal)storageUsedGB,
+            BandwidthUsedGB = (decimal)bandwidthUsedGB,
             DeploymentsCount = deploymentsCount,
             TotalCost = baseCost + storageCost + bandwidthCost,
             LineItems = new Dictionary<string, decimal>
@@ -222,31 +226,56 @@ public class SubscriptionService : ISubscriptionService
         };
     }
 
-    private double CalculateStorageUsage(Guid tenantId, DateTime periodStart, DateTime periodEnd)
+    private async Task<double> CalculateStorageUsageAsync(
+        Guid tenantId,
+        DateTime periodStart,
+        DateTime periodEnd,
+        CancellationToken cancellationToken = default)
     {
-        // Calculate actual storage usage
-        // In production, this would query:
-        // - MinIO metrics API for tenant's bucket/prefix
-        // - Database size for tenant's schema
-        // Example production code:
-        // var minioClient = new MinioClient()
-        //     .WithEndpoint("minio.example.com:9000")
-        //     .WithCredentials(accessKey, secretKey)
-        //     .WithSSL()
-        //     .Build();
-        // var bucketName = $"tenant-{tenantId:N}";
-        // var totalBytes = 0L;
-        // await foreach (var item in minioClient.ListObjectsEnumAsync(new ListObjectsArgs()
-        //     .WithBucket(bucketName)
-        //     .WithRecursive(true)))
-        // {
-        //     totalBytes += (long)item.Size;
-        // }
-        // return totalBytes / (1024.0 * 1024.0 * 1024.0); // Convert to GB
+        if (_storageService != null)
+        {
+            try
+            {
+                // Get actual storage usage from MinIO
+                var bucketName = $"tenant-{tenantId:N}";
 
-        // Return simulated value from in-memory tracking or 0
+                var bucketExists = await _storageService.BucketExistsAsync(bucketName, cancellationToken);
+                if (bucketExists)
+                {
+                    var totalBytes = await _storageService.GetBucketSizeAsync(bucketName, cancellationToken);
+                    var totalGB = totalBytes / (1024.0 * 1024.0 * 1024.0);
+
+                    _logger.LogDebug("Calculated storage usage for tenant {TenantId}: {TotalBytes} bytes ({TotalGB} GB)",
+                        tenantId, totalBytes, totalGB);
+
+                    return totalGB;
+                }
+                else
+                {
+                    _logger.LogDebug("Bucket {BucketName} does not exist for tenant {TenantId} - storage usage is 0",
+                        bucketName, tenantId);
+                    return 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to calculate storage usage for tenant {TenantId} - falling back to simulated value",
+                    tenantId);
+                // Fall through to simulated value
+            }
+        }
+
+        // Fallback to simulated value from in-memory tracking or 0
         _storageUsage.TryGetValue(tenantId, out var bytes);
-        return bytes / (1024.0 * 1024.0 * 1024.0); // Convert to GB
+        var gb = bytes / (1024.0 * 1024.0 * 1024.0);
+
+        if (_storageService == null)
+        {
+            _logger.LogWarning("No storage service configured - using simulated storage usage for tenant {TenantId}: {GB} GB",
+                tenantId, gb);
+        }
+
+        return gb;
     }
 
     private double CalculateBandwidthUsage(Guid tenantId, DateTime periodStart, DateTime periodEnd)

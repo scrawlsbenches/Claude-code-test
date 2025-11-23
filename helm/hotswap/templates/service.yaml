@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hotswap.fullname" . }}
+  labels:
+    {{- include "hotswap.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.service.httpsPort }}
+      targetPort: https
+      protocol: TCP
+      name: https
+    {{- if .Values.config.prometheus.enabled }}
+    - port: {{ .Values.service.metricsPort }}
+      targetPort: http
+      protocol: TCP
+      name: metrics
+    {{- end }}
+  selector:
+    {{- include "hotswap.selectorLabels" . | nindent 4 }}

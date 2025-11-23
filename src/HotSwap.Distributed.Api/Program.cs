@@ -12,6 +12,9 @@ using HotSwap.Distributed.Infrastructure.Notifications;
 using HotSwap.Distributed.Infrastructure.Security;
 using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Infrastructure.Tenants;
+using HotSwap.Distributed.Infrastructure.Data;
+using HotSwap.Distributed.Infrastructure.Repositories;
+using HotSwap.Distributed.Infrastructure.Services;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Services;
@@ -171,8 +174,17 @@ builder.Services.AddSingleton(jwtConfig);
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 
-// Register messaging services (in-memory implementations)
-builder.Services.AddSingleton<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessageQueue>();
+// Register messaging services
+// Use PostgreSQL-backed message queue (or in-memory for development)
+var usePostgresMessageQueue = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresMessageQueue", true);
+if (usePostgresMessageQueue)
+{
+    builder.Services.AddScoped<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.PostgresMessageQueue>();
+}
+else
+{
+    builder.Services.AddSingleton<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessageQueue>();
+}
 builder.Services.AddSingleton<IMessagePersistence, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessagePersistence>();
 
 // Configure JWT authentication
@@ -221,8 +233,19 @@ builder.Services.AddSingleton<IModuleVerifier>(sp =>
     return new ModuleVerifier(logger, strictMode);
 });
 
-// Register distributed lock (in-memory implementation)
-builder.Services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
+// Register distributed lock
+// Use PostgreSQL advisory locks for production (true distributed locking)
+// Fall back to in-memory for development/testing
+var usePostgresLocks = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresLocks", true);
+if (usePostgresLocks)
+{
+    builder.Services.AddScoped<IDistributedLock, PostgresDistributedLock>();
+    builder.Services.AddLogging(logging => logging.AddConsole());
+}
+else
+{
+    builder.Services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
+}
 
 // Register pipeline configuration
 builder.Services.AddSingleton(sp =>
@@ -234,7 +257,18 @@ builder.Services.AddSingleton(sp =>
 
 // Register approval workflow services
 builder.Services.AddSingleton<INotificationService, LoggingNotificationService>();
-builder.Services.AddSingleton<IApprovalService, ApprovalService>();
+
+// Use PostgreSQL-backed approval service (or in-memory for development)
+var usePostgresApprovals = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresApprovals", true);
+if (usePostgresApprovals)
+{
+    builder.Services.AddScoped<IApprovalRepository, ApprovalRepository>();
+    builder.Services.AddScoped<IApprovalService, ApprovalServiceRefactored>();
+}
+else
+{
+    builder.Services.AddSingleton<IApprovalService, ApprovalService>();
+}
 
 // Skip background services in Test environment to prevent test hangs
 if (builder.Environment.EnvironmentName != "Test")
@@ -251,6 +285,19 @@ if (!string.IsNullOrEmpty(builder.Configuration["ConnectionStrings:PostgreSql"])
     if (builder.Environment.EnvironmentName != "Test")
     {
         builder.Services.AddHostedService<AuditLogRetentionBackgroundService>();
+
+        // Register deployment job processor (transactional outbox pattern)
+        var usePostgresJobQueue = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresJobQueue", true);
+        if (usePostgresJobQueue)
+        {
+            builder.Services.AddHostedService<DeploymentJobProcessor>();
+        }
+
+        // Register message consumer service (PostgreSQL LISTEN/NOTIFY)
+        if (usePostgresMessageQueue)
+        {
+            builder.Services.AddHostedService<MessageConsumerService>();
+        }
     }
 }
 else
@@ -312,8 +359,10 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
     var telemetry = sp.GetRequiredService<TelemetryProvider>();
     var pipelineConfig = sp.GetRequiredService<PipelineConfiguration>();
     var deploymentTracker = sp.GetRequiredService<IDeploymentTracker>();
-    var approvalService = sp.GetRequiredService<IApprovalService>();
+    // NOTE: IApprovalService is scoped (requires DbContext), cannot inject into singleton
+    // Pass IServiceScopeFactory so orchestrator can create scopes when needed
     var auditLogService = sp.GetService<IAuditLogService>(); // Optional - may be null
+    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
 
     var orchestrator = new DistributedKernelOrchestrator(
         logger,
@@ -323,8 +372,9 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
         telemetry,
         pipelineConfig,
         deploymentTracker,
-        approvalService,
-        auditLogService);
+        approvalService: null, // Scoped service - resolved via scopeFactory
+        auditLogService,
+        serviceScopeFactory: scopeFactory);
 
     // Note: Orchestrator is created here but clusters are initialized synchronously
     // after app.Build() to ensure it's ready before accepting requests
