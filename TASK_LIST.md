@@ -495,7 +495,7 @@ GET /metrics  # Prometheus OpenMetrics format
 ---
 
 ### 8. Helm Charts for Kubernetes
-**Priority:** 🟢 Medium
+**Priority:** ⚪ Low
 **Status:** Not Implemented
 **Effort:** 2 days
 **References:** BUILD_STATUS.md:387, PROJECT_STATUS_REPORT.md:521
