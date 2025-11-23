@@ -1583,19 +1583,219 @@ MinIO Integration (Infrastructure layer)
 
 ---
 
+### 27. PostgreSQL-Based Distributed Systems Implementation
+**Priority:** 🔴 Critical
+**Status:** 🔄 **In Progress** (2025-11-23)
+**Effort:** 6-8 days
+**Started:** 2025-11-23
+**References:** POSTGRESQL_DISTRIBUTED_SYSTEMS_PLAN.md, CODE_REVIEW_DR_MARCUS_CHEN.md
+
+**Requirements:**
+- [ ] Replace InMemoryDistributedLock with PostgreSQL advisory locks
+- [ ] Migrate ApprovalService from static dictionaries to database persistence
+- [ ] Implement transactional outbox pattern for deployment jobs
+- [ ] Replace InMemoryMessageQueue with PostgreSQL LISTEN/NOTIFY queue
+
+**Problem Statement:**
+Code review (Task #26) identified 4 critical distributed systems issues preventing horizontal scaling:
+1. **Split-brain vulnerability** - InMemoryDistributedLock is process-local (doesn't work across instances)
+2. **Static state memory leak** - ApprovalService uses static dictionaries (grows indefinitely)
+3. **Fire-and-forget deployments** - Background tasks orphaned on restart
+4. **Message queue data loss** - In-memory queue loses all data on restart
+
+**Solution:** PostgreSQL-based implementations (no Redis required)
+
+**Implementation Breakdown:**
+This task is broken down into 4 phases (27.1 - 27.4) for incremental implementation.
+
+**Advantages over Redis:**
+- ✅ Already integrated (EF Core, Npgsql)
+- ✅ No new dependencies or infrastructure
+- ✅ Works in all environments (SQLite for tests, PostgreSQL for production)
+- ✅ ACID guarantees prevent data loss
+- ✅ Proven patterns (advisory locks, LISTEN/NOTIFY, outbox pattern)
+
+---
+
+#### 27.1 PostgreSQL Advisory Locks for Distributed Locking
+**Status:** 📋 **Not Implemented**
+**Effort:** 2 days
+**Description:** Replace InMemoryDistributedLock with PostgreSQL advisory locks for true distributed coordination.
+
+**Acceptance Criteria:**
+- [ ] Create `PostgresDistributedLock : IDistributedLock`
+- [ ] Implement lock key hashing (string → int64)
+- [ ] Add timeout support with `pg_try_advisory_lock`
+- [ ] Automatic lock release on connection close
+- [ ] Unit tests with in-memory PostgreSQL
+- [ ] Update DI registration to use PostgresDistributedLock
+- [ ] Verify deployment locking works across multiple API instances
+
+**Technical Details:**
+```csharp
+// Use PostgreSQL advisory lock functions:
+// - pg_advisory_lock(key) - Blocks until lock acquired
+// - pg_try_advisory_lock(key) - Returns immediately (true/false)
+// - pg_advisory_unlock(key) - Release lock
+```
+
+**Files to Create:**
+- `src/HotSwap.Distributed.Infrastructure/Locking/PostgresDistributedLock.cs`
+- `tests/HotSwap.Distributed.Tests/Locking/PostgresDistributedLockTests.cs`
+
+**Performance:** <1ms latency, 10,000+ locks/second
+
+---
+
+#### 27.2 Database-Backed Approval Request Persistence
+**Status:** 📋 **Not Implemented**
+**Effort:** 1 day
+**Description:** Migrate ApprovalService from static dictionaries to PostgreSQL table storage.
+
+**Acceptance Criteria:**
+- [ ] Add `ApprovalRequestEntity` to `AuditLogDbContext`
+- [ ] Create EF Core migration for `approval_requests` table
+- [ ] Create `ApprovalRepository : IApprovalRepository`
+- [ ] Refactor `ApprovalService` to use repository pattern
+- [ ] Update `ApprovalTimeoutBackgroundService` to use database queries
+- [ ] Add integration tests for multi-instance approval workflow
+- [ ] Verify no memory leaks (remove static dictionaries)
+
+**Schema:**
+```sql
+CREATE TABLE approval_requests (
+    deployment_id VARCHAR(100) PRIMARY KEY,
+    requester_email VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL, -- Pending, Approved, Rejected, Expired
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_approval_status ON approval_requests(status, expires_at);
+```
+
+**Files to Create/Modify:**
+- `src/HotSwap.Distributed.Infrastructure/Data/Entities/ApprovalRequestEntity.cs`
+- `src/HotSwap.Distributed.Infrastructure/Repositories/ApprovalRepository.cs`
+- `src/HotSwap.Distributed.Infrastructure/Services/ApprovalService.cs` (refactor)
+- `src/HotSwap.Distributed.Infrastructure/Migrations/*.cs` (migration)
+
+**Benefits:** Survives restarts, works across instances, no memory leak, query capabilities
+
+---
+
+#### 27.3 Transactional Outbox Pattern for Deployment Jobs
+**Status:** 📋 **Not Implemented**
+**Effort:** 2-3 days
+**Description:** Replace fire-and-forget Task.Run with durable job queue using outbox pattern.
+
+**Acceptance Criteria:**
+- [ ] Add `DeploymentJobEntity` to database
+- [ ] Create EF Core migration for `deployment_jobs` table
+- [ ] Create `DeploymentJobProcessor` background service
+- [ ] Refactor `DeploymentsController` to enqueue jobs (not fire-and-forget)
+- [ ] Implement retry logic with exponential backoff
+- [ ] Add job status monitoring endpoints (GET /api/deployments/{id}/status)
+- [ ] Prevent duplicate processing using `FOR UPDATE SKIP LOCKED`
+- [ ] Integration tests for job recovery after restart
+
+**Schema:**
+```sql
+CREATE TABLE deployment_jobs (
+    id SERIAL PRIMARY KEY,
+    deployment_id VARCHAR(100) UNIQUE NOT NULL,
+    status VARCHAR(20) NOT NULL, -- Pending, Running, Succeeded, Failed
+    payload JSONB NOT NULL,
+    retry_count INT DEFAULT 0,
+    max_retries INT DEFAULT 3,
+    locked_until TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Files to Create/Modify:**
+- `src/HotSwap.Distributed.Infrastructure/Data/Entities/DeploymentJobEntity.cs`
+- `src/HotSwap.Distributed.Infrastructure/Services/DeploymentJobProcessor.cs`
+- `src/HotSwap.Distributed.Api/Controllers/DeploymentsController.cs` (refactor)
+
+**Benefits:** Survives restarts, automatic retry, distributed processing, observability
+
+---
+
+#### 27.4 PostgreSQL Message Queue with LISTEN/NOTIFY
+**Status:** 📋 **Not Implemented**
+**Effort:** 1-2 days
+**Description:** Replace InMemoryMessageQueue with durable PostgreSQL-backed queue.
+
+**Acceptance Criteria:**
+- [ ] Add `MessageEntity` to database
+- [ ] Create EF Core migration for `message_queue` table
+- [ ] Create `PostgresMessageQueue : IMessageQueue`
+- [ ] Implement LISTEN/NOTIFY for real-time delivery (<10ms latency)
+- [ ] Create `MessageConsumerService` background service
+- [ ] Support message priority and topic filtering
+- [ ] Replace InMemoryMessageQueue in DI registration
+- [ ] Integration tests for message durability and delivery
+
+**Schema:**
+```sql
+CREATE TABLE message_queue (
+    id SERIAL PRIMARY KEY,
+    message_id VARCHAR(100) UNIQUE NOT NULL,
+    topic VARCHAR(100) NOT NULL,
+    payload JSONB NOT NULL,
+    priority INT DEFAULT 0,
+    status VARCHAR(20) NOT NULL, -- Pending, Processing, Completed
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Real-time Notification:**
+```csharp
+// Publisher
+NOTIFY message_queue, 'deployment.completed';
+
+// Consumer
+LISTEN message_queue; // Receives notification instantly
+```
+
+**Files to Create:**
+- `src/HotSwap.Distributed.Infrastructure/Data/Entities/MessageEntity.cs`
+- `src/HotSwap.Distributed.Infrastructure/Messaging/PostgresMessageQueue.cs`
+- `src/HotSwap.Distributed.Infrastructure/Messaging/MessageConsumerService.cs`
+
+**Benefits:** Durable, real-time (<10ms), priority support, retry logic, distributed consumers
+
+---
+
+**Total Actual Effort:** TBD (estimated 6-8 days)
+
+**Performance Characteristics:**
+- **Advisory Locks:** <1ms latency, 10,000+ locks/second
+- **Job Queue:** 5-10s latency (polling), 100+ jobs/second
+- **Message Queue:** 5-10ms latency (LISTEN/NOTIFY), 1,000+ messages/second
+
+**Impact:** 🔴 **CRITICAL** - Fixes all 4 critical distributed systems blockers, enables production horizontal scaling
+
+**Dependencies:**
+- Task #3 (PostgreSQL Audit Log) - Database infrastructure ✅ Complete
+- Task #16 (Secret Rotation) - Background service pattern ✅ Complete
+
+---
+
 ## Summary Statistics
 
-**Total Tasks:** 26 (updated 2025-11-22)
+**Total Tasks:** 27 (updated 2025-11-23)
 
 **By Priority:**
-- 🔴 Critical: 3 tasks (12%)
+- 🔴 Critical: 4 tasks (15%) - includes Task #27 (PostgreSQL Distributed Systems)
 - 🟡 High: 4 tasks (15%) - includes Task #12 (Multi-Tenancy)
-- 🟢 Medium: 15 tasks (58%)
+- 🟢 Medium: 15 tasks (56%)
 - ⚪ Low: 4 tasks (15%)
 
 **By Status:**
-- ✅ Completed: 16 tasks (62%) - Tasks #1, #2, #3, #4, #5, #6, #7, #12, #15, #16, #17, #21, #22, #23, #24, #26
-- Not Implemented: 10 tasks (38%) - Tasks #8, #9, #10, #11, #13, #14, #18, #19, #20, #25
+- ✅ Completed: 16 tasks (59%) - Tasks #1, #2, #3, #4, #5, #6, #7, #12, #15, #16, #17, #21, #22, #23, #24, #26
+- 🔄 In Progress: 1 task (4%) - Task #27 (PostgreSQL Distributed Systems)
+- Not Implemented: 10 tasks (37%) - Tasks #8, #9, #10, #11, #13, #14, #18, #19, #20, #25
 
 **Note:** Task list updated 2025-11-23 after VaultSecretService completion. Task #16 (Secret Rotation) is now 100% complete with production-ready VaultSecretService implementation.
 

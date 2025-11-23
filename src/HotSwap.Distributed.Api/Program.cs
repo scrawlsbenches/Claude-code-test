@@ -221,8 +221,19 @@ builder.Services.AddSingleton<IModuleVerifier>(sp =>
     return new ModuleVerifier(logger, strictMode);
 });
 
-// Register distributed lock (in-memory implementation)
-builder.Services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
+// Register distributed lock
+// Use PostgreSQL advisory locks for production (true distributed locking)
+// Fall back to in-memory for development/testing
+var usePostgresLocks = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresLocks", true);
+if (usePostgresLocks)
+{
+    builder.Services.AddScoped<IDistributedLock, PostgresDistributedLock>();
+    builder.Services.AddLogging(logging => logging.AddConsole());
+}
+else
+{
+    builder.Services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
+}
 
 // Register pipeline configuration
 builder.Services.AddSingleton(sp =>
