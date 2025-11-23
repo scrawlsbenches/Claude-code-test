@@ -10,6 +10,7 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Orchestrator;
 
+[Collection("BackgroundService Sequential")]
 public class AckTimeoutBackgroundServiceTests
 {
     private readonly Mock<IMessageQueue> _mockQueue;

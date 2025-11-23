@@ -44,9 +44,7 @@ public class SecretRotationBackgroundService : BackgroundService
 
         try
         {
-            // Initial check on startup
-            await CheckAndRotateSecretsAsync(stoppingToken);
-
+            // Wait for first interval before checking (no initial check on startup)
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 await CheckAndRotateSecretsAsync(stoppingToken);
@@ -144,6 +142,13 @@ public class SecretRotationBackgroundService : BackgroundService
 
     private bool ShouldRotateSecret(SecretMetadata metadata)
     {
+        // If NextRotationAt is explicitly set, use it
+        if (metadata.NextRotationAt.HasValue)
+        {
+            return DateTime.UtcNow >= metadata.NextRotationAt.Value;
+        }
+
+        // Otherwise calculate based on rotation policy
         if (metadata.RotationPolicy?.RotationIntervalDays == null)
             return false;
 
@@ -227,8 +232,9 @@ public class SecretRotationConfiguration
     /// <summary>
     /// Interval in minutes between secret rotation checks.
     /// Default: 60 minutes (1 hour).
+    /// Supports fractional minutes for testing (e.g., 0.00017 = ~10ms).
     /// </summary>
-    public int CheckIntervalMinutes { get; set; } = 60;
+    public double CheckIntervalMinutes { get; set; } = 60;
 
     /// <summary>
     /// Default rotation policy applied to secrets without explicit policies.

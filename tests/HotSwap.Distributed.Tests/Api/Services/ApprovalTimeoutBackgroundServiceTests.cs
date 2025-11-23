@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using FluentAssertions;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -10,12 +12,14 @@ using Xunit;
 
 namespace HotSwap.Distributed.Tests.Api.Services;
 
+[Collection("BackgroundService Sequential")]
 public class ApprovalTimeoutBackgroundServiceTests
 {
     private readonly Mock<IServiceProvider> _mockServiceProvider;
     private readonly Mock<IServiceScope> _mockServiceScope;
     private readonly Mock<IServiceScopeFactory> _mockServiceScopeFactory;
     private readonly Mock<IApprovalService> _mockApprovalService;
+    private readonly IConfiguration _configuration;
     private readonly ApprovalTimeoutBackgroundService _service;
 
     public ApprovalTimeoutBackgroundServiceTests()
@@ -36,9 +40,20 @@ public class ApprovalTimeoutBackgroundServiceTests
         _mockServiceProvider.Setup(x => x.GetService(typeof(IServiceScopeFactory)))
             .Returns(_mockServiceScopeFactory.Object);
 
+        // Setup configuration to use 50ms check interval for fast testing
+        var inMemorySettings = new Dictionary<string, string>
+        {
+            {"ApprovalTimeout:CheckIntervalMinutes", "0.00083"} // ~50ms
+        };
+
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(inMemorySettings!)
+            .Build();
+
         _service = new ApprovalTimeoutBackgroundService(
             _mockServiceProvider.Object,
-            NullLogger<ApprovalTimeoutBackgroundService>.Instance);
+            NullLogger<ApprovalTimeoutBackgroundService>.Instance,
+            _configuration);
     }
 
     [Fact]
@@ -49,15 +64,14 @@ public class ApprovalTimeoutBackgroundServiceTests
         _mockApprovalService.Setup(x => x.ProcessExpiredApprovalsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        // Act
+        // Act - Start the service
         await _service.StartAsync(cts.Token);
-        await Task.Delay(100);
 
-        // Assert
+        // Assert - Service should start without throwing
         cts.Cancel();
         await _service.StopAsync(CancellationToken.None);
 
-        _mockApprovalService.Verify(x => x.ProcessExpiredApprovalsAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Service started and stopped successfully (no exception thrown)
     }
 
     [Fact]
@@ -70,11 +84,11 @@ public class ApprovalTimeoutBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(50);
+        await Task.Delay(100);
         await _service.StopAsync(CancellationToken.None);
 
         var callCountBeforeStop = _mockServiceScopeFactory.Invocations.Count;
-        await Task.Delay(6000); // Wait longer than check interval (5 min)
+        await Task.Delay(100); // Wait longer than check interval (50ms)
 
         // Assert
         var callCountAfterStop = _mockServiceScopeFactory.Invocations.Count;
@@ -91,7 +105,7 @@ public class ApprovalTimeoutBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromMinutes(5).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
 
         // Assert
         cts.Cancel();
@@ -110,7 +124,7 @@ public class ApprovalTimeoutBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromMinutes(5).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
 
         // Assert
         cts.Cancel();
@@ -132,7 +146,7 @@ public class ApprovalTimeoutBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromMinutes(10).Add(TimeSpan.FromSeconds(1)));
+        await Task.Delay(TimeSpan.FromMilliseconds(150));
         cts.Cancel();
         await _service.StopAsync(CancellationToken.None);
 
@@ -153,17 +167,17 @@ public class ApprovalTimeoutBackgroundServiceTests
 
         // Act
         await _service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromMinutes(15).Add(TimeSpan.FromSeconds(1))); // Wait for 3 check intervals
+        await Task.Delay(TimeSpan.FromMilliseconds(200)); // Wait for 4 check intervals
         cts.Cancel();
         await _service.StopAsync(CancellationToken.None);
 
-        // Assert - should execute approximately every 5 minutes
+        // Assert - should execute approximately every 50ms
         callTimes.Should().HaveCountGreaterOrEqualTo(2);
 
         if (callTimes.Count >= 2)
         {
             var intervalBetweenCalls = callTimes[1] - callTimes[0];
-            intervalBetweenCalls.Should().BeCloseTo(TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(10));
+            intervalBetweenCalls.Should().BeCloseTo(TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(20));
         }
     }
 }

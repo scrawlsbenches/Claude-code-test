@@ -8,7 +8,7 @@ namespace HotSwap.Distributed.Tests.Infrastructure;
 
 /// <summary>
 /// Unit tests for InMemoryMessagePersistence.
-/// These tests verify the message persistence logic WITHOUT requiring Redis or any external dependencies.
+/// These tests verify the message persistence logic without requiring any external dependencies.
 /// </summary>
 public class InMemoryMessagePersistenceTests
 {

@@ -1,7 +1,7 @@
 using FluentAssertions;
 using HotSwap.KnowledgeGraph.Domain.Models;
-using HotSwap.KnowledgeGraph.QueryEngine.Services;
 using HotSwap.KnowledgeGraph.Infrastructure.Repositories;
+using HotSwap.KnowledgeGraph.QueryEngine.Services;
 using Moq;
 
 namespace HotSwap.KnowledgeGraph.Tests.QueryEngine;

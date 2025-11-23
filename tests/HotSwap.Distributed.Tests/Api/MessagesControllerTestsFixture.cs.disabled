@@ -1,6 +1,7 @@
 using HotSwap.Distributed.Api;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -18,8 +19,12 @@ public class MessagesControllerTestsFixture : IDisposable
         MockQueue = new Mock<IMessageQueue>();
         MockPersistence = new Mock<IMessagePersistence>();
 
-        Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        Factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
         {
+            // Set environment to Test to disable background services that cause test hangs
+            builder.UseEnvironment("Test");
+
             builder.ConfigureServices(services =>
             {
                 // Replace real services with mocks

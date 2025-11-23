@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Caching.Memory;
 using HotSwap.KnowledgeGraph.Domain.Models;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HotSwap.KnowledgeGraph.QueryEngine.Services;
 

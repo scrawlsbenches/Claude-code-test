@@ -1,11 +1,11 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace HotSwap.Distributed.Orchestrator.Services;
 

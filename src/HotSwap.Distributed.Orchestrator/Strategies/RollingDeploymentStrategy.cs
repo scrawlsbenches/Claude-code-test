@@ -1,6 +1,8 @@
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
+using HotSwap.Distributed.Orchestrator.Services;
 using Microsoft.Extensions.Logging;
 
 namespace HotSwap.Distributed.Orchestrator.Strategies;
@@ -8,21 +10,49 @@ namespace HotSwap.Distributed.Orchestrator.Strategies;
 /// <summary>
 /// Rolling deployment strategy - deploys sequentially with health checks.
 /// Suitable for QA environment.
+/// Uses resource-based stabilization checks for adaptive batch timing.
 /// </summary>
 public class RollingDeploymentStrategy : IDeploymentStrategy
 {
     private readonly ILogger<RollingDeploymentStrategy> _logger;
+    private readonly IMetricsProvider? _metricsProvider;
+    private readonly ResourceStabilizationService? _stabilizationService;
     private readonly int _maxConcurrent;
     private readonly TimeSpan _healthCheckDelay;
+    private readonly ResourceStabilizationConfig? _stabilizationConfig;
 
     public string StrategyName => "Rolling";
 
+    /// <summary>
+    /// Initializes a new instance with resource-based stabilization (recommended).
+    /// </summary>
+    public RollingDeploymentStrategy(
+        ILogger<RollingDeploymentStrategy> logger,
+        IMetricsProvider metricsProvider,
+        ResourceStabilizationService stabilizationService,
+        ResourceStabilizationConfig stabilizationConfig,
+        int maxConcurrent = 2)
+    {
+        _logger = logger;
+        _metricsProvider = metricsProvider;
+        _stabilizationService = stabilizationService;
+        _stabilizationConfig = stabilizationConfig;
+        _maxConcurrent = maxConcurrent;
+        _healthCheckDelay = TimeSpan.FromSeconds(30); // Not used with stabilization service
+    }
+
+    /// <summary>
+    /// Initializes a new instance with fixed time delays (legacy, for backward compatibility).
+    /// </summary>
     public RollingDeploymentStrategy(
         ILogger<RollingDeploymentStrategy> logger,
         int maxConcurrent = 2,
         TimeSpan? healthCheckDelay = null)
     {
         _logger = logger;
+        _metricsProvider = null;
+        _stabilizationService = null;
+        _stabilizationConfig = null;
         _maxConcurrent = maxConcurrent;
         _healthCheckDelay = healthCheckDelay ?? TimeSpan.FromSeconds(30);
     }
@@ -44,7 +74,8 @@ public class RollingDeploymentStrategy : IDeploymentStrategy
             _logger.LogInformation("Starting rolling deployment of {ModuleName} v{Version} to {Environment} (batch size: {BatchSize})",
                 request.ModuleName, request.Version, cluster.Environment, _maxConcurrent);
 
-            var nodes = cluster.Nodes.ToList();
+            // Sort nodes by hostname to ensure deterministic batch ordering across deployments
+            var nodes = cluster.Nodes.OrderBy(n => n.Hostname).ToList();
 
             if (nodes.Count == 0)
             {
@@ -52,6 +83,16 @@ public class RollingDeploymentStrategy : IDeploymentStrategy
                 result.Message = "No nodes available in cluster";
                 result.EndTime = DateTime.UtcNow;
                 return result;
+            }
+
+            // Capture baseline metrics if using resource stabilization
+            ClusterMetricsSnapshot? baselineMetrics = null;
+            if (_stabilizationService != null && _metricsProvider != null)
+            {
+                _logger.LogInformation("Capturing baseline metrics for resource-based stabilization");
+                baselineMetrics = await _metricsProvider.GetClusterMetricsAsync(
+                    cluster.Environment,
+                    cancellationToken);
             }
 
             var successfulDeployments = new List<NodeDeploymentResult>();
@@ -96,12 +137,50 @@ public class RollingDeploymentStrategy : IDeploymentStrategy
                 // Wait and perform health checks before next batch
                 if (i + _maxConcurrent < nodes.Count)
                 {
-                    _logger.LogDebug("Waiting {Delay}s before health check",
-                        _healthCheckDelay.TotalSeconds);
+                    // Use resource-based stabilization if available, otherwise fall back to fixed wait
+                    if (_stabilizationService != null && _stabilizationConfig != null && baselineMetrics != null)
+                    {
+                        _logger.LogInformation("Waiting for batch resources to stabilize (adaptive timing)...");
 
-                    await Task.Delay(_healthCheckDelay, cancellationToken);
+                        var batchNodeIds = batch.Select(n => n.NodeId);
+                        var stabilizationResult = await _stabilizationService.WaitForStabilizationAsync(
+                            batchNodeIds,
+                            baselineMetrics,
+                            _stabilizationConfig,
+                            cancellationToken);
 
-                    // Check health of deployed nodes
+                        if (!stabilizationResult.IsStable)
+                        {
+                            _logger.LogWarning(
+                                "Batch resources did not stabilize within timeout. Elapsed: {Elapsed:F1}s",
+                                stabilizationResult.ElapsedTime.TotalSeconds);
+
+                            result.RollbackPerformed = true;
+                            await RollbackAllAsync(request.ModuleName, successfulDeployments, cluster, result);
+
+                            result.Success = false;
+                            result.Message = "Batch resources did not stabilize. Rolled back all changes.";
+                            result.EndTime = DateTime.UtcNow;
+                            return result;
+                        }
+
+                        _logger.LogInformation(
+                            "Batch resources stabilized after {Elapsed:F1}s ({Checks} checks, {Consecutive} consecutive stable)",
+                            stabilizationResult.ElapsedTime.TotalSeconds,
+                            stabilizationResult.TotalChecks,
+                            stabilizationResult.ConsecutiveStableChecks);
+                    }
+                    else
+                    {
+                        // Legacy mode: fixed time delay
+                        _logger.LogDebug("Waiting {Delay}s before health check (legacy fixed-time mode)",
+                            _healthCheckDelay.TotalSeconds);
+
+                        await Task.Delay(_healthCheckDelay, cancellationToken);
+                    }
+
+                    // Check health of deployed nodes (always performed, regardless of stabilization mode)
+                    _logger.LogDebug("Performing health checks on batch nodes");
                     var healthCheckTasks = batch.Select(n => n.GetHealthAsync(cancellationToken));
                     var healthStatuses = await Task.WhenAll(healthCheckTasks);
 

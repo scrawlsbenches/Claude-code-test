@@ -4,11 +4,11 @@ using HotSwap.Distributed.IntegrationTests.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 
 namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 
@@ -122,17 +122,17 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 services.Remove(cacheDescriptor);
             }
 
-            // Add in-memory distributed cache (no Redis needed)
+            // Add in-memory distributed cache
             services.AddDistributedMemoryCache();
 
-            // Replace RedisDistributedLock with InMemoryDistributedLock
+            // Replace with InMemoryDistributedLock (C# in-memory implementation)
             var lockDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IDistributedLock));
             if (lockDescriptor != null)
             {
                 services.Remove(lockDescriptor);
             }
 
-            // Add in-memory distributed lock (no Redis needed)
+            // Add in-memory distributed lock (C# implementation using SemaphoreSlim)
             services.AddSingleton<IDistributedLock, InMemoryDistributedLock>();
 
             // Replace InMemoryMetricsProvider with DeterministicMetricsProvider

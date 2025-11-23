@@ -38,6 +38,7 @@ Claude-code-test/
 ├── docker-compose.yml                        # Full stack deployment
 ├── DistributedKernel.sln                     # Solution file
 ├── test-critical-paths.sh                    # Critical path validation
+├── test-fast.sh                              # Fast test execution (60% faster)
 ├── validate-code.sh                          # Code validation script
 ├── .claude/skills/                            # Claude Skills (18 skills, ~12,000+ lines)
 │   ├── thinking-framework.md                 # Meta-orchestrator (Think First, Code Later)
@@ -68,6 +69,7 @@ Claude-code-test/
 ├── PROJECT_STATUS_REPORT.md                  # Production readiness status
 ├── SPEC_COMPLIANCE_REVIEW.md                 # Specification compliance
 ├── BUILD_STATUS.md                           # Build validation report
+├── BUILD_PERFORMANCE_ANALYSIS.md             # Performance investigation & optimization
 ├── LICENSE                                   # MIT License
 └── .gitignore                               # .NET gitignore
 ```
@@ -124,6 +126,7 @@ Claude-code-test/
 | First-time setup | `dotnet restore && dotnet build && dotnet test` | [Setup](#development-environment-setup) |
 | Build project | `dotnet build` | [Building](#building-the-project) |
 | Run all tests | `dotnet test` | [Running Tests](#running-tests) |
+| **Run tests FAST ⚡** | `./test-fast.sh` **(60% faster!)** | **[Fast Tests](#fast-test-execution-recommended)** ⭐ |
 | Run API locally | `dotnet run --project src/HotSwap.Distributed.Api/` | [Running](#running-the-application) |
 | Pre-commit check | `dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test` | [Pre-Commit](#️-critical-pre-commit-checklist) |
 | **Use Claude Skills** | `/tdd-helper`, `/precommit-check`, `/doc-sync-check`, etc. | **[SKILLS.md](SKILLS.md)** ⭐ |
@@ -516,6 +519,37 @@ dotnet test --verbosity normal
 dotnet test --verbosity quiet
 ```
 
+#### Fast Test Execution (Recommended)
+
+**⚡ Performance Tip:** Tests run 50-60% faster with optimized logging configuration.
+
+```bash
+# Fast tests with minimal logging (RECOMMENDED for development)
+./test-fast.sh
+
+# Or manually set Test environment
+export DOTNET_ENVIRONMENT=Test
+dotnet test
+
+# Expected improvement: ~3 minutes → ~1-1.5 minutes (60% faster)
+```
+
+**Why is this faster?**
+- Reduces logging from Debug to Warning/Error only
+- Disables telemetry and non-essential background services
+- Console I/O is the bottleneck (50% of test time)
+- See [BUILD_PERFORMANCE_ANALYSIS.md](BUILD_PERFORMANCE_ANALYSIS.md) for detailed analysis
+
+**When to use:**
+- ✅ Local development and rapid iteration
+- ✅ Pre-commit validation
+- ✅ CI/CD pipelines
+
+**When to use regular `dotnet test`:**
+- 🔍 Debugging test failures (need detailed logs)
+- 🐛 Investigating integration issues
+- 📊 Analyzing system behavior
+
 #### Run Specific Test Projects
 
 ```bash
@@ -524,6 +558,9 @@ dotnet test tests/HotSwap.Distributed.Tests/HotSwap.Distributed.Tests.csproj
 
 # Run tests with filter
 dotnet test --filter "FullyQualifiedName~DeploymentPipeline"
+
+# Fast execution with filter
+DOTNET_ENVIRONMENT=Test dotnet test --filter "ClassName~YourTest"
 ```
 
 #### Test Coverage

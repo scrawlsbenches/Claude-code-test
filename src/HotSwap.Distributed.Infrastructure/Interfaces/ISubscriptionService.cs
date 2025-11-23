@@ -1,5 +1,5 @@
-using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Domain.Enums;
+using HotSwap.Distributed.Domain.Models;
 
 namespace HotSwap.Distributed.Infrastructure.Interfaces;
 

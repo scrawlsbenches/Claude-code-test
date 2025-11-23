@@ -257,12 +257,6 @@ if [ -f "Dockerfile" ]; then
 fi
 
 if [ -f "docker-compose.yml" ]; then
-    if grep -q "redis" "docker-compose.yml"; then
-        pass_test "Docker Compose: Redis service"
-    else
-        fail_test "Docker Compose: Missing Redis"
-    fi
-
     if grep -q "jaeger" "docker-compose.yml"; then
         pass_test "Docker Compose: Jaeger service"
     else

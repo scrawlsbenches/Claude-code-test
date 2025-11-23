@@ -1,3 +1,4 @@
+using FluentAssertions;
 using HotSwap.Distributed.Api.Hubs;
 using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
@@ -6,7 +7,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using FluentAssertions;
 
 namespace HotSwap.Distributed.Tests.Api.Services;
 

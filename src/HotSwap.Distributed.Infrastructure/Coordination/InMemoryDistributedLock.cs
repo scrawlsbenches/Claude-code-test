@@ -1,5 +1,5 @@
-using HotSwap.Distributed.Infrastructure.Interfaces;
 using System.Collections.Concurrent;
+using HotSwap.Distributed.Infrastructure.Interfaces;
 
 namespace HotSwap.Distributed.Infrastructure.Coordination;
 
@@ -7,7 +7,7 @@ namespace HotSwap.Distributed.Infrastructure.Coordination;
 /// In-memory implementation of distributed lock.
 /// Uses ConcurrentDictionary with SemaphoreSlim to provide thread-safe locking behavior.
 /// Note: Locks are process-local only - not truly distributed across multiple instances.
-/// For production use across multiple instances, consider Redis-based locking.
+/// For production use across multiple instances, consider using a distributed coordination service.
 /// </summary>
 public class InMemoryDistributedLock : IDistributedLock
 {

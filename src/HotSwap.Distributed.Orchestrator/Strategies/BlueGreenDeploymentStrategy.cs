@@ -1,6 +1,8 @@
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
+using HotSwap.Distributed.Orchestrator.Services;
 using Microsoft.Extensions.Logging;
 
 namespace HotSwap.Distributed.Orchestrator.Strategies;
@@ -8,19 +10,46 @@ namespace HotSwap.Distributed.Orchestrator.Strategies;
 /// <summary>
 /// Blue-Green deployment strategy - deploys to standby environment and switches traffic.
 /// Suitable for Staging environment.
+/// Uses resource-based stabilization checks to verify green environment stability before switching traffic.
 /// </summary>
 public class BlueGreenDeploymentStrategy : IDeploymentStrategy
 {
     private readonly ILogger<BlueGreenDeploymentStrategy> _logger;
+    private readonly IMetricsProvider? _metricsProvider;
+    private readonly ResourceStabilizationService? _stabilizationService;
     private readonly TimeSpan _smokeTestTimeout;
+    private readonly ResourceStabilizationConfig? _stabilizationConfig;
 
     public string StrategyName => "BlueGreen";
 
+    /// <summary>
+    /// Initializes a new instance with resource-based stabilization (recommended).
+    /// </summary>
+    public BlueGreenDeploymentStrategy(
+        ILogger<BlueGreenDeploymentStrategy> logger,
+        IMetricsProvider metricsProvider,
+        ResourceStabilizationService stabilizationService,
+        ResourceStabilizationConfig stabilizationConfig,
+        TimeSpan? smokeTestTimeout = null)
+    {
+        _logger = logger;
+        _metricsProvider = metricsProvider;
+        _stabilizationService = stabilizationService;
+        _stabilizationConfig = stabilizationConfig;
+        _smokeTestTimeout = smokeTestTimeout ?? TimeSpan.FromMinutes(5);
+    }
+
+    /// <summary>
+    /// Initializes a new instance with fixed time delays (legacy, for backward compatibility).
+    /// </summary>
     public BlueGreenDeploymentStrategy(
         ILogger<BlueGreenDeploymentStrategy> logger,
         TimeSpan? smokeTestTimeout = null)
     {
         _logger = logger;
+        _metricsProvider = null;
+        _stabilizationService = null;
+        _stabilizationConfig = null;
         _smokeTestTimeout = smokeTestTimeout ?? TimeSpan.FromMinutes(5);
     }
 
@@ -51,13 +80,24 @@ public class BlueGreenDeploymentStrategy : IDeploymentStrategy
                 return result;
             }
 
+            // Capture baseline metrics if using resource stabilization
+            ClusterMetricsSnapshot? baselineMetrics = null;
+            if (_stabilizationService != null && _metricsProvider != null)
+            {
+                _logger.LogInformation("Capturing baseline metrics for green environment");
+                baselineMetrics = await _metricsProvider.GetClusterMetricsAsync(
+                    cluster.Environment,
+                    cancellationToken);
+            }
+
             // In a real implementation, we would:
             // 1. Identify the "green" (standby) environment
             // 2. Deploy to green environment
-            // 3. Run smoke tests
-            // 4. Switch load balancer to green
-            // 5. Monitor for issues
-            // 6. Decommission blue (old) environment
+            // 3. Wait for green environment to stabilize
+            // 4. Run smoke tests
+            // 5. Switch load balancer to green
+            // 6. Monitor for issues
+            // 7. Decommission blue (old) environment
 
             // For simulation, we'll deploy to all nodes and run smoke tests
             _logger.LogInformation("Deploying to green environment ({NodeCount} nodes)", nodes.Count);
@@ -78,7 +118,40 @@ public class BlueGreenDeploymentStrategy : IDeploymentStrategy
                 return result;
             }
 
-            _logger.LogInformation("Green environment deployed successfully. Running smoke tests...");
+            _logger.LogInformation("Green environment deployed successfully.");
+
+            // Wait for green environment resources to stabilize before smoke tests
+            if (_stabilizationService != null && _stabilizationConfig != null && baselineMetrics != null)
+            {
+                _logger.LogInformation("Waiting for green environment resources to stabilize (adaptive timing)...");
+
+                var greenNodeIds = nodes.Select(n => n.NodeId);
+                var stabilizationResult = await _stabilizationService.WaitForStabilizationAsync(
+                    greenNodeIds,
+                    baselineMetrics,
+                    _stabilizationConfig,
+                    cancellationToken);
+
+                if (!stabilizationResult.IsStable)
+                {
+                    _logger.LogWarning(
+                        "Green environment resources did not stabilize within timeout. Elapsed: {Elapsed:F1}s",
+                        stabilizationResult.ElapsedTime.TotalSeconds);
+
+                    result.Success = false;
+                    result.Message = "Green environment resources did not stabilize. Not switching traffic.";
+                    result.EndTime = DateTime.UtcNow;
+                    return result;
+                }
+
+                _logger.LogInformation(
+                    "Green environment stabilized after {Elapsed:F1}s ({Checks} checks, {Consecutive} consecutive stable)",
+                    stabilizationResult.ElapsedTime.TotalSeconds,
+                    stabilizationResult.TotalChecks,
+                    stabilizationResult.ConsecutiveStableChecks);
+            }
+
+            _logger.LogInformation("Running smoke tests...");
 
             // Run smoke tests
             var smokeTestsPassed = await RunSmokeTestsAsync(cluster, cancellationToken);
