@@ -359,8 +359,10 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
     var telemetry = sp.GetRequiredService<TelemetryProvider>();
     var pipelineConfig = sp.GetRequiredService<PipelineConfiguration>();
     var deploymentTracker = sp.GetRequiredService<IDeploymentTracker>();
-    var approvalService = sp.GetRequiredService<IApprovalService>();
+    // NOTE: IApprovalService is scoped (requires DbContext), cannot inject into singleton
+    // Pass IServiceScopeFactory so orchestrator can create scopes when needed
     var auditLogService = sp.GetService<IAuditLogService>(); // Optional - may be null
+    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
 
     var orchestrator = new DistributedKernelOrchestrator(
         logger,
@@ -370,8 +372,9 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
         telemetry,
         pipelineConfig,
         deploymentTracker,
-        approvalService,
-        auditLogService);
+        approvalService: null, // Scoped service - resolved via scopeFactory
+        auditLogService,
+        serviceScopeFactory: scopeFactory);
 
     // Note: Orchestrator is created here but clusters are initialized synchronously
     // after app.Build() to ensure it's ready before accepting requests
