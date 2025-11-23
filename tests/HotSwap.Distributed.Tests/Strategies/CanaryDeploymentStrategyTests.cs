@@ -3,6 +3,7 @@ using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Core;
+using HotSwap.Distributed.Orchestrator.Services;
 using HotSwap.Distributed.Orchestrator.Strategies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -462,6 +463,238 @@ public class CanaryDeploymentStrategyTests
         // Second wave: 40% total = 8 nodes (6 new)
         // Third wave: 70% total = 14 nodes (6 new)
         // Fourth wave: 100% = 20 nodes (6 new)
+    }
+
+    // Resource-based deployment tests
+
+    [Fact]
+    public async Task DeployAsync_WithResourceStabilization_UsesAdaptiveTiming()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig
+        {
+            CpuDeltaThreshold = 10.0,
+            MemoryDeltaThreshold = 10.0,
+            LatencyDeltaThreshold = 15.0,
+            PollingInterval = TimeSpan.FromMilliseconds(50),
+            ConsecutiveStableChecks = 2,
+            MinimumWaitTime = TimeSpan.FromMilliseconds(100),
+            MaximumWaitTime = TimeSpan.FromSeconds(5)
+        };
+
+        SetupHealthyMetrics();
+
+        // Mock stabilization service to return stable result quickly
+        stabilizationServiceMock
+            .Setup(s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                It.IsAny<ResourceStabilizationConfig>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResourceStabilizationResult
+            {
+                IsStable = true,
+                ElapsedTime = TimeSpan.FromMilliseconds(200),
+                ConsecutiveStableChecks = 2,
+                TotalChecks = 3,
+                TimeoutReached = false
+            });
+
+        var strategy = new CanaryDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            initialPercentage: 50,
+            incrementPercentage: 50);
+
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Production, 10);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.NodeResults.Should().HaveCount(10);
+
+        // Verify stabilization service was called
+        stabilizationServiceMock.Verify(
+            s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                config,
+                It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithResourceStabilizationTimeout_RollsBack()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig
+        {
+            CpuDeltaThreshold = 10.0,
+            MemoryDeltaThreshold = 10.0,
+            LatencyDeltaThreshold = 15.0,
+            PollingInterval = TimeSpan.FromMilliseconds(50),
+            ConsecutiveStableChecks = 3,
+            MinimumWaitTime = TimeSpan.FromMilliseconds(100),
+            MaximumWaitTime = TimeSpan.FromSeconds(2)
+        };
+
+        SetupHealthyMetrics();
+
+        // Mock stabilization service to return timeout (unstable)
+        stabilizationServiceMock
+            .Setup(s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                It.IsAny<ResourceStabilizationConfig>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResourceStabilizationResult
+            {
+                IsStable = false,
+                ElapsedTime = TimeSpan.FromSeconds(2),
+                ConsecutiveStableChecks = 1,
+                TotalChecks = 10,
+                TimeoutReached = true
+            });
+
+        var strategy = new CanaryDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            initialPercentage: 50,
+            incrementPercentage: 50);
+
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Production, 10);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Canary metrics degraded"); // Stabilization failure triggers canary health failure
+        result.Message.Should().Contain("Rolled back");
+        result.RollbackPerformed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithResourceStabilization_MultipleWavesStabilize()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig
+        {
+            CpuDeltaThreshold = 10.0,
+            MemoryDeltaThreshold = 10.0,
+            LatencyDeltaThreshold = 15.0,
+            PollingInterval = TimeSpan.FromMilliseconds(50),
+            ConsecutiveStableChecks = 2,
+            MinimumWaitTime = TimeSpan.FromMilliseconds(100),
+            MaximumWaitTime = TimeSpan.FromSeconds(5)
+        };
+
+        SetupHealthyMetrics();
+
+        // Mock stabilization service to return stable result for each wave
+        stabilizationServiceMock
+            .Setup(s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                It.IsAny<ResourceStabilizationConfig>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResourceStabilizationResult
+            {
+                IsStable = true,
+                ElapsedTime = TimeSpan.FromMilliseconds(150),
+                ConsecutiveStableChecks = 2,
+                TotalChecks = 3,
+                TimeoutReached = false
+            });
+
+        var strategy = new CanaryDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            initialPercentage: 25,
+            incrementPercentage: 25);
+
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Production, 8);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(2, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.NodeResults.Should().HaveCount(8);
+
+        // Should have 3 waves (25%, 50%, 75%, 100%), so 3 stabilization checks
+        stabilizationServiceMock.Verify(
+            s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                config,
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(3));
+    }
+
+    [Fact]
+    public void Constructor_WithResourceStabilization_AcceptsParameters()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig();
+
+        // Act
+        var strategy = new CanaryDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            initialPercentage: 15,
+            incrementPercentage: 25);
+
+        // Assert
+        strategy.Should().NotBeNull();
+        strategy.StrategyName.Should().Be("Canary");
     }
 
     // Helper methods

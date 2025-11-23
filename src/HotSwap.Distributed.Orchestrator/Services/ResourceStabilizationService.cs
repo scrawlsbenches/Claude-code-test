@@ -78,7 +78,7 @@ public class ResourceStabilizationService
     /// </code>
     /// </para>
     /// </remarks>
-    public async Task<ResourceStabilizationResult> WaitForStabilizationAsync(
+    public virtual async Task<ResourceStabilizationResult> WaitForStabilizationAsync(
         IEnumerable<Guid> nodeIds,
         ClusterMetricsSnapshot baseline,
         ResourceStabilizationConfig config,
