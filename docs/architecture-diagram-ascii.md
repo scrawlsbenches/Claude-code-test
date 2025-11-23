@@ -120,9 +120,9 @@
 ║  │                            DATA SERVICES                                      │ ║
 ║  │  ┌────────────────┐  ┌──────────────────┐  ┌──────────────────────────────┐ │ ║
 ║  │  │ Coordination   │  │ Message Queue    │  │  Schema Registry             │ │ ║
-║  │  │ • Redis/Memory │  │ • Persistence    │  │  • Validation                │ │ ║
+║  │  │ • In-Memory    │  │ • Persistence    │  │  • Validation                │ │ ║
 ║  │  │ • Distributed  │  │ • Exactly-Once   │  │  • Versioning                │ │ ║
-║  │  │   Locks        │  │ • Dead-Letter Q  │  │  • Compatibility Check       │ │ ║
+║  │  │   Locks (C#)   │  │ • Dead-Letter Q  │  │  • Compatibility Check       │ │ ║
 ║  │  └────────────────┘  └──────────────────┘  └──────────────────────────────┘ │ ║
 ║  │                                                                               │ ║
 ║  │  ┌────────────────┐  ┌──────────────────┐                                   │ ║

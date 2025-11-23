@@ -40,7 +40,7 @@ public class TenantProvisioningServiceTests
         result.Status.Should().Be(TenantStatus.Active);
         result.DatabaseSchema.Should().NotBeNullOrEmpty();
         result.KubernetesNamespace.Should().NotBeNullOrEmpty();
-        result.RedisKeyPrefix.Should().NotBeNullOrEmpty();
+        result.CacheKeyPrefix.Should().NotBeNullOrEmpty();
         result.StorageBucketPrefix.Should().NotBeNullOrEmpty();
 
         _mockTenantRepository.Verify(r => r.CreateAsync(It.IsAny<Tenant>(), It.IsAny<CancellationToken>()), Times.Once);
