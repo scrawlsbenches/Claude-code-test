@@ -142,8 +142,8 @@ public class AnalyticsControllerTests
         var expectedStart = DateTime.UtcNow.AddDays(-30);
         var expectedEnd = DateTime.UtcNow;
 
-        capturedStartDate.Value.Should().BeCloseTo(expectedStart, TimeSpan.FromSeconds(5));
-        capturedEndDate.Value.Should().BeCloseTo(expectedEnd, TimeSpan.FromSeconds(5));
+        capturedStartDate!.Value.Should().BeCloseTo(expectedStart, TimeSpan.FromSeconds(5));
+        capturedEndDate!.Value.Should().BeCloseTo(expectedEnd, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class AnalyticsControllerTests
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         capturedEndDate.Should().NotBeNull();
-        capturedEndDate.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        capturedEndDate!.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     #endregion
@@ -266,8 +266,8 @@ public class AnalyticsControllerTests
         var expectedStart = DateTime.UtcNow.AddMonths(-1);
         var expectedEnd = DateTime.UtcNow;
 
-        capturedStartDate.Value.Should().BeCloseTo(expectedStart, TimeSpan.FromSeconds(5));
-        capturedEndDate.Value.Should().BeCloseTo(expectedEnd, TimeSpan.FromSeconds(5));
+        capturedStartDate!.Value.Should().BeCloseTo(expectedStart, TimeSpan.FromSeconds(5));
+        capturedEndDate!.Value.Should().BeCloseTo(expectedEnd, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -402,8 +402,8 @@ public class AnalyticsControllerTests
         var expectedStart = DateTime.UtcNow.AddMonths(-1);
         var expectedEnd = DateTime.UtcNow;
 
-        capturedStartDate.Value.Should().BeCloseTo(expectedStart, TimeSpan.FromSeconds(5));
-        capturedEndDate.Value.Should().BeCloseTo(expectedEnd, TimeSpan.FromSeconds(5));
+        capturedStartDate!.Value.Should().BeCloseTo(expectedStart, TimeSpan.FromSeconds(5));
+        capturedEndDate!.Value.Should().BeCloseTo(expectedEnd, TimeSpan.FromSeconds(5));
     }
 
     [Fact]

@@ -30,7 +30,7 @@ public class ClustersControllerTests
         _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(
             mockLogger.Object,
             mockLoggerFactory.Object,
-            null, null, null, null, null, null, null);
+            null!, null!, null!, null!, null!, null!, null!);
 
         _mockMetricsProvider = new Mock<IMetricsProvider>();
 
