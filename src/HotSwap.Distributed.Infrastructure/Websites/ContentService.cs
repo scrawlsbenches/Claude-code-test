@@ -1,6 +1,7 @@
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
+using HotSwap.Distributed.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace HotSwap.Distributed.Infrastructure.Websites;
@@ -12,16 +13,20 @@ public class ContentService : IContentService
 {
     private readonly IPageRepository _pageRepository;
     private readonly IMediaRepository _mediaRepository;
+    private readonly IObjectStorageService? _storageService;
     private readonly ILogger<ContentService> _logger;
+    private const string MediaBucketName = "tenant-media";
 
     public ContentService(
         IPageRepository pageRepository,
         IMediaRepository mediaRepository,
-        ILogger<ContentService> logger)
+        ILogger<ContentService> logger,
+        IObjectStorageService? storageService = null)
     {
         _pageRepository = pageRepository ?? throw new ArgumentNullException(nameof(pageRepository));
         _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _storageService = storageService; // Optional - falls back to simulated storage if not provided
     }
 
     public async Task<Page> CreatePageAsync(Page page, CancellationToken cancellationToken = default)
@@ -86,32 +91,43 @@ public class ContentService : IContentService
         _logger.LogInformation("Uploading media: {FileName} for website {WebsiteId}",
             fileName, websiteId);
 
-        // Read file stream
+        // Read file stream into memory
         using var memoryStream = new MemoryStream();
         await fileStream.CopyToAsync(memoryStream, cancellationToken);
         var fileBytes = memoryStream.ToArray();
 
-        // Upload to MinIO object storage (self-hosted, S3-compatible)
-        // In production, this would use MinIO SDK
-        // Example production code for MinIO:
-        // using var minioClient = new MinioClient()
-        //     .WithEndpoint("minio.example.com:9000")
-        //     .WithCredentials(accessKey, secretKey)
-        //     .WithSSL()
-        //     .Build();
-        // var bucketName = "tenant-media";
-        // var objectKey = $"websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
-        // await minioClient.PutObjectAsync(new PutObjectArgs()
-        //     .WithBucket(bucketName)
-        //     .WithObject(objectKey)
-        //     .WithStreamData(new MemoryStream(fileBytes))
-        //     .WithObjectSize(fileBytes.Length)
-        //     .WithContentType(contentType)
-        //     .WithServerSideEncryption(sse), cancellationToken);
-        // var storageUrl = $"https://minio.example.com/{bucketName}/{objectKey}";
+        string storageUrl;
 
-        // For now, use simulated storage URL
-        var storageUrl = $"https://storage.example.com/websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
+        if (_storageService != null)
+        {
+            // Upload to MinIO object storage (self-hosted, S3-compatible)
+            var objectKey = $"websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
+
+            // Ensure bucket exists
+            var bucketExists = await _storageService.BucketExistsAsync(MediaBucketName, cancellationToken);
+            if (!bucketExists)
+            {
+                await _storageService.CreateBucketAsync(MediaBucketName, cancellationToken);
+                _logger.LogInformation("Created media bucket: {BucketName}", MediaBucketName);
+            }
+
+            // Upload file
+            memoryStream.Position = 0; // Reset stream position
+            storageUrl = await _storageService.UploadObjectAsync(
+                MediaBucketName,
+                objectKey,
+                memoryStream,
+                contentType,
+                cancellationToken);
+
+            _logger.LogInformation("Uploaded media to MinIO: {ObjectKey}", objectKey);
+        }
+        else
+        {
+            // Fallback to simulated storage (for testing without MinIO)
+            storageUrl = $"https://storage.example.com/websites/{websiteId}/media/{Guid.NewGuid():N}/{fileName}";
+            _logger.LogWarning("No storage service configured - using simulated storage URL");
+        }
 
         var media = new MediaAsset
         {
@@ -140,23 +156,56 @@ public class ContentService : IContentService
         if (media == null)
             return false;
 
-        // Delete from MinIO object storage (self-hosted, S3-compatible)
-        // In production, this would use MinIO SDK
-        // Example production code for MinIO:
-        // using var minioClient = new MinioClient()
-        //     .WithEndpoint("minio.example.com:9000")
-        //     .WithCredentials(accessKey, secretKey)
-        //     .WithSSL()
-        //     .Build();
-        // var bucketName = "tenant-media";
-        // // Extract object key from storage URL
-        // var objectKey = ExtractObjectKeyFromUrl(media.StorageUrl);
-        // await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
-        //     .WithBucket(bucketName)
-        //     .WithObject(objectKey), cancellationToken);
+        if (_storageService != null)
+        {
+            // Extract object key from storage URL
+            var objectKey = ExtractObjectKeyFromUrl(media.StorageUrl);
+
+            if (!string.IsNullOrEmpty(objectKey))
+            {
+                try
+                {
+                    await _storageService.DeleteObjectAsync(MediaBucketName, objectKey, cancellationToken);
+                    _logger.LogInformation("Deleted media from MinIO: {ObjectKey}", objectKey);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete media from storage: {ObjectKey} - continuing with database deletion", objectKey);
+                    // Don't fail the entire operation if storage deletion fails
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Could not extract object key from storage URL: {StorageUrl}", media.StorageUrl);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("No storage service configured - simulated media deletion for {MediaId}", mediaId);
+        }
 
         _logger.LogInformation("Deleted media from storage: {StorageUrl}", media.StorageUrl);
 
         return await _mediaRepository.DeleteAsync(mediaId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Extracts the object key from a MinIO storage URL.
+    /// Expected URL format: http(s)://endpoint/bucket/object-key
+    /// </summary>
+    private static string ExtractObjectKeyFromUrl(string storageUrl)
+    {
+        try
+        {
+            var uri = new Uri(storageUrl);
+            // Remove leading slash and bucket name to get object key
+            var path = uri.AbsolutePath.TrimStart('/');
+            var segments = path.Split('/', 2);
+            return segments.Length >= 2 ? segments[1] : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 }

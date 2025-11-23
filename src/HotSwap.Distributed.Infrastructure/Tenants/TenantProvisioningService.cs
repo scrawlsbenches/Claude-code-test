@@ -1,6 +1,7 @@
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
+using HotSwap.Distributed.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace HotSwap.Distributed.Infrastructure.Tenants;
@@ -11,14 +12,17 @@ namespace HotSwap.Distributed.Infrastructure.Tenants;
 public class TenantProvisioningService : ITenantProvisioningService
 {
     private readonly ITenantRepository _tenantRepository;
+    private readonly IObjectStorageService? _storageService;
     private readonly ILogger<TenantProvisioningService> _logger;
 
     public TenantProvisioningService(
         ITenantRepository tenantRepository,
-        ILogger<TenantProvisioningService> logger)
+        ILogger<TenantProvisioningService> logger,
+        IObjectStorageService? storageService = null)
     {
         _tenantRepository = tenantRepository ?? throw new ArgumentNullException(nameof(tenantRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _storageService = storageService; // Optional - falls back to simulated storage if not provided
     }
 
     public async Task<Tenant> ProvisionTenantAsync(Tenant tenant, CancellationToken cancellationToken = default)
@@ -254,41 +258,34 @@ public class TenantProvisioningService : ITenantProvisioningService
 
         try
         {
-            // Create MinIO bucket or prefix with appropriate permissions
-            // In production, this would use MinIO SDK (S3-compatible, self-hosted object storage)
-            // Example production code for MinIO:
-            // using var minioClient = new MinioClient()
-            //     .WithEndpoint("minio.example.com:9000")
-            //     .WithCredentials(accessKey, secretKey)
-            //     .WithSSL()
-            //     .Build();
-            // var bucketName = $"tenant-{tenant.TenantId:N}";
-            // await minioClient.MakeBucketAsync(new MakeBucketArgs()
-            //     .WithBucket(bucketName), cancellationToken);
-            //
-            // // Set bucket policy for tenant isolation
-            // var policy = $$"""
-            // {
-            //   "Version": "2012-10-17",
-            //   "Statement": [
-            //     {
-            //       "Effect": "Allow",
-            //       "Principal": {"AWS": ["arn:aws:iam:::user/tenant-{{tenant.TenantId}}"]},
-            //       "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
-            //       "Resource": ["arn:aws:s3:::{{bucketName}}/{{tenant.StorageBucketPrefix}}*"]
-            //     }
-            //   ]
-            // }
-            // """;
-            // await minioClient.SetPolicyAsync(new SetPolicyArgs()
-            //     .WithBucket(bucketName)
-            //     .WithPolicy(policy), cancellationToken);
+            if (_storageService != null)
+            {
+                // Create MinIO bucket for the tenant
+                var bucketName = $"tenant-{tenant.TenantId:N}";
 
-            _logger.LogInformation("Storage bucket provisioned with prefix {Prefix} for tenant {TenantId}",
-                tenant.StorageBucketPrefix, tenant.TenantId);
+                var bucketExists = await _storageService.BucketExistsAsync(bucketName, cancellationToken);
+                if (!bucketExists)
+                {
+                    await _storageService.CreateBucketAsync(bucketName, cancellationToken);
+                    _logger.LogInformation("Created storage bucket: {BucketName} for tenant {TenantId}",
+                        bucketName, tenant.TenantId);
+                }
+                else
+                {
+                    _logger.LogDebug("Storage bucket {BucketName} already exists for tenant {TenantId}",
+                        bucketName, tenant.TenantId);
+                }
 
-            // Simulate async storage operation
-            await Task.Delay(100, cancellationToken);
+                _logger.LogInformation("Storage bucket provisioned with prefix {Prefix} for tenant {TenantId}",
+                    tenant.StorageBucketPrefix, tenant.TenantId);
+            }
+            else
+            {
+                // Fallback to simulated storage (for testing without MinIO)
+                _logger.LogWarning("No storage service configured - using simulated storage for tenant {TenantId}",
+                    tenant.TenantId);
+                await Task.Delay(100, cancellationToken);
+            }
         }
         catch (Exception ex)
         {
@@ -438,42 +435,36 @@ public class TenantProvisioningService : ITenantProvisioningService
 
         try
         {
-            // Delete all objects with tenant prefix
-            // In production, this would use MinIO SDK (S3-compatible, self-hosted object storage)
-            // Example production code for MinIO:
-            // using var minioClient = new MinioClient()
-            //     .WithEndpoint("minio.example.com:9000")
-            //     .WithCredentials(accessKey, secretKey)
-            //     .WithSSL()
-            //     .Build();
-            // var bucketName = $"tenant-{tenant.TenantId:N}";
-            // var objectsToDelete = new List<string>();
-            // await foreach (var item in minioClient.ListObjectsEnumAsync(new ListObjectsArgs()
-            //     .WithBucket(bucketName)
-            //     .WithPrefix(tenant.StorageBucketPrefix)
-            //     .WithRecursive(true), cancellationToken))
-            // {
-            //     objectsToDelete.Add(item.Key);
-            //     if (objectsToDelete.Count >= 1000) // Batch delete for efficiency
-            //     {
-            //         await minioClient.RemoveObjectsAsync(new RemoveObjectsArgs()
-            //             .WithBucket(bucketName)
-            //             .WithObjects(objectsToDelete), cancellationToken);
-            //         objectsToDelete.Clear();
-            //     }
-            // }
-            // if (objectsToDelete.Any())
-            // {
-            //     await minioClient.RemoveObjectsAsync(new RemoveObjectsArgs()
-            //         .WithBucket(bucketName)
-            //         .WithObjects(objectsToDelete), cancellationToken);
-            // }
+            if (_storageService != null)
+            {
+                // Delete the entire bucket for the tenant
+                var bucketName = $"tenant-{tenant.TenantId:N}";
 
-            _logger.LogInformation("Storage bucket prefix {Prefix} cleaned up for tenant {TenantId}",
-                tenant.StorageBucketPrefix, tenant.TenantId);
+                var bucketExists = await _storageService.BucketExistsAsync(bucketName, cancellationToken);
+                if (bucketExists)
+                {
+                    // DeleteBucketAsync will delete all objects in the bucket first
+                    await _storageService.DeleteBucketAsync(bucketName, cancellationToken);
 
-            // Simulate async operation
-            await Task.Delay(100, cancellationToken);
+                    _logger.LogInformation("Deleted storage bucket: {BucketName} for tenant {TenantId}",
+                        bucketName, tenant.TenantId);
+                }
+                else
+                {
+                    _logger.LogDebug("Storage bucket {BucketName} does not exist for tenant {TenantId}",
+                        bucketName, tenant.TenantId);
+                }
+
+                _logger.LogInformation("Storage bucket prefix {Prefix} cleaned up for tenant {TenantId}",
+                    tenant.StorageBucketPrefix, tenant.TenantId);
+            }
+            else
+            {
+                // Fallback to simulated cleanup (for testing without MinIO)
+                _logger.LogWarning("No storage service configured - using simulated cleanup for tenant {TenantId}",
+                    tenant.TenantId);
+                await Task.Delay(100, cancellationToken);
+            }
         }
         catch (Exception ex)
         {
