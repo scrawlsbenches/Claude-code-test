@@ -245,7 +245,18 @@ builder.Services.AddSingleton(sp =>
 
 // Register approval workflow services
 builder.Services.AddSingleton<INotificationService, LoggingNotificationService>();
-builder.Services.AddSingleton<IApprovalService, ApprovalService>();
+
+// Use PostgreSQL-backed approval service (or in-memory for development)
+var usePostgresApprovals = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresApprovals", true);
+if (usePostgresApprovals)
+{
+    builder.Services.AddScoped<IApprovalRepository, ApprovalRepository>();
+    builder.Services.AddScoped<IApprovalService, ApprovalServiceRefactored>();
+}
+else
+{
+    builder.Services.AddSingleton<IApprovalService, ApprovalService>();
+}
 
 // Skip background services in Test environment to prevent test hangs
 if (builder.Environment.EnvironmentName != "Test")

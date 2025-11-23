@@ -44,6 +44,11 @@ public class AuditLogDbContext : DbContext
     /// </summary>
     public DbSet<ApprovalRequestEntity> ApprovalRequests { get; set; } = null!;
 
+    /// <summary>
+    /// Deployment jobs for transactional outbox pattern.
+    /// </summary>
+    public DbSet<DeploymentJobEntity> DeploymentJobs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -226,6 +231,35 @@ public class AuditLogDbContext : DbContext
             // Configure enum as string
             entity.Property(e => e.Status)
                 .HasConversion<string>();
+        });
+
+        // Configure DeploymentJobEntity
+        modelBuilder.Entity<DeploymentJobEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.DeploymentId)
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.Status, e.NextRetryAt })
+                .HasDatabaseName("idx_deployment_jobs_pending");
+
+            // Partial index for jobs that can be picked up
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("idx_deployment_jobs_claimable")
+                .HasFilter("status IN ('Pending', 'Failed')");
+
+            entity.HasIndex(e => e.LockedUntil)
+                .HasDatabaseName("idx_deployment_jobs_lock")
+                .HasFilter("status = 'Running'");
+
+            // Configure enum as string
+            entity.Property(e => e.Status)
+                .HasConversion<string>();
+
+            // Configure JSON payload column
+            entity.Property(e => e.Payload)
+                .HasColumnType("jsonb");
         });
     }
 }
