@@ -39,6 +39,11 @@ public class AuditLogDbContext : DbContext
     /// </summary>
     public DbSet<ConfigurationAuditEvent> ConfigurationAuditEvents { get; set; } = null!;
 
+    /// <summary>
+    /// Approval requests for deployment workflows.
+    /// </summary>
+    public DbSet<ApprovalRequestEntity> ApprovalRequests { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -189,6 +194,38 @@ public class AuditLogDbContext : DbContext
             entity.HasIndex(e => e.CreatedAt)
                 .HasDatabaseName("idx_config_audit_timestamp")
                 .IsDescending();
+        });
+
+        // Configure ApprovalRequestEntity
+        modelBuilder.Entity<ApprovalRequestEntity>(entity =>
+        {
+            entity.HasKey(e => e.DeploymentExecutionId);
+
+            entity.HasIndex(e => e.ApprovalId)
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.Status, e.TimeoutAt })
+                .HasDatabaseName("idx_approval_requests_status_timeout");
+
+            // Partial index for pending approvals that haven't expired
+            entity.HasIndex(e => e.TimeoutAt)
+                .HasDatabaseName("idx_approval_requests_pending")
+                .HasFilter("status = 0"); // 0 = Pending in enum
+
+            entity.HasIndex(e => e.RequesterEmail)
+                .HasDatabaseName("idx_approval_requests_requester");
+
+            entity.HasIndex(e => e.RequestedAt)
+                .HasDatabaseName("idx_approval_requests_requested_at")
+                .IsDescending();
+
+            // Configure array column for approver emails
+            entity.Property(e => e.ApproverEmails)
+                .HasColumnType("text[]");
+
+            // Configure enum as string
+            entity.Property(e => e.Status)
+                .HasConversion<string>();
         });
     }
 }
