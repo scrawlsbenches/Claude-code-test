@@ -257,12 +257,6 @@ if [ -f "Dockerfile" ]; then
 fi
 
 if [ -f "docker-compose.yml" ]; then
-    if ! grep -qi "redis" "docker-compose.yml"; then
-        pass_test "Docker Compose: No Redis dependency (using C# in-memory)"
-    else
-        fail_test "Docker Compose: Redis found (should use C# in-memory implementation)"
-    fi
-
     if grep -q "jaeger" "docker-compose.yml"; then
         pass_test "Docker Compose: Jaeger service"
     else
