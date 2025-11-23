@@ -1594,16 +1594,16 @@ MinIO Integration (Infrastructure layer)
 **References:** CanaryDeploymentStrategy.cs:176-245, RollingDeploymentStrategy.cs:98-123, BlueGreenDeploymentStrategy.cs:122-160
 
 **Requirements:**
-- [ ] Replace time-based waits with resource stabilization checks
-- [ ] Implement resource polling mechanism (every 30s)
-- [ ] Add stabilization criteria (CPU/Memory/Latency thresholds)
-- [ ] Require N consecutive stable checks before proceeding
-- [ ] Add safety bounds (minimum/maximum wait times)
-- [ ] Update Canary strategy to use resource-based approach
+- [x] Replace time-based waits with resource stabilization checks
+- [x] Implement resource polling mechanism (every 30s)
+- [x] Add stabilization criteria (CPU/Memory/Latency thresholds)
+- [x] Require N consecutive stable checks before proceeding
+- [x] Add safety bounds (minimum/maximum wait times)
+- [x] Update Canary strategy to use resource-based approach
 - [ ] Update Rolling strategy to use resource-based approach
 - [ ] Update Blue-Green strategy to use resource-based approach
-- [ ] Add configuration for resource thresholds
-- [ ] Create comprehensive unit tests (TDD approach)
+- [x] Add configuration for resource thresholds
+- [x] Create comprehensive unit tests (TDD approach)
 - [ ] Update integration tests
 
 **Current Implementation:**
