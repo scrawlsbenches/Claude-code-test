@@ -2,6 +2,7 @@ using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
+using HotSwap.Distributed.Orchestrator.Services;
 using Microsoft.Extensions.Logging;
 
 namespace HotSwap.Distributed.Orchestrator.Strategies;
@@ -9,17 +10,43 @@ namespace HotSwap.Distributed.Orchestrator.Strategies;
 /// <summary>
 /// Canary deployment strategy - gradual rollout with metrics analysis.
 /// Safest strategy for Production environment.
+/// Uses resource-based stabilization checks instead of fixed time delays.
 /// </summary>
 public class CanaryDeploymentStrategy : IDeploymentStrategy
 {
     private readonly ILogger<CanaryDeploymentStrategy> _logger;
     private readonly IMetricsProvider _metricsProvider;
+    private readonly ResourceStabilizationService? _stabilizationService;
     private readonly int _initialPercentage;
     private readonly int _incrementPercentage;
-    private readonly TimeSpan _waitDuration;
+    private readonly TimeSpan _waitDuration; // Fallback for backward compatibility
+    private readonly ResourceStabilizationConfig? _stabilizationConfig;
 
     public string StrategyName => "Canary";
 
+    /// <summary>
+    /// Initializes a new instance with resource-based stabilization (recommended).
+    /// </summary>
+    public CanaryDeploymentStrategy(
+        ILogger<CanaryDeploymentStrategy> logger,
+        IMetricsProvider metricsProvider,
+        ResourceStabilizationService stabilizationService,
+        ResourceStabilizationConfig stabilizationConfig,
+        int initialPercentage = 10,
+        int incrementPercentage = 20)
+    {
+        _logger = logger;
+        _metricsProvider = metricsProvider;
+        _stabilizationService = stabilizationService;
+        _stabilizationConfig = stabilizationConfig;
+        _initialPercentage = initialPercentage;
+        _incrementPercentage = incrementPercentage;
+        _waitDuration = TimeSpan.FromMinutes(15); // Not used with stabilization service
+    }
+
+    /// <summary>
+    /// Initializes a new instance with fixed time delays (legacy, for backward compatibility).
+    /// </summary>
     public CanaryDeploymentStrategy(
         ILogger<CanaryDeploymentStrategy> logger,
         IMetricsProvider metricsProvider,
@@ -29,6 +56,8 @@ public class CanaryDeploymentStrategy : IDeploymentStrategy
     {
         _logger = logger;
         _metricsProvider = metricsProvider;
+        _stabilizationService = null; // Legacy mode - use fixed wait duration
+        _stabilizationConfig = null;
         _initialPercentage = initialPercentage;
         _incrementPercentage = incrementPercentage;
         _waitDuration = waitDuration ?? TimeSpan.FromMinutes(15);
@@ -118,18 +147,60 @@ public class CanaryDeploymentStrategy : IDeploymentStrategy
                 // If not all nodes deployed, wait and analyze metrics
                 if (deployedNodes.Count < allNodes.Count)
                 {
-                    _logger.LogInformation("Waiting {Duration}m before metrics analysis",
-                        _waitDuration.TotalMinutes);
+                    bool canaryHealthy;
 
-                    await Task.Delay(_waitDuration, cancellationToken);
+                    // Use resource-based stabilization if available, otherwise fall back to fixed wait
+                    if (_stabilizationService != null && _stabilizationConfig != null)
+                    {
+                        _logger.LogInformation("Waiting for canary resources to stabilize (adaptive timing)...");
 
-                    // Analyze canary metrics
-                    _logger.LogInformation("Analyzing canary metrics...");
+                        var nodeIds = deployedNodes.Select(n => n.NodeId);
+                        var stabilizationResult = await _stabilizationService.WaitForStabilizationAsync(
+                            nodeIds,
+                            baselineMetrics,
+                            _stabilizationConfig,
+                            cancellationToken);
 
-                    var canaryHealthy = await AnalyzeCanaryMetricsAsync(
-                        deployedNodes,
-                        baselineMetrics,
-                        cancellationToken);
+                        if (!stabilizationResult.IsStable)
+                        {
+                            _logger.LogWarning(
+                                "Canary resources did not stabilize within timeout. Timeout: {Timeout}, Elapsed: {Elapsed:F1}s",
+                                stabilizationResult.TimeoutReached ? "Yes" : "No",
+                                stabilizationResult.ElapsedTime.TotalSeconds);
+
+                            canaryHealthy = false;
+                        }
+                        else
+                        {
+                            _logger.LogInformation(
+                                "Canary resources stabilized after {Elapsed:F1}s ({Checks} checks, {Consecutive} consecutive stable)",
+                                stabilizationResult.ElapsedTime.TotalSeconds,
+                                stabilizationResult.TotalChecks,
+                                stabilizationResult.ConsecutiveStableChecks);
+
+                            // Additional legacy metrics check for extra safety
+                            canaryHealthy = await AnalyzeCanaryMetricsAsync(
+                                deployedNodes,
+                                baselineMetrics,
+                                cancellationToken);
+                        }
+                    }
+                    else
+                    {
+                        // Legacy mode: fixed time delay
+                        _logger.LogInformation("Waiting {Duration}m before metrics analysis (legacy fixed-time mode)",
+                            _waitDuration.TotalMinutes);
+
+                        await Task.Delay(_waitDuration, cancellationToken);
+
+                        // Analyze canary metrics
+                        _logger.LogInformation("Analyzing canary metrics...");
+
+                        canaryHealthy = await AnalyzeCanaryMetricsAsync(
+                            deployedNodes,
+                            baselineMetrics,
+                            cancellationToken);
+                    }
 
                     if (!canaryHealthy)
                     {
