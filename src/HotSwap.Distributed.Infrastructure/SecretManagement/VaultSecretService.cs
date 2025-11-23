@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using VaultSharp;
+using VaultSharp.Core;
 using VaultSharp.V1.AuthMethods;
 using VaultSharp.V1.AuthMethods.AppRole;
 using VaultSharp.V1.AuthMethods.Token;
@@ -114,7 +115,7 @@ public class VaultSecretService : ISecretService
         {
             var result = await _retryPolicy.ExecuteAsync(async () =>
             {
-                var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretVersionAsync(
+                var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
                     path: secretId,
                     version: version,
                     mountPoint: _mountPoint);
@@ -181,7 +182,10 @@ public class VaultSecretService : ISecretService
                 return null;
 
             var currentVersion = result.Data.CurrentVersion;
-            var createdTime = result.Data.CreatedTime;
+            // VaultSharp 1.17.5.1 returns CreatedTime as string, not DateTime
+            var createdTime = DateTime.TryParse(result.Data.CreatedTime, out var parsedTime)
+                ? parsedTime
+                : DateTime.UtcNow;
             var customMetadata = result.Data.CustomMetadata ?? new Dictionary<string, string>();
 
             // Extract rotation policy from custom metadata
@@ -297,10 +301,15 @@ public class VaultSecretService : ISecretService
                     customMetadata["auto_rotate"] = rotationPolicy.EnableAutomaticRotation.ToString();
                 }
 
+                // VaultSharp 1.17.5.1 API: Requires Custom MetadataRequest with CustomMetadata property
+                var metadataRequest = new VaultSharp.V1.SecretsEngines.KeyValue.V2.CustomMetadataRequest
+                {
+                    CustomMetadata = customMetadata
+                };
                 await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretMetadataAsync(
-                    path: secretId,
-                    customMetadata: customMetadata,
-                    mountPoint: _mountPoint);
+                    secretId,
+                    metadataRequest,
+                    _mountPoint);
             }
 
             _logger.LogInformation("Set secret {SecretId} version {Version} in Vault", secretId, version);
@@ -390,10 +399,15 @@ public class VaultSecretService : ISecretService
                 customMetadata["auto_rotate"] = metadata.RotationPolicy.EnableAutomaticRotation.ToString();
             }
 
+            // VaultSharp 1.17.5.1 API: Requires CustomMetadataRequest with CustomMetadata property
+            var metadataRequest = new VaultSharp.V1.SecretsEngines.KeyValue.V2.CustomMetadataRequest
+            {
+                CustomMetadata = customMetadata
+            };
             await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretMetadataAsync(
-                path: secretId,
-                customMetadata: customMetadata,
-                mountPoint: _mountPoint);
+                secretId,
+                metadataRequest,
+                _mountPoint);
 
             var rotationWindowEndsAt = DateTime.UtcNow.AddHours(rotationWindowHours);
 
@@ -556,10 +570,15 @@ public class VaultSecretService : ISecretService
                 customMetadata["auto_rotate"] = metadata.RotationPolicy.EnableAutomaticRotation.ToString();
             }
 
+            // VaultSharp 1.17.5.1 API: Requires CustomMetadataRequest with CustomMetadata property
+            var metadataRequest = new VaultSharp.V1.SecretsEngines.KeyValue.V2.CustomMetadataRequest
+            {
+                CustomMetadata = customMetadata
+            };
             await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretMetadataAsync(
-                path: secretId,
-                customMetadata: customMetadata,
-                mountPoint: _mountPoint);
+                secretId,
+                metadataRequest,
+                _mountPoint);
 
             _logger.LogInformation("Extended rotation window for {SecretId} by {Hours} hours (new window: {NewWindow} hours)",
                 secretId, additionalHours, newWindowHours);

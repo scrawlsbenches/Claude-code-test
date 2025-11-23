@@ -1,0 +1,191 @@
+name: Load Tests
+
+# Run load tests on demand or after deployment
+on:
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'quick'
+        type: choice
+        options:
+          - quick      # Metrics + Spike + Concurrent (15 min)
+          - standard   # Quick + Deployments + Stress (40 min)
+          - full       # Standard + Soak (100 min)
+      base_url:
+        description: 'API base URL to test'
+        required: false
+        default: 'http://localhost:5000'
+
+  # Optional: Run after successful deployment
+  # workflow_run:
+  #   workflows: ["Deploy to Staging"]
+  #   types:
+  #     - completed
+
+env:
+  BASE_URL: ${{ inputs.base_url || 'http://localhost:5000' }}
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  load-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hours max
+
+    services:
+      # PostgreSQL for the API
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hotswap_distributed
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Restore .NET dependencies
+        run: dotnet restore
+
+      - name: Build API (Release)
+        run: dotnet build src/HotSwap.Distributed.Api/HotSwap.Distributed.Api.csproj --configuration Release --no-restore
+
+      - name: Apply database migrations
+        run: |
+          dotnet ef database update --project src/HotSwap.Distributed.Infrastructure --startup-project src/HotSwap.Distributed.Api
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=hotswap_distributed;Username=postgres;Password=postgres"
+
+      - name: Start API in background
+        run: |
+          cd src/HotSwap.Distributed.Api
+          nohup dotnet run --configuration Release --no-build > ../../api.log 2>&1 &
+          echo $! > ../../api.pid
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=hotswap_distributed;Username=postgres;Password=postgres"
+          Logging__LogLevel__Default: "Warning"
+
+      - name: Wait for API to be ready
+        run: |
+          timeout=60
+          elapsed=0
+          until curl -f -s http://localhost:5000/health > /dev/null || [ $elapsed -ge $timeout ]; do
+            echo "Waiting for API to start... ($elapsed/$timeout seconds)"
+            sleep 2
+            elapsed=$((elapsed + 2))
+          done
+
+          if [ $elapsed -ge $timeout ]; then
+            echo "API failed to start within $timeout seconds"
+            cat api.log
+            exit 1
+          fi
+
+          echo "API is healthy"
+          curl http://localhost:5000/health
+
+      - name: Run Quick Load Tests
+        if: inputs.test_suite == 'quick' || inputs.test_suite == 'standard' || inputs.test_suite == 'full'
+        run: |
+          cd tests/LoadTests
+          k6 run scenarios/metrics-load-test.js
+          k6 run scenarios/spike-test.js
+          k6 run scenarios/concurrent-deployments-test.js
+
+      - name: Run Standard Load Tests
+        if: inputs.test_suite == 'standard' || inputs.test_suite == 'full'
+        run: |
+          cd tests/LoadTests
+          k6 run scenarios/deployments-load-test.js
+          k6 run scenarios/stress-test.js
+
+      - name: Run Full Load Tests
+        if: inputs.test_suite == 'full'
+        run: |
+          cd tests/LoadTests
+          k6 run scenarios/soak-test.js
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results
+          path: |
+            tests/LoadTests/*-results.json
+            api.log
+          retention-days: 30
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) || true
+          fi
+
+      - name: Display API logs on failure
+        if: failure()
+        run: |
+          echo "=== API Logs ==="
+          cat api.log || echo "No API logs found"
+
+  # Optional: Analyze results and post to PR
+  analyze-results:
+    needs: load-tests
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: load-test-results
+
+      - name: Analyze results
+        run: |
+          echo "=== Load Test Results Summary ==="
+
+          for file in *-results.json; do
+            if [ -f "$file" ]; then
+              echo ""
+              echo "📊 $file"
+
+              # Extract key metrics using jq
+              p95=$(jq -r '.metrics.http_req_duration.values["p(95)"]' "$file" 2>/dev/null || echo "N/A")
+              p99=$(jq -r '.metrics.http_req_duration.values["p(99)"]' "$file" 2>/dev/null || echo "N/A")
+              error_rate=$(jq -r '.metrics.http_req_failed.values.rate' "$file" 2>/dev/null || echo "N/A")
+
+              echo "  p95: ${p95}ms"
+              echo "  p99: ${p99}ms"
+              echo "  error_rate: ${error_rate}%"
+            fi
+          done
+
+      # Optional: Post comment to PR with results
+      # - name: Comment PR
+      #   uses: actions/github-script@v7
+      #   if: github.event_name == 'pull_request'
+      #   with:
+      #     script: |
+      #       // Parse results and post comment
