@@ -138,6 +138,46 @@ public class MessagesControllerTests
         storedMessage!.Timestamp.Should().BeOnOrAfter(beforePublish).And.BeOnOrBefore(afterPublish);
     }
 
+    [Fact]
+    public async Task PublishMessage_WhenPersistenceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        var message = CreateTestMessage();
+
+        _mockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        _mockQueue.Setup(x => x.EnqueueAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.PublishMessage(message);
+
+        // Assert
+        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+    }
+
+    [Fact]
+    public async Task PublishMessage_WhenQueueThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        var message = CreateTestMessage();
+
+        _mockPersistence.Setup(x => x.StoreAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _mockQueue.Setup(x => x.EnqueueAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Queue service unavailable"));
+
+        // Act
+        var result = await _controller.PublishMessage(message);
+
+        // Assert
+        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+    }
+
     #endregion
 
     #region GetMessage Tests
@@ -172,6 +212,21 @@ public class MessagesControllerTests
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetMessage_WhenPersistenceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        _mockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database connection lost"));
+
+        // Act
+        var result = await _controller.GetMessage("msg-123");
+
+        // Assert
+        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
     }
 
     #endregion
@@ -252,6 +307,21 @@ public class MessagesControllerTests
         _mockPersistence.Verify(x => x.GetByTopicAsync("test.topic", 1000, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task GetMessagesByTopic_WhenPersistenceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        _mockPersistence.Setup(x => x.GetByTopicAsync("test.topic", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Query timeout"));
+
+        // Act
+        var result = await _controller.GetMessagesByTopic("test.topic");
+
+        // Assert
+        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+    }
+
     #endregion
 
     #region AcknowledgeMessage Tests
@@ -329,6 +399,21 @@ public class MessagesControllerTests
         updatedMessage.AcknowledgedAt!.Value.Should().BeOnOrAfter(beforeAck).And.BeOnOrBefore(afterAck);
     }
 
+    [Fact]
+    public async Task AcknowledgeMessage_WhenPersistenceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        _mockPersistence.Setup(x => x.RetrieveAsync("msg-123", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database unavailable"));
+
+        // Act
+        var result = await _controller.AcknowledgeMessage("msg-123");
+
+        // Assert
+        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+    }
+
     #endregion
 
     #region DeleteMessage Tests
@@ -360,6 +445,21 @@ public class MessagesControllerTests
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task DeleteMessage_WhenPersistenceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        _mockPersistence.Setup(x => x.DeleteAsync("msg-123", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Delete operation failed"));
+
+        // Act
+        var result = await _controller.DeleteMessage("msg-123");
+
+        // Assert
+        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
     }
 
     #endregion
