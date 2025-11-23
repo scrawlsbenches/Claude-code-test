@@ -5,7 +5,7 @@ using HotSwap.Distributed.Infrastructure.Interfaces;
 namespace HotSwap.Distributed.Infrastructure.Messaging;
 
 /// <summary>
-/// In-memory implementation of message persistence for testing/fallback when Redis is unavailable.
+/// In-memory implementation of message persistence.
 /// Messages are stored in memory and will be lost on application restart.
 /// </summary>
 public class InMemoryMessagePersistence : IMessagePersistence

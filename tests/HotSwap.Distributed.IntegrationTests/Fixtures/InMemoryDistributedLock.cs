@@ -6,7 +6,7 @@ namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 /// <summary>
 /// In-memory implementation of distributed lock for testing.
 /// Uses ConcurrentDictionary with SemaphoreSlim to simulate distributed locking behavior.
-/// This allows tests to run without Redis.
+/// This allows tests to run without external dependencies.
 /// </summary>
 public class InMemoryDistributedLock : IDistributedLock
 {
