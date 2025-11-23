@@ -159,8 +159,8 @@ public class UsageReportResponse
     public Guid TenantId { get; set; }
     public DateTime PeriodStart { get; set; }
     public DateTime PeriodEnd { get; set; }
-    public long StorageUsedGB { get; set; }
-    public long BandwidthUsedGB { get; set; }
+    public decimal StorageUsedGB { get; set; }
+    public decimal BandwidthUsedGB { get; set; }
     public int DeploymentsCount { get; set; }
     public decimal TotalCost { get; set; }
     public Dictionary<string, decimal> LineItems { get; set; } = new();

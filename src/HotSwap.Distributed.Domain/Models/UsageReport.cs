@@ -23,12 +23,12 @@ public class UsageReport
     /// <summary>
     /// Storage used in gigabytes.
     /// </summary>
-    public long StorageUsedGB { get; set; }
+    public decimal StorageUsedGB { get; set; }
 
     /// <summary>
     /// Bandwidth used in gigabytes.
     /// </summary>
-    public long BandwidthUsedGB { get; set; }
+    public decimal BandwidthUsedGB { get; set; }
 
     /// <summary>
     /// Number of deployments executed during the period.

@@ -186,8 +186,8 @@ public class SubscriptionService : ISubscriptionService
             TenantId = tenantId,
             PeriodStart = periodStart,
             PeriodEnd = periodEnd,
-            StorageUsedGB = (long)storageUsedGB,
-            BandwidthUsedGB = (long)bandwidthUsedGB,
+            StorageUsedGB = (decimal)storageUsedGB,
+            BandwidthUsedGB = (decimal)bandwidthUsedGB,
             DeploymentsCount = deploymentsCount,
             TotalCost = baseCost + storageCost + bandwidthCost,
             LineItems = new Dictionary<string, decimal>
