@@ -1,8 +1,20 @@
 # Skipped Tests Analysis
 
-**Date:** 2025-11-20
-**Status:** 14 tests skipped (all by design)
-**Location:** `tests/HotSwap.Distributed.Tests/Infrastructure/RedisMessagePersistenceTests.cs`
+> **⚠️ OBSOLETE DOCUMENT - November 2025**
+>
+> This document describes Redis integration tests that **no longer exist**. Redis has been completely removed from the codebase and replaced with C# in-memory implementations (PR #94).
+>
+> **Current status:** See updated test skipping analysis in the investigation branch or run `dotnet test` for current test counts.
+
+---
+
+**Original Date:** 2025-11-20
+**Original Status:** 14 tests skipped (all by design)
+**Original Location:** `tests/HotSwap.Distributed.Tests/Infrastructure/RedisMessagePersistenceTests.cs` (REMOVED)
+
+---
+
+## ⚠️ Historical Document Below (Redis Removed in November 2025)
 
 ---
 
