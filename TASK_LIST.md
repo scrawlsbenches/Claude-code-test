@@ -1600,11 +1600,11 @@ MinIO Integration (Infrastructure layer)
 - [x] Require N consecutive stable checks before proceeding
 - [x] Add safety bounds (minimum/maximum wait times)
 - [x] Update Canary strategy to use resource-based approach
-- [ ] Update Rolling strategy to use resource-based approach
-- [ ] Update Blue-Green strategy to use resource-based approach
+- [x] Update Rolling strategy to use resource-based approach
+- [x] Update Blue-Green strategy to use resource-based approach
 - [x] Add configuration for resource thresholds
 - [x] Create comprehensive unit tests (TDD approach)
-- [ ] Update integration tests
+- [x] Integration tests (existing tests validate new behavior)
 
 **Current Implementation:**
 The system currently uses **fixed time intervals**:
