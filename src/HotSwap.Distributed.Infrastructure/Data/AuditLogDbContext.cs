@@ -49,6 +49,11 @@ public class AuditLogDbContext : DbContext
     /// </summary>
     public DbSet<DeploymentJobEntity> DeploymentJobs { get; set; } = null!;
 
+    /// <summary>
+    /// Message queue for PostgreSQL LISTEN/NOTIFY pattern.
+    /// </summary>
+    public DbSet<MessageEntity> Messages { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -252,6 +257,36 @@ public class AuditLogDbContext : DbContext
             entity.HasIndex(e => e.LockedUntil)
                 .HasDatabaseName("idx_deployment_jobs_lock")
                 .HasFilter("status = 'Running'");
+
+            // Configure enum as string
+            entity.Property(e => e.Status)
+                .HasConversion<string>();
+
+            // Configure JSON payload column
+            entity.Property(e => e.Payload)
+                .HasColumnType("jsonb");
+        });
+
+        // Configure MessageEntity
+        modelBuilder.Entity<MessageEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.MessageId)
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.Topic, e.Priority, e.CreatedAt })
+                .HasDatabaseName("idx_messages_topic_priority");
+
+            // Partial index for pending messages
+            entity.HasIndex(e => new { e.Topic, e.Priority })
+                .HasDatabaseName("idx_messages_pending")
+                .HasFilter("status = 'Pending'")
+                .IsDescending();
+
+            entity.HasIndex(e => e.LockedUntil)
+                .HasDatabaseName("idx_messages_lock")
+                .HasFilter("status = 'Processing'");
 
             // Configure enum as string
             entity.Property(e => e.Status)

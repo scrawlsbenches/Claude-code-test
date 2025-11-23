@@ -12,6 +12,9 @@ using HotSwap.Distributed.Infrastructure.Notifications;
 using HotSwap.Distributed.Infrastructure.Security;
 using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Infrastructure.Tenants;
+using HotSwap.Distributed.Infrastructure.Data;
+using HotSwap.Distributed.Infrastructure.Repositories;
+using HotSwap.Distributed.Infrastructure.Services;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Services;
@@ -171,8 +174,17 @@ builder.Services.AddSingleton(jwtConfig);
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 
-// Register messaging services (in-memory implementations)
-builder.Services.AddSingleton<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessageQueue>();
+// Register messaging services
+// Use PostgreSQL-backed message queue (or in-memory for development)
+var usePostgresMessageQueue = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresMessageQueue", true);
+if (usePostgresMessageQueue)
+{
+    builder.Services.AddScoped<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.PostgresMessageQueue>();
+}
+else
+{
+    builder.Services.AddSingleton<IMessageQueue, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessageQueue>();
+}
 builder.Services.AddSingleton<IMessagePersistence, HotSwap.Distributed.Infrastructure.Messaging.InMemoryMessagePersistence>();
 
 // Configure JWT authentication
@@ -273,6 +285,19 @@ if (!string.IsNullOrEmpty(builder.Configuration["ConnectionStrings:PostgreSql"])
     if (builder.Environment.EnvironmentName != "Test")
     {
         builder.Services.AddHostedService<AuditLogRetentionBackgroundService>();
+
+        // Register deployment job processor (transactional outbox pattern)
+        var usePostgresJobQueue = builder.Configuration.GetValue<bool>("DistributedSystems:UsePostgresJobQueue", true);
+        if (usePostgresJobQueue)
+        {
+            builder.Services.AddHostedService<DeploymentJobProcessor>();
+        }
+
+        // Register message consumer service (PostgreSQL LISTEN/NOTIFY)
+        if (usePostgresMessageQueue)
+        {
+            builder.Services.AddHostedService<MessageConsumerService>();
+        }
     }
 }
 else
@@ -353,6 +378,10 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
 
     return orchestrator;
 });
+
+// Register orchestrator interface for dependency injection
+builder.Services.AddSingleton<IDistributedKernelOrchestrator>(sp =>
+    sp.GetRequiredService<DistributedKernelOrchestrator>());
 
 // Add health checks
 builder.Services.AddHealthChecks();
