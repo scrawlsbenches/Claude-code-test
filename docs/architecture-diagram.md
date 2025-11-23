@@ -60,7 +60,7 @@ graph TB
         end
 
         subgraph "Data Services"
-            Coordination[Coordination<br/>Redis/In-Memory Locks]
+            Coordination[Coordination<br/>In-Memory Locks (C# SemaphoreSlim)]
             Messaging[Message Queue<br/>Persistence & Delivery]
             SchemaRegistry[Schema Registry<br/>Validation & Versioning]
             DeploymentTracker[Deployment Tracker<br/>State Management]

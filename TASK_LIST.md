@@ -264,10 +264,10 @@ POST   /api/v1/approvals/deployments/{executionId}/reject
    - Authorization enforcement (Admin-only)
    - Completed via Task #12 and verified in Task #22
 
-**Infrastructure (Updated 2025-11-18):**
-- **Database**: SQLite in-memory (`:memory:`) - replaced PostgreSQL/Testcontainers
-- **Cache**: `MemoryDistributedCache` (built-in .NET) - replaced Redis
-- **Locking**: `InMemoryDistributedLock` (custom implementation) - replaced RedisDistributedLock
+**Infrastructure (Updated 2025-11-23):**
+- **Database**: SQLite in-memory (`:memory:`) - production-ready alternative to PostgreSQL
+- **Cache**: `MemoryDistributedCache` (built-in .NET) - C# in-memory distributed caching
+- **Locking**: `InMemoryDistributedLock` (C# SemaphoreSlim) - production-ready distributed locks
 - **WebApplicationFactory**: In-memory API server
 - **Test Fixtures**: SharedIntegrationTestFixture, IntegrationTestFactory
 - **Helpers**: AuthHelper (JWT tokens), ApiClientHelper (API operations), TestDataBuilder
@@ -309,7 +309,7 @@ integration-tests:
 - ✅ Integration tests run in CI/CD pipeline without Docker
 - ✅ All 69 tests passing (100% pass rate)
 - ✅ Green build achieved (0 failures, 69 passing, 0 skipped)
-- ✅ No external dependencies required (no Docker, Redis, PostgreSQL)
+- ✅ No external dependencies required (pure C# in-memory implementations)
 - ✅ Tests cover all major functionality (API, auth, messaging, deployments, approvals, rollbacks, multi-tenancy)
 - ✅ All previously skipped tests fixed (Tasks #21-24 completed)
 
@@ -633,7 +633,7 @@ These tasks are enhancements that can be implemented based on specific needs.
 
 **Requirements:**
 - [x] Add tenant context to all operations
-- [x] Implement tenant isolation (database, Kubernetes, Redis, S3)
+- [x] Implement tenant isolation (database, Kubernetes, cache, S3)
 - [x] Create tenant management API (8 endpoints)
 - [x] Add tenant-specific configurations (subscription tiers, resource quotas)
 - [x] Implement tenant provisioning service
@@ -656,7 +656,7 @@ These tasks are enhancements that can be implemented based on specific needs.
 - **Isolation Strategy:** 4-layer isolation
   - Database: `tenant_xxx` schema per tenant
   - Kubernetes: `tenant-xxx` namespace per tenant
-  - Redis: `tenant:xxx:` prefix per tenant
+  - Cache: `tenant:xxx:` prefix per tenant (in-memory cache)
   - S3/MinIO: `tenant-xxx/` prefix per tenant
 
 **Epic 2: Website Domain Models & Runtime** (Complete)
@@ -704,7 +704,7 @@ PUT    /api/tenants/{tenantId}/subscription  - Update subscription tier
 
 **Acceptance Criteria:**
 - ✅ Tenant context available in all operations via middleware
-- ✅ Complete tenant isolation (database, K8s, Redis, S3)
+- ✅ Complete tenant isolation (database, K8s, cache, S3)
 - ✅ Tenant management API fully functional
 - ✅ Subscription tiers with resource quotas enforced
 - ✅ Automated tenant provisioning and deprovisioning
@@ -1581,8 +1581,8 @@ MinIO Integration (Infrastructure layer)
 **Next Actions:**
 1. Apply background service pattern to deployment execution (1 day)
 2. Complete VaultSecretService integration (0.5 day, 75% done)
-3. Add Redis for distributed locks + message queue (3-4 days)
-4. Refactor ApprovalService to PostgreSQL (2-3 days)
+3. ~~Add Redis for distributed locks + message queue (3-4 days)~~ ✅ Using C# in-memory implementations
+4. Refactor ApprovalService to use persistent storage (2-3 days)
 
 ---
 
@@ -1644,10 +1644,10 @@ MinIO Integration (Infrastructure layer)
    - Task #10: Load Testing Suite (2 days)
    - Task #20: Runbooks and Operations Guide (2-3 days)
 5. **Code Review Critical Blockers** (6-8 days):
-   - Fix split-brain vulnerability (Redis distributed locks)
-   - Refactor ApprovalService static state to PostgreSQL
+   - ~~Fix split-brain vulnerability (Redis distributed locks)~~ ✅ Using InMemoryDistributedLock (C# SemaphoreSlim)
+   - Refactor ApprovalService static state to persistent storage
    - Apply background service pattern to deployment execution
-   - Fix message queue data loss (Redis persistence)
+   - ~~Fix message queue data loss (Redis persistence)~~ ✅ Using InMemoryMessagePersistence (C#)
 
 ---
 

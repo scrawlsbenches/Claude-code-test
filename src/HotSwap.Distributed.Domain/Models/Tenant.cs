@@ -73,9 +73,9 @@ public class Tenant
     public string? KubernetesNamespace { get; set; }
 
     /// <summary>
-    /// Redis key prefix for tenant isolation (e.g., "tenant:abc123:").
+    /// Cache key prefix for tenant isolation using in-memory cache (e.g., "tenant:abc123:").
     /// </summary>
-    public string? RedisKeyPrefix { get; set; }
+    public string? CacheKeyPrefix { get; set; }
 
     /// <summary>
     /// S3 bucket prefix for tenant isolation (e.g., "tenant-abc123/").

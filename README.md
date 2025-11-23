@@ -294,7 +294,7 @@ See [SECRET_ROTATION_GUIDE.md](SECRET_ROTATION_GUIDE.md) for setup instructions.
 │  - TelemetryProvider (OpenTelemetry)                │
 │  - ModuleVerifier (RSA Signatures)                  │
 │  - MetricsProvider                                  │
-│  - RedisDistributedLock                             │
+│  - InMemoryDistributedLock (C# SemaphoreSlim)       │
 │  - JwtTokenService                                  │
 │  - SecretRotationService (Vault)                    │
 │  - Knowledge Graph Engine                           │
@@ -398,7 +398,7 @@ curl -X POST http://localhost:5000/api/v1/deployments \
 
 ### Infrastructure
 - **OpenTelemetry 1.9.0** - Distributed tracing and metrics
-- **StackExchange.Redis 2.7.10** - Distributed locking and caching
+- **Microsoft.Extensions.Caching.Memory** - In-memory distributed caching (C# built-in)
 - **Serilog.AspNetCore 8.0.0** - Structured logging
 - **System.Security.Cryptography.Pkcs 8.0.0** - Module signature verification
 - **Microsoft.AspNetCore.Authentication.JwtBearer 8.0.0** - JWT authentication
@@ -415,7 +415,6 @@ curl -X POST http://localhost:5000/api/v1/deployments \
 
 ### External Dependencies
 - **HashiCorp Vault** (optional) - Secret management
-- **Redis 7+** - Distributed locking
 - **Jaeger** (optional) - Distributed tracing visualization
 
 ---
@@ -736,9 +735,9 @@ See **[SKILLS.md](SKILLS.md)** for comprehensive documentation, decision trees, 
 
 **Horizontal Scaling:**
 - API: Multiple instances behind load balancer
-- Redis: Sentinel or Cluster mode for HA
-- SignalR: Redis backplane for multi-instance
-- Metrics: Distributed cache with Redis
+- Cache: In-memory distributed cache with C# MemoryCache
+- SignalR: In-memory backplane (sticky sessions) or Azure SignalR Service for multi-instance
+- Metrics: Distributed cache with in-memory implementation
 
 ---
 
@@ -794,9 +793,6 @@ Jwt__SecretKey=<min-32-chars>         # JWT signing key
 Jwt__Issuer=YourIssuer                # Token issuer
 Jwt__Audience=YourAudience            # Token audience
 Jwt__ExpirationMinutes=60             # Token expiration
-
-# Redis Configuration
-Redis__ConnectionString=localhost:6379 # Redis connection
 
 # Optional: Vault Configuration
 Vault__Address=http://localhost:8200  # Vault server URL

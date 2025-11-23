@@ -79,5 +79,5 @@ appsettings.Production.json
 # Symlink to /etc/letsencrypt if needed
 letsencrypt/
 
-# Redis database dumps
-dump.rdbpackages-microsoft-prod.deb
+# Microsoft packages
+packages-microsoft-prod.deb
