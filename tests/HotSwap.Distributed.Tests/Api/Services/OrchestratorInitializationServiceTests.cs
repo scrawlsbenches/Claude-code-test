@@ -28,7 +28,7 @@ public class OrchestratorInitializationServiceTests
         _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(
             mockLogger.Object,
             mockLoggerFactory.Object,
-            null!, null!, null!, null!, null!, null!, null!);
+            null!, null!, null!, null!, null!, null!, null!, null!);
 
         _mockServiceScope = new Mock<IServiceScope>();
         _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();

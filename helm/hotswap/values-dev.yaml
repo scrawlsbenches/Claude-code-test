@@ -1,0 +1,60 @@
+# Development environment values
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+  tag: latest
+
+config:
+  aspnetcoreEnvironment: Development
+  logging:
+    logLevel:
+      default: Debug
+      microsoft: Information
+      system: Information
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+postgresql:
+  enabled: true
+  auth:
+    password: dev-password-change-me
+  primary:
+    persistence:
+      enabled: false  # Use emptyDir for dev
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+vault:
+  address: http://vault:8200
+  authMethod: token
+  token: dev-token-change-me
+
+ingress:
+  enabled: false
+
+# Relaxed health checks for faster iteration
+healthChecks:
+  livenessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 30
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10

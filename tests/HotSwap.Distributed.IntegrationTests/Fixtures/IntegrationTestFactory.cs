@@ -19,7 +19,7 @@ namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 /// </summary>
 public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly SqliteConnection _sqliteConnection;
+    private readonly SqliteConnection? _sqliteConnection;
 
     public IntegrationTestFactory()
     {
@@ -111,7 +111,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
             // Add SQLite in-memory DbContext
             services.AddDbContext<HotSwap.Distributed.Infrastructure.Data.AuditLogDbContext>(options =>
             {
-                options.UseSqlite(_sqliteConnection);
+                options.UseSqlite(_sqliteConnection!);
             });
 
             // Replace any existing IDistributedCache registrations with in-memory implementation
@@ -199,9 +199,20 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
     /// </summary>
     public new async Task DisposeAsync()
     {
-        // Close and dispose SQLite connection
-        await _sqliteConnection.CloseAsync();
-        await _sqliteConnection.DisposeAsync();
+        // Close and dispose SQLite connection with null safety
+        if (_sqliteConnection != null)
+        {
+            try
+            {
+                await _sqliteConnection.CloseAsync();
+                await _sqliteConnection.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log but don't throw - disposal should be resilient
+                System.Diagnostics.Debug.WriteLine($"Error disposing SQLite connection: {ex.Message}");
+            }
+        }
 
         await base.DisposeAsync();
     }

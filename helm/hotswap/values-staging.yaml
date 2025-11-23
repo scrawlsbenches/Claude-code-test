@@ -1,0 +1,68 @@
+# Staging environment values
+replicaCount: 2
+
+image:
+  pullPolicy: IfNotPresent
+  tag: ""  # Set via --set during deployment
+
+config:
+  aspnetcoreEnvironment: Staging
+  corsOrigins:
+    - https://staging.hotswap.example.com
+    - https://staging-dashboard.hotswap.example.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+resources:
+  limits:
+    cpu: 1500m
+    memory: 3Gi
+  requests:
+    cpu: 400m
+    memory: 768Mi
+
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: postgres-staging.example.com
+  port: 5432
+  database: hotswap_staging
+  username: hotswap
+  existingSecret: hotswap-staging-db-secret
+  existingSecretPasswordKey: password
+
+vault:
+  address: https://vault-staging.example.com
+  authMethod: kubernetes
+  role: hotswap-staging
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: staging.hotswap.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: hotswap-staging-tls
+      hosts:
+        - staging.hotswap.example.com
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  labels:
+    release: prometheus-staging

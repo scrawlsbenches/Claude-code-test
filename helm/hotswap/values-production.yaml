@@ -1,0 +1,141 @@
+# Production environment values
+replicaCount: 5
+
+image:
+  pullPolicy: IfNotPresent
+  tag: ""  # REQUIRED: Set via --set during deployment (e.g., v1.0.0)
+
+config:
+  aspnetcoreEnvironment: Production
+  corsOrigins:
+    - https://hotswap.example.com
+    - https://dashboard.hotswap.example.com
+  rateLimiting:
+    enabled: true
+    requestsPerMinute: 200
+    requestsPerHour: 2000
+
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 3
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Use external managed PostgreSQL in production
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: postgres-prod.example.com
+  port: 5432
+  database: hotswap_production
+  username: hotswap
+  existingSecret: hotswap-prod-db-secret
+  existingSecretPasswordKey: password
+
+vault:
+  address: https://vault-prod.example.com
+  authMethod: kubernetes
+  role: hotswap-production
+  namespace: production
+
+secretRotation:
+  enabled: true
+  checkIntervalMinutes: 30
+  defaultRotationIntervalDays: 30
+  notificationThresholdDays: 3
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "200"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/enable-cors: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+  hosts:
+    - host: hotswap.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: hotswap-prod-tls
+      hosts:
+        - hotswap.example.com
+
+# Pod anti-affinity to spread across nodes
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - hotswap
+        topologyKey: kubernetes.io/hostname
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: node.kubernetes.io/instance-type
+              operator: In
+              values:
+                - production-optimized
+
+# Production-grade health checks
+healthChecks:
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  scrapeTimeout: 10s
+  labels:
+    release: prometheus-prod
+    environment: production
+
+# Node selector for production workloads
+nodeSelector:
+  workload-type: production
+
+# Tolerations for dedicated nodes
+tolerations:
+  - key: "workload"
+    operator: "Equal"
+    value: "production"
+    effect: "NoSchedule"

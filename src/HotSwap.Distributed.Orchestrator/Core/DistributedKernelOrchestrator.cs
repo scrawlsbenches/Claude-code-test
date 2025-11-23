@@ -9,6 +9,7 @@ using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Pipeline;
 using HotSwap.Distributed.Orchestrator.Strategies;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace HotSwap.Distributed.Orchestrator.Core;
@@ -26,11 +27,10 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
     private readonly TelemetryProvider _telemetry;
     private readonly PipelineConfiguration _pipelineConfig;
     private readonly IDeploymentTracker? _deploymentTracker;
-    private readonly IApprovalService? _approvalService;
+    private readonly IServiceScopeFactory? _serviceScopeFactory;
     private readonly IAuditLogService? _auditLogService;
     private readonly ConcurrentDictionary<EnvironmentType, EnvironmentCluster> _clusters;
     private readonly Dictionary<EnvironmentType, IDeploymentStrategy> _strategies;
-    private DeploymentPipeline? _pipeline;
     private bool _initialized;
     private bool _disposed;
 
@@ -43,7 +43,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
         PipelineConfiguration? pipelineConfig = null,
         IDeploymentTracker? deploymentTracker = null,
         IApprovalService? approvalService = null,
-        IAuditLogService? auditLogService = null)
+        IAuditLogService? auditLogService = null,
+        IServiceScopeFactory? serviceScopeFactory = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -54,7 +55,7 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
         _telemetry = telemetry ?? new TelemetryProvider();
         _pipelineConfig = pipelineConfig ?? new PipelineConfiguration();
         _deploymentTracker = deploymentTracker;
-        _approvalService = approvalService;
+        _serviceScopeFactory = serviceScopeFactory;
         _auditLogService = auditLogService;
         _clusters = new ConcurrentDictionary<EnvironmentType, EnvironmentCluster>();
         _strategies = new Dictionary<EnvironmentType, IDeploymentStrategy>();
@@ -137,17 +138,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
                 incrementPercentage: _pipelineConfig.CanaryIncrementPercentage,
                 waitDuration: _pipelineConfig.CanaryWaitDuration);
 
-            // Initialize deployment pipeline
-            _pipeline = new DeploymentPipeline(
-                _loggerFactory.CreateLogger<DeploymentPipeline>(),
-                this,
-                _moduleVerifier,
-                _telemetry,
-                _pipelineConfig,
-                _strategies,
-                approvalService: _approvalService,
-                auditLogService: _auditLogService,
-                deploymentTracker: _deploymentTracker);
+            // Note: Pipeline is created per-request in ExecuteDeploymentPipelineAsync
+            // to support scoped services (like IApprovalService which requires DbContext)
 
             _initialized = true;
 
@@ -173,22 +165,46 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
             throw new InvalidOperationException("Orchestrator not initialized. Call InitializeClustersAsync first.");
         }
 
-        if (_pipeline == null)
-        {
-            throw new InvalidOperationException("Pipeline not initialized");
-        }
-
         _logger.LogInformation("Executing deployment pipeline for {ModuleName} v{Version} to {Environment}",
             request.Module.Name, request.Module.Version, request.TargetEnvironment);
 
         try
         {
-            var result = await _pipeline.ExecutePipelineAsync(request, cancellationToken);
+            // Create pipeline per-request to support scoped services
+            IApprovalService? approvalService = null;
+            IServiceScope? scope = null;
 
-            _logger.LogInformation("Deployment pipeline completed for {ModuleName}: {Success}",
-                request.Module.Name, result.Success ? "SUCCESS" : "FAILED");
+            // Resolve approval service from scope if available
+            if (_serviceScopeFactory != null)
+            {
+                scope = _serviceScopeFactory.CreateScope();
+                approvalService = scope.ServiceProvider.GetService<IApprovalService>();
+            }
 
-            return result;
+            try
+            {
+                var pipeline = new DeploymentPipeline(
+                    _loggerFactory.CreateLogger<DeploymentPipeline>(),
+                    this,
+                    _moduleVerifier,
+                    _telemetry,
+                    _pipelineConfig,
+                    _strategies,
+                    approvalService: approvalService,
+                    auditLogService: _auditLogService,
+                    deploymentTracker: _deploymentTracker);
+
+                var result = await pipeline.ExecutePipelineAsync(request, cancellationToken);
+
+                _logger.LogInformation("Deployment pipeline completed for {ModuleName}: {Success}",
+                    request.Module.Name, result.Success ? "SUCCESS" : "FAILED");
+
+                return result;
+            }
+            finally
+            {
+                scope?.Dispose();
+            }
         }
         catch (Exception ex)
         {
@@ -412,8 +428,8 @@ public class DistributedKernelOrchestrator : IClusterRegistry, IAsyncDisposable
 
         _logger.LogInformation("Disposing Distributed Kernel Orchestrator");
 
-        // Dispose pipeline
-        _pipeline?.Dispose();
+        // Note: Pipeline is created per-request and disposed after each request
+        // No need to dispose here
 
         // Dispose all clusters
         var disposeTasks = _clusters.Values.Select(c => c.DisposeAsync().AsTask());
