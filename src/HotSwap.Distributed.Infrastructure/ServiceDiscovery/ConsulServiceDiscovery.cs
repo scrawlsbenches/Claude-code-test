@@ -1,6 +1,7 @@
 using Consul;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace HotSwap.Distributed.Infrastructure.ServiceDiscovery;
 
@@ -162,13 +163,13 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
 
         var nodes = services.Response.Select(service => new ServiceNode
         {
-            NodeId = service.Service.Meta.GetValueOrDefault("node-id", service.Service.ID),
+            NodeId = GetMetaValue(service.Service.Meta, "node-id", service.Service.ID),
             Hostname = service.Service.Address,
             Port = service.Service.Port,
-            Environment = service.Service.Meta.GetValueOrDefault("environment", environment),
+            Environment = GetMetaValue(service.Service.Meta, "environment", environment),
             IsHealthy = service.Checks.All(check => check.Status == HealthStatus.Passing),
             LastHealthCheck = DateTime.UtcNow,
-            Metadata = service.Service.Meta,
+            Metadata = ToDictionary(service.Service.Meta),
             Tags = service.Service.Tags.ToList()
         }).ToList();
 
@@ -194,7 +195,7 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
             var allServices = await _consulClient.Agent.Services(cancellationToken);
 
             var service = allServices.Response.Values.FirstOrDefault(s =>
-                s.Meta.GetValueOrDefault("node-id") == nodeId);
+                GetMetaValue(s.Meta, "node-id") == nodeId);
 
             if (service == null)
             {
@@ -221,10 +222,10 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
                 NodeId = nodeId,
                 Hostname = service.Address,
                 Port = service.Port,
-                Environment = service.Meta.GetValueOrDefault("environment", "unknown"),
+                Environment = GetMetaValue(service.Meta, "environment", "unknown"),
                 IsHealthy = serviceEntry.Checks.All(check => check.Status == HealthStatus.Passing),
                 LastHealthCheck = DateTime.UtcNow,
-                Metadata = service.Meta,
+                Metadata = ToDictionary(service.Meta),
                 Tags = service.Tags.ToList()
             };
         }
@@ -257,10 +258,10 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
             NodeId = nodeId,
             Hostname = agentService.Address,
             Port = agentService.Port,
-            Environment = agentService.Meta.GetValueOrDefault("environment", "unknown"),
+            Environment = GetMetaValue(agentService.Meta, "environment", "unknown"),
             IsHealthy = entry.Checks.All(check => check.Status == HealthStatus.Passing),
             LastHealthCheck = DateTime.UtcNow,
-            Metadata = agentService.Meta,
+            Metadata = ToDictionary(agentService.Meta),
             Tags = agentService.Tags.ToList()
         };
     }
@@ -278,17 +279,17 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
             return;
         }
 
-        // Update check status
-        var checkId = $"service:{serviceId}";
-        var status = isHealthy ? HealthStatus.Passing : HealthStatus.Critical;
-        var note = isHealthy ? "Node is healthy" : "Node is unhealthy";
+        // Note: When using HTTP health checks, Consul automatically updates the health status.
+        // Manual updates via UpdateTTL are only for TTL-based health checks.
+        // For HTTP checks, we just invalidate the cache to force a fresh lookup.
 
-        await _consulClient.Agent.UpdateTTL(checkId, note, status, cancellationToken);
+        _logger.LogInformation("Health status update requested for node {NodeId}: {Status}",
+            nodeId, isHealthy ? "Healthy" : "Unhealthy");
 
-        _logger.LogInformation("Updated health status for node {NodeId}: {Status}", nodeId, status);
-
-        // Invalidate cache
+        // Invalidate cache to force fresh lookup
         InvalidateCacheForNode(nodeId);
+
+        await Task.CompletedTask;
     }
 
     public async Task RegisterHealthCheckAsync(
@@ -308,7 +309,7 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
 
         var checkRegistration = new AgentCheckRegistration
         {
-            ID = $"check-{serviceId}",
+            CheckID = $"check-{serviceId}",
             Name = $"Health check for {serviceId}",
             ServiceID = serviceId,
             HTTP = healthCheckUrl,
@@ -337,13 +338,13 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
 
         var nodes = services.Response.Select(service => new ServiceNode
         {
-            NodeId = service.Service.Meta.GetValueOrDefault("node-id", service.Service.ID),
+            NodeId = GetMetaValue(service.Service.Meta, "node-id", service.Service.ID),
             Hostname = service.Service.Address,
             Port = service.Service.Port,
-            Environment = service.Service.Meta.GetValueOrDefault("environment", environment),
+            Environment = GetMetaValue(service.Service.Meta, "environment", environment),
             IsHealthy = true,  // All returned services are healthy due to passingOnly=true
             LastHealthCheck = DateTime.UtcNow,
-            Metadata = service.Service.Meta,
+            Metadata = ToDictionary(service.Service.Meta),
             Tags = service.Service.Tags.ToList()
         }).ToList();
 
@@ -356,6 +357,22 @@ public class ConsulServiceDiscovery : IServiceDiscovery, IAsyncDisposable
     private string GenerateServiceId(NodeRegistration node)
     {
         return $"{_config.ServiceName}-{node.Environment.ToLower()}-{node.NodeId}";
+    }
+
+    private static string GetMetaValue(IDictionary<string, string>? meta, string key, string defaultValue = "")
+    {
+        if (meta == null)
+            return defaultValue;
+
+        return meta.TryGetValue(key, out var value) ? value : defaultValue;
+    }
+
+    private static Dictionary<string, string> ToDictionary(IDictionary<string, string>? source)
+    {
+        if (source == null)
+            return new Dictionary<string, string>();
+
+        return new Dictionary<string, string>(source);
     }
 
     private void InvalidateCacheForNode(string nodeId)
