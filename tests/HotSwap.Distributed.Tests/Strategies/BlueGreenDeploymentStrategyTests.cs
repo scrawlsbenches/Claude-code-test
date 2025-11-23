@@ -1,7 +1,9 @@
 using FluentAssertions;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Orchestrator.Core;
+using HotSwap.Distributed.Orchestrator.Services;
 using HotSwap.Distributed.Orchestrator.Strategies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,12 +16,14 @@ public class BlueGreenDeploymentStrategyTests
     private readonly Mock<ILogger<BlueGreenDeploymentStrategy>> _loggerMock;
     private readonly Mock<ILogger<EnvironmentCluster>> _clusterLoggerMock;
     private readonly Mock<ILogger<KernelNode>> _nodeLoggerMock;
+    private readonly Mock<IMetricsProvider> _metricsProviderMock;
 
     public BlueGreenDeploymentStrategyTests()
     {
         _loggerMock = new Mock<ILogger<BlueGreenDeploymentStrategy>>();
         _clusterLoggerMock = new Mock<ILogger<EnvironmentCluster>>();
         _nodeLoggerMock = new Mock<ILogger<KernelNode>>();
+        _metricsProviderMock = new Mock<IMetricsProvider>();
     }
 
     [Fact]
@@ -361,6 +365,277 @@ public class BlueGreenDeploymentStrategyTests
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
         result.Message.Should().Contain("Smoke tests failed");
+    }
+
+    // Resource-based deployment tests
+
+    [Fact]
+    public async Task DeployAsync_WithResourceStabilization_WaitsBeforeSmokeTests()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig
+        {
+            CpuDeltaThreshold = 10.0,
+            MemoryDeltaThreshold = 10.0,
+            LatencyDeltaThreshold = 15.0,
+            PollingInterval = TimeSpan.FromMilliseconds(50),
+            ConsecutiveStableChecks = 2,
+            MinimumWaitTime = TimeSpan.FromMilliseconds(100),
+            MaximumWaitTime = TimeSpan.FromSeconds(5)
+        };
+
+        // Setup baseline metrics
+        _metricsProviderMock
+            .Setup(m => m.GetClusterMetricsAsync(
+                It.IsAny<EnvironmentType>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClusterMetricsSnapshot
+            {
+                Environment = "Staging",
+                TotalNodes = 5,
+                AvgCpuUsage = 50.0,
+                AvgMemoryUsage = 60.0,
+                AvgLatency = 100.0,
+                AvgErrorRate = 1.0
+            });
+
+        // Mock stabilization service to return stable result
+        stabilizationServiceMock
+            .Setup(s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                It.IsAny<ResourceStabilizationConfig>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResourceStabilizationResult
+            {
+                IsStable = true,
+                ElapsedTime = TimeSpan.FromMilliseconds(200),
+                ConsecutiveStableChecks = 2,
+                TotalChecks = 3,
+                TimeoutReached = false
+            });
+
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 5);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.NodeResults.Should().HaveCount(5);
+        result.Message.Should().Contain("Successfully deployed");
+
+        // Verify stabilization service was called before smoke tests
+        stabilizationServiceMock.Verify(
+            s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                config,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithResourceStabilizationFailure_DoesNotSwitchTraffic()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig
+        {
+            CpuDeltaThreshold = 10.0,
+            MemoryDeltaThreshold = 10.0,
+            LatencyDeltaThreshold = 15.0,
+            PollingInterval = TimeSpan.FromMilliseconds(50),
+            ConsecutiveStableChecks = 3,
+            MinimumWaitTime = TimeSpan.FromMilliseconds(100),
+            MaximumWaitTime = TimeSpan.FromSeconds(2)
+        };
+
+        // Setup baseline metrics
+        _metricsProviderMock
+            .Setup(m => m.GetClusterMetricsAsync(
+                It.IsAny<EnvironmentType>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClusterMetricsSnapshot
+            {
+                Environment = "Staging",
+                TotalNodes = 5,
+                AvgCpuUsage = 50.0,
+                AvgMemoryUsage = 60.0,
+                AvgLatency = 100.0,
+                AvgErrorRate = 1.0
+            });
+
+        // Mock stabilization service to return unstable (timeout)
+        stabilizationServiceMock
+            .Setup(s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                It.IsAny<ResourceStabilizationConfig>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResourceStabilizationResult
+            {
+                IsStable = false,
+                ElapsedTime = TimeSpan.FromSeconds(2),
+                ConsecutiveStableChecks = 1,
+                TotalChecks = 10,
+                TimeoutReached = true
+            });
+
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+
+        var cluster = await CreateClusterWithNodes(EnvironmentType.Staging, 5);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("did not stabilize");
+        result.Message.Should().Contain("Not switching traffic");
+        result.NodeResults.Should().HaveCount(5);
+        result.NodeResults.Should().OnlyContain(r => r.Success); // Deployment succeeded but not switching
+    }
+
+    [Fact]
+    public async Task DeployAsync_WithResourceStabilization_SmokeTestsStillRun()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig
+        {
+            CpuDeltaThreshold = 10.0,
+            MemoryDeltaThreshold = 10.0,
+            LatencyDeltaThreshold = 15.0,
+            PollingInterval = TimeSpan.FromMilliseconds(50),
+            ConsecutiveStableChecks = 2,
+            MinimumWaitTime = TimeSpan.FromMilliseconds(100),
+            MaximumWaitTime = TimeSpan.FromSeconds(5)
+        };
+
+        // Setup baseline metrics
+        _metricsProviderMock
+            .Setup(m => m.GetClusterMetricsAsync(
+                It.IsAny<EnvironmentType>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClusterMetricsSnapshot
+            {
+                Environment = "Staging",
+                TotalNodes = 5,
+                AvgCpuUsage = 50.0,
+                AvgMemoryUsage = 60.0,
+                AvgLatency = 100.0,
+                AvgErrorRate = 1.0
+            });
+
+        // Mock stabilization service to return stable
+        stabilizationServiceMock
+            .Setup(s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                It.IsAny<ResourceStabilizationConfig>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResourceStabilizationResult
+            {
+                IsStable = true,
+                ElapsedTime = TimeSpan.FromMilliseconds(150),
+                ConsecutiveStableChecks = 2,
+                TotalChecks = 3,
+                TimeoutReached = false
+            });
+
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            smokeTestTimeout: TimeSpan.FromSeconds(3));
+
+        // Create cluster with one unhealthy node (smoke tests will fail)
+        var cluster = await CreateClusterWithUnhealthyNode(EnvironmentType.Staging, 5, unhealthyNodeIndex: 2);
+
+        var request = new ModuleDeploymentRequest
+        {
+            ModuleName = "test-module",
+            Version = new Version(1, 0, 0)
+        };
+
+        // Act
+        var result = await strategy.DeployAsync(request, cluster);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Smoke tests failed");
+        result.Message.Should().Contain("Traffic remains on blue environment");
+
+        // Verify stabilization was performed before smoke tests
+        stabilizationServiceMock.Verify(
+            s => s.WaitForStabilizationAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<ClusterMetricsSnapshot>(),
+                config,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void Constructor_WithResourceStabilization_AcceptsParameters()
+    {
+        // Arrange
+        var stabilizationServiceMock = new Mock<ResourceStabilizationService>(
+            Mock.Of<ILogger<ResourceStabilizationService>>(),
+            _metricsProviderMock.Object);
+
+        var config = new ResourceStabilizationConfig();
+
+        // Act
+        var strategy = new BlueGreenDeploymentStrategy(
+            _loggerMock.Object,
+            _metricsProviderMock.Object,
+            stabilizationServiceMock.Object,
+            config,
+            smokeTestTimeout: TimeSpan.FromMinutes(3));
+
+        // Assert
+        strategy.Should().NotBeNull();
+        strategy.StrategyName.Should().Be("BlueGreen");
     }
 
     // Helper methods
