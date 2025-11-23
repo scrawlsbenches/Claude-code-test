@@ -4,10 +4,12 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using VaultSharp;
+using VaultSharp.Core;
 using VaultSharp.V1.AuthMethods;
 using VaultSharp.V1.AuthMethods.AppRole;
 using VaultSharp.V1.AuthMethods.Token;
 using VaultSharp.V1.Commons;
+using VaultSharp.V1.SecretsEngines.KeyValue.V2.Models;
 using DomainSecretMetadata = HotSwap.Distributed.Domain.Models.SecretMetadata;
 using VaultSecretMetadata = VaultSharp.V1.Commons.SecretMetadata;
 
@@ -114,7 +116,7 @@ public class VaultSecretService : ISecretService
         {
             var result = await _retryPolicy.ExecuteAsync(async () =>
             {
-                var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretVersionAsync(
+                var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
                     path: secretId,
                     version: version,
                     mountPoint: _mountPoint);
@@ -181,7 +183,7 @@ public class VaultSecretService : ISecretService
                 return null;
 
             var currentVersion = result.Data.CurrentVersion;
-            var createdTime = result.Data.CreatedTime;
+            var createdTime = result.Data.CreatedTime; // Already DateTime
             var customMetadata = result.Data.CustomMetadata ?? new Dictionary<string, string>();
 
             // Extract rotation policy from custom metadata
@@ -297,9 +299,14 @@ public class VaultSecretService : ISecretService
                     customMetadata["auto_rotate"] = rotationPolicy.EnableAutomaticRotation.ToString();
                 }
 
+                var metadataRequest = new CustomMetadataRequest
+                {
+                    CustomMetadata = customMetadata
+                };
+
                 await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretMetadataAsync(
                     path: secretId,
-                    customMetadata: customMetadata,
+                    metadataRequest,
                     mountPoint: _mountPoint);
             }
 
@@ -390,9 +397,14 @@ public class VaultSecretService : ISecretService
                 customMetadata["auto_rotate"] = metadata.RotationPolicy.EnableAutomaticRotation.ToString();
             }
 
+            var metadataRequest = new CustomMetadataRequest
+            {
+                CustomMetadata = customMetadata
+            };
+
             await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretMetadataAsync(
                 path: secretId,
-                customMetadata: customMetadata,
+                metadataRequest,
                 mountPoint: _mountPoint);
 
             var rotationWindowEndsAt = DateTime.UtcNow.AddHours(rotationWindowHours);
@@ -556,9 +568,14 @@ public class VaultSecretService : ISecretService
                 customMetadata["auto_rotate"] = metadata.RotationPolicy.EnableAutomaticRotation.ToString();
             }
 
+            var metadataRequest = new CustomMetadataRequest
+            {
+                CustomMetadata = customMetadata
+            };
+
             await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretMetadataAsync(
                 path: secretId,
-                customMetadata: customMetadata,
+                metadataRequest,
                 mountPoint: _mountPoint);
 
             _logger.LogInformation("Extended rotation window for {SecretId} by {Hours} hours (new window: {NewWindow} hours)",
