@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hotswap.fullname" . }}
+  labels:
+    {{- include "hotswap.labels" . | nindent 4 }}
+data:
+  appsettings.json: |
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": {{ .Values.config.logging.logLevel.default | quote }},
+          "Microsoft": {{ .Values.config.logging.logLevel.microsoft | quote }},
+          "System": {{ .Values.config.logging.logLevel.system | quote }}
+        }
+      },
+      "AllowedHosts": "*",
+      "CorsOrigins": {{ .Values.config.corsOrigins | toJson }},
+      "RateLimiting": {
+        "Enabled": {{ .Values.config.rateLimiting.enabled }},
+        "RequestsPerMinute": {{ .Values.config.rateLimiting.requestsPerMinute }},
+        "RequestsPerHour": {{ .Values.config.rateLimiting.requestsPerHour }}
+      },
+      "PipelineConfiguration": {
+        "QaMaxConcurrentNodes": {{ .Values.config.pipeline.qaMaxConcurrentNodes }},
+        "RollingHealthCheckDelaySeconds": {{ .Values.config.pipeline.rollingHealthCheckDelaySeconds }},
+        "StagingSmokeTestTimeoutSeconds": {{ .Values.config.pipeline.stagingSmokeTestTimeoutSeconds }},
+        "CanaryInitialPercentage": {{ .Values.config.pipeline.canaryInitialPercentage }},
+        "CanaryIncrementPercentage": {{ .Values.config.pipeline.canaryIncrementPercentage }},
+        "CanaryWaitDurationSeconds": {{ .Values.config.pipeline.canaryWaitDurationSeconds }}
+      },
+      "VaultConfiguration": {
+        "Address": {{ .Values.vault.address | quote }},
+        "Namespace": {{ .Values.vault.namespace | quote }},
+        "AuthMethod": {{ .Values.vault.authMethod | quote }},
+        "Role": {{ .Values.vault.role | quote }}
+      },
+      "SecretRotation": {
+        "Enabled": {{ .Values.secretRotation.enabled }},
+        "CheckIntervalMinutes": {{ .Values.secretRotation.checkIntervalMinutes }},
+        "Policies": {
+          "DefaultRotationPolicy": {
+            "RotationIntervalDays": {{ .Values.secretRotation.defaultRotationIntervalDays }},
+            "NotificationThresholdDays": {{ .Values.secretRotation.notificationThresholdDays }}
+          }
+        }
+      },
+      "PrometheusMetrics": {
+        "Enabled": {{ .Values.config.prometheus.enabled }},
+        "Endpoint": {{ .Values.config.prometheus.endpoint | quote }}
+      }
+    }

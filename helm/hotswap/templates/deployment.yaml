@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hotswap.fullname" . }}
+  labels:
+    {{- include "hotswap.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "hotswap.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "hotswap.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "hotswap.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 5000
+          protocol: TCP
+        - name: https
+          containerPort: 5001
+          protocol: TCP
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: {{ .Values.config.aspnetcoreEnvironment | quote }}
+        - name: ASPNETCORE_URLS
+          value: "http://+:5000;https://+:5001"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Host={{ include "hotswap.databaseHost" . }};Port={{ include "hotswap.databasePort" . }};Database={{ include "hotswap.databaseName" . }};Username={{ include "hotswap.databaseUsername" . }};Password=$(DATABASE_PASSWORD);SSL Mode=Require;Trust Server Certificate=true"
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "hotswap.databaseSecretName" . }}
+              key: {{ include "hotswap.databaseSecretPasswordKey" . }}
+        {{- if eq .Values.vault.authMethod "token" }}
+        - name: VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "hotswap.fullname" . }}
+              key: vault-token
+        {{- end }}
+        {{- if eq .Values.vault.authMethod "approle" }}
+        - name: VAULT_ROLE_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "hotswap.fullname" . }}
+              key: vault-role-id
+        - name: VAULT_SECRET_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "hotswap.fullname" . }}
+              key: vault-secret-id
+        {{- end }}
+        {{- if eq .Values.vault.authMethod "kubernetes" }}
+        - name: VAULT_K8S_SA_TOKEN_PATH
+          value: {{ .Values.vault.kubernetes.serviceAccountPath | quote }}
+        {{- end }}
+        - name: VAULT_ADDR
+          value: {{ .Values.vault.address | quote }}
+        {{- with .Values.env }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        livenessProbe:
+          {{- toYaml .Values.healthChecks.livenessProbe | nindent 12 }}
+        readinessProbe:
+          {{- toYaml .Values.healthChecks.readinessProbe | nindent 12 }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.json
+          readOnly: true
+        {{- with .Values.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "hotswap.fullname" . }}
+      {{- with .Values.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
