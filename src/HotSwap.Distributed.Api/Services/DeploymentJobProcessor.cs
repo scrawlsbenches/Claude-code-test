@@ -1,13 +1,15 @@
 using System.Text.Json;
+using HotSwap.Distributed.Domain.Enums;
+using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Data;
 using HotSwap.Distributed.Infrastructure.Data.Entities;
-using HotSwap.Distributed.Orchestrator.Interfaces;
+using HotSwap.Distributed.Orchestrator.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace HotSwap.Distributed.Infrastructure.Services;
+namespace HotSwap.Distributed.Api.Services;
 
 /// <summary>
 /// Background service that processes deployment jobs using transactional outbox pattern.
@@ -95,7 +97,7 @@ public class DeploymentJobProcessor : BackgroundService
     private async Task ProcessJobAsync(DeploymentJobEntity job, CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var orchestrator = scope.ServiceProvider.GetRequiredService<IDistributedKernelOrchestrator>();
+        var orchestrator = scope.ServiceProvider.GetRequiredService<DistributedKernelOrchestrator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<AuditLogDbContext>();
 
         try
@@ -109,13 +111,22 @@ public class DeploymentJobProcessor : BackgroundService
                 throw new InvalidOperationException("Failed to deserialize job payload");
             }
 
+            // Create deployment request
+            var deploymentRequest = new DeploymentRequest
+            {
+                Module = new ModuleDescriptor
+                {
+                    Name = payload.ModuleName,
+                    Version = Version.Parse(payload.ModuleVersion)
+                },
+                TargetEnvironment = Enum.Parse<EnvironmentType>(payload.TargetEnvironment),
+                RequesterEmail = "system@deployment-job-processor",
+                RequireApproval = false // Jobs are already approved before being enqueued
+            };
+
             // Execute deployment
             var result = await orchestrator.ExecuteDeploymentPipelineAsync(
-                payload.ModuleName,
-                payload.ModuleVersion,
-                payload.TargetEnvironment,
-                payload.DeploymentStrategy,
-                payload.DeploymentExecutionId,
+                deploymentRequest,
                 cancellationToken);
 
             // Mark job as succeeded

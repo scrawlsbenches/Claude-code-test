@@ -379,10 +379,6 @@ builder.Services.AddSingleton<DistributedKernelOrchestrator>(sp =>
     return orchestrator;
 });
 
-// Register orchestrator interface for dependency injection
-builder.Services.AddSingleton<IDistributedKernelOrchestrator>(sp =>
-    sp.GetRequiredService<DistributedKernelOrchestrator>());
-
 // Add health checks
 builder.Services.AddHealthChecks();
 

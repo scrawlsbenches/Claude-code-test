@@ -410,7 +410,7 @@ public class ApprovalServiceRefactored : IApprovalService
             DeploymentExecutionId = entity.DeploymentExecutionId,
             ApprovalId = entity.ApprovalId,
             RequesterEmail = entity.RequesterEmail,
-            TargetEnvironment = Enum.Parse<DeploymentEnvironment>(entity.TargetEnvironment),
+            TargetEnvironment = Enum.Parse<EnvironmentType>(entity.TargetEnvironment),
             ModuleName = entity.ModuleName,
             Version = Version.Parse(entity.ModuleVersion),
             Status = entity.Status,
