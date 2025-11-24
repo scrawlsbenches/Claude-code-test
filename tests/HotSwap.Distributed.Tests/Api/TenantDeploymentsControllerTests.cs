@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using FluentAssertions;
 using HotSwap.Distributed.Api.Controllers;
 using HotSwap.Distributed.Api.Models;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using System.Security.Claims;
 using Xunit;
 
 namespace HotSwap.Distributed.Tests.Api;

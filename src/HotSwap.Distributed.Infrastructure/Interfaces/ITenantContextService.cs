@@ -21,12 +21,6 @@ public interface ITenantContextService
     Guid? GetCurrentTenantId();
 
     /// <summary>
-    /// Sets the current tenant in the HTTP context.
-    /// </summary>
-    /// <param name="tenant">Tenant to set</param>
-    void SetCurrentTenant(Tenant tenant);
-
-    /// <summary>
     /// Validates that the current tenant is active and operational.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>

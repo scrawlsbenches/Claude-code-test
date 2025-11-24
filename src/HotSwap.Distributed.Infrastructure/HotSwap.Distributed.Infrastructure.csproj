@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="HotSwap.Distributed.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HotSwap.Distributed.Domain\HotSwap.Distributed.Domain.csproj" />
   </ItemGroup>
 
