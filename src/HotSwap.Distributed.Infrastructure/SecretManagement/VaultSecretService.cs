@@ -626,20 +626,7 @@ public class VaultSecretService : ISecretService
             VaultServiceTimeout = TimeSpan.FromSeconds(_config.TimeoutSeconds)
         };
 
-        if (!_config.ValidateCertificate)
-        {
-            _logger.LogWarning("TLS certificate validation is DISABLED - this is insecure for production");
-            vaultClientSettings.MyHttpClientProviderFunc = handler =>
-            {
-                var httpClientHandler = handler as HttpClientHandler;
-                if (httpClientHandler != null)
-                {
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
-                }
-                return new HttpClient(handler);
-            };
-        }
-
+        // TLS certificate validation is always enabled for security
         return new VaultClient(vaultClientSettings);
     }
 
@@ -663,9 +650,12 @@ public class VaultSecretService : ISecretService
     {
         const int length = 64;
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?";
-        var random = new Random();
-        return new string(Enumerable.Repeat(chars, length)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
+
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        var data = new byte[length];
+        rng.GetBytes(data);
+
+        return new string(data.Select(b => chars[b % chars.Length]).ToArray());
     }
 
     #endregion

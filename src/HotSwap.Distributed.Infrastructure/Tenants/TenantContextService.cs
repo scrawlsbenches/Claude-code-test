@@ -34,8 +34,8 @@ public class TenantContextService : ITenantContextService
         if (httpContext.Items.TryGetValue("Tenant", out var cachedTenant))
             return cachedTenant as Tenant;
 
-        // Extract tenant ID from various sources
-        var tenantId = ExtractTenantId(httpContext);
+        // Extract tenant ID from various sources (async for subdomain resolution)
+        var tenantId = await ExtractTenantIdAsync(httpContext, cancellationToken);
         if (tenantId == null)
             return null;
 
@@ -62,7 +62,8 @@ public class TenantContextService : ITenantContextService
         if (httpContext.Items.TryGetValue("TenantId", out var cachedTenantId))
             return cachedTenantId as Guid?;
 
-        return ExtractTenantId(httpContext);
+        // Synchronous extraction - only from headers/claims, not subdomain (which requires async DB lookup)
+        return ExtractTenantIdSync(httpContext);
     }
 
     public void SetCurrentTenant(Tenant tenant)
@@ -98,7 +99,35 @@ public class TenantContextService : ITenantContextService
         return true;
     }
 
-    private Guid? ExtractTenantId(HttpContext context)
+    private Guid? ExtractTenantIdSync(HttpContext context)
+    {
+        // Synchronous extraction - only from headers and JWT claims
+        // Subdomain resolution requires async DB lookup, so it's handled in ExtractTenantIdAsync
+
+        // Option 1: From X-Tenant-ID header (for API access)
+        if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var headerValue))
+        {
+            if (Guid.TryParse(headerValue, out var tenantId))
+            {
+                _logger.LogDebug("Tenant resolved from header: {TenantId}", tenantId);
+                return tenantId;
+            }
+        }
+
+        // Option 2: From JWT claim
+        var user = context.User;
+        var tenantClaim = user.FindFirst("tenant_id");
+        if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))
+        {
+            _logger.LogDebug("Tenant resolved from JWT claim: {TenantId}", claimTenantId);
+            return claimTenantId;
+        }
+
+        _logger.LogDebug("Could not extract tenant ID from header or JWT claim (subdomain resolution requires async)");
+        return null;
+    }
+
+    private async Task<Guid?> ExtractTenantIdAsync(HttpContext context, CancellationToken cancellationToken = default)
     {
         // Option 1: From subdomain (e.g., tenant1.platform.com)
         var host = context.Request.Host.Host;
@@ -106,8 +135,7 @@ public class TenantContextService : ITenantContextService
         if (parts.Length >= 3)
         {
             var subdomain = parts[0];
-            // Async call in sync method - consider refactoring if needed
-            var tenant = _tenantRepository.GetBySubdomainAsync(subdomain).Result;
+            var tenant = await _tenantRepository.GetBySubdomainAsync(subdomain, cancellationToken);
             if (tenant != null)
             {
                 _logger.LogDebug("Tenant resolved from subdomain: {Subdomain} -> {TenantId}",

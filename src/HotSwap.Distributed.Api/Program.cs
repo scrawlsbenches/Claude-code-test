@@ -165,7 +165,7 @@ var jwtConfig = new JwtConfiguration
 {
     SecretKey = jwtSecretKey,
     Issuer = builder.Configuration["Jwt:Issuer"] ?? "DistributedKernelOrchestrator",
-    Audience = builder.Configuration["Jwt:Issuer"] ?? "DistributedKernelApi",
+    Audience = builder.Configuration["Jwt:Audience"] ?? "DistributedKernelApi",
     ExpirationMinutes = builder.Configuration.GetValue<int>("Jwt:ExpirationMinutes", 60)
 };
 builder.Services.AddSingleton(jwtConfig);

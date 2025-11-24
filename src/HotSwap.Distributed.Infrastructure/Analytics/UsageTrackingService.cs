@@ -13,7 +13,7 @@ public class UsageTrackingService : IUsageTrackingService
     private readonly ConcurrentDictionary<string, long> _pageViews = new();
     private readonly ConcurrentDictionary<Guid, long> _bandwidthUsage = new();
     private readonly ConcurrentDictionary<Guid, long> _storageUsage = new();
-    private readonly ConcurrentDictionary<string, HashSet<string>> _uniqueVisitors = new(); // Key: "websiteId:date", Value: Set of visitor hashes
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _uniqueVisitors = new(); // Key: "websiteId:date", Value: Concurrent set of visitor hashes
 
     public UsageTrackingService(ILogger<UsageTrackingService> logger)
     {
@@ -39,17 +39,9 @@ public class UsageTrackingService : IUsageTrackingService
         var visitorHash = ComputeVisitorHash(ipAddress, userAgent);
         var dateKey = $"{websiteId}:{DateTime.UtcNow:yyyy-MM-dd}";
 
-        _uniqueVisitors.AddOrUpdate(
-            dateKey,
-            _ => new HashSet<string> { visitorHash },
-            (_, existingSet) =>
-            {
-                lock (existingSet)
-                {
-                    existingSet.Add(visitorHash);
-                }
-                return existingSet;
-            });
+        // Use ConcurrentDictionary as a thread-safe set (value is unused)
+        var visitors = _uniqueVisitors.GetOrAdd(dateKey, _ => new ConcurrentDictionary<string, byte>());
+        visitors.TryAdd(visitorHash, 0);
 
         _logger.LogDebug("Recorded page view: {WebsiteId} - {Path} (Visitor: {VisitorHash})",
             websiteId, path, visitorHash.Substring(0, 8));
@@ -101,19 +93,16 @@ public class UsageTrackingService : IUsageTrackingService
     {
         // Aggregate unique visitors across all days in the range
         // In production, this would query a database or analytics service
-        var allUniqueVisitors = new HashSet<string>();
+        var allUniqueVisitors = new ConcurrentDictionary<string, byte>();
 
         for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
         {
             var dateKey = $"{websiteId}:{date:yyyy-MM-dd}";
             if (_uniqueVisitors.TryGetValue(dateKey, out var visitorsForDay))
             {
-                lock (visitorsForDay)
+                foreach (var visitor in visitorsForDay.Keys)
                 {
-                    foreach (var visitor in visitorsForDay)
-                    {
-                        allUniqueVisitors.Add(visitor);
-                    }
+                    allUniqueVisitors.TryAdd(visitor, 0);
                 }
             }
         }
