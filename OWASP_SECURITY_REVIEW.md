@@ -301,7 +301,6 @@ Dependency versions reviewed across all .csproj files:
 **Infrastructure Project Dependencies** (`HotSwap.Distributed.Infrastructure.csproj`):
 - ⚠️ **Microsoft.AspNetCore.Http.Abstractions: 2.2.0** (OUTDATED - current is 8.0+)
 - ✅ Npgsql.EntityFrameworkCore.PostgreSQL: 9.0.4 (latest)
-- ✅ StackExchange.Redis: 2.7.10 (current)
 - ✅ System.Security.Cryptography.Pkcs: 8.0.0 (current)
 - ✅ System.IdentityModel.Tokens.Jwt: 8.0.0 (current)
 - ✅ BCrypt.Net-Next: 4.0.3 (current)

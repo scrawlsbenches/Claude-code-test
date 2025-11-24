@@ -332,8 +332,6 @@ curl -X POST http://localhost:5000/api/v1/deployments \
 
 ⚠️ **Approval Workflow Tests Hanging** - 7 integration tests in `ApprovalWorkflowIntegrationTests.cs` are skipped due to test hangs. Root cause under investigation.
 
-⚠️ **Redis Integration Tests** - 14 tests in `RedisMessagePersistenceTests.cs` skip gracefully when Redis unavailable (intentional design).
-
 ### Run Tests
 
 ```bash
@@ -557,7 +555,7 @@ Before deploying to production, additionally:
 **Horizontal Scaling:**
 - API: Multiple instances behind load balancer
 - SignalR: Requires sticky sessions or Azure SignalR Service
-- Caching: In-memory (single instance) or Redis (distributed)
+- Caching: In-memory (single instance)
 - Locking: PostgreSQL advisory locks (distributed-safe)
 
 ---
@@ -741,7 +739,6 @@ git push -u origin claude/your-feature-sessionid
 
 ### Test Issues
 - ⚠️ 7 approval workflow integration tests hanging
-- ⚠️ 14 Redis integration tests skip when Redis unavailable
 - ⚠️ Domain model coverage at 34.92% (target: 60%+)
 
 ### Concurrency Issues
@@ -770,7 +767,6 @@ git push -u origin claude/your-feature-sessionid
 - [ ] Increase domain model coverage to 60%+
 - [ ] Add load/stress testing suite
 - [ ] Implement proper user management (database-backed)
-- [ ] Add Redis caching support
 
 ### Medium-Term
 - [ ] Chaos engineering test suite

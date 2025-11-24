@@ -394,7 +394,6 @@ Each entry follows this structure:
 - **Enhanced Technology Stack section** with actual versions (all packages)
   - .NET 8.0, ASP.NET Core 8.0
   - OpenTelemetry 1.9.0
-  - StackExchange.Redis 2.7.10
   - Serilog.AspNetCore 8.0.0
   - xUnit 2.6.2, Moq 4.20.70, FluentAssertions 6.12.0
 

@@ -193,7 +193,6 @@ namespace HotSwap.Distributed.IntegrationTests.Fixtures;
 [CollectionDefinition("IntegrationTests")]
 public class IntegrationTestCollection :
     ICollectionFixture<PostgreSqlContainerFixture>,
-    ICollectionFixture<RedisContainerFixture>
 {
     // This class is never instantiated.
     // Its purpose is to define the collection and its fixtures.
@@ -211,7 +210,6 @@ public class IntegrationTestCollection :
 **Estimated Time Waste**: 140-280 seconds
 
 **Problem**:
-Each test class uses `IClassFixture<PostgreSqlContainerFixture>` and `IClassFixture<RedisContainerFixture>`, causing **separate container instances per test class**.
 
 **Evidence**:
 ```csharp
@@ -219,7 +217,6 @@ Each test class uses `IClassFixture<PostgreSqlContainerFixture>` and `IClassFixt
 [Collection("IntegrationTests")]
 public class BasicIntegrationTests :
     IClassFixture<PostgreSqlContainerFixture>,  // ❌ Class fixture
-    IClassFixture<RedisContainerFixture>,       // ❌ Class fixture
     IAsyncLifetime
 ```
 
@@ -239,7 +236,6 @@ public class BasicIntegrationTests :
 [Collection("IntegrationTests")]
 public class BasicIntegrationTests :
     IClassFixture<PostgreSqlContainerFixture>,  // ❌ Remove
-    IClassFixture<RedisContainerFixture>,       // ❌ Remove
     IAsyncLifetime
 
 // After:
@@ -252,7 +248,6 @@ public class BasicIntegrationTests : IAsyncLifetime  // ✅ Collection provides 
 ```csharp
 public BasicIntegrationTests(
     PostgreSqlContainerFixture postgreSqlFixture,
-    RedisContainerFixture redisFixture)
 {
     _postgreSqlFixture = postgreSqlFixture;
     _redisFixture = redisFixture;
@@ -302,7 +297,6 @@ Make `IntegrationTestFactory` a collection fixture:
 [CollectionDefinition("IntegrationTests")]
 public class IntegrationTestCollection :
     ICollectionFixture<PostgreSqlContainerFixture>,
-    ICollectionFixture<RedisContainerFixture>,
     ICollectionFixture<IntegrationTestFactory>  // ✅ Add factory as collection fixture
 {
 }
@@ -311,7 +305,6 @@ public class IntegrationTestCollection :
 public BasicIntegrationTests(
     IntegrationTestFactory factory,
     PostgreSqlContainerFixture postgreSqlFixture,
-    RedisContainerFixture redisFixture)
 {
     _factory = factory;
     // ...

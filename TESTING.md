@@ -126,7 +126,7 @@ public async Task DeployAsync_WithHealthyCluster_ReturnsSuccess()
 Integration tests verify complete workflows using in-memory alternatives (SQLite, MemoryDistributedCache, DeterministicMetricsProvider). These tests validate end-to-end scenarios with an in-memory API server.
 
 **Key Features:**
-- **No Docker Dependencies**: Uses SQLite in-memory instead of PostgreSQL, MemoryDistributedCache instead of Redis
+- **No Docker Dependencies**: Uses SQLite in-memory instead of PostgreSQL, MemoryDistributedCache for caching
 - **Deterministic Metrics**: Uses `DeterministicMetricsProvider` for consistent, predictable test behavior
 - **Environment Parity**: Tests behave identically in local development and CI/CD environments
 - **Zero Flakiness**: All tests produce consistent results across all platforms
@@ -162,7 +162,6 @@ tests/HotSwap.Distributed.IntegrationTests/
 Integration tests use in-memory alternatives and require **no external dependencies**:
 - ✅ No Docker required
 - ✅ No PostgreSQL required
-- ✅ No Redis required
 - ✅ Only .NET 8 SDK required
 
 #### Running Integration Tests Locally
@@ -316,7 +315,7 @@ integration-tests:
 
 **GitHub Actions Environment**:
 - Ubuntu-latest runner (Docker pre-installed)
-- Testcontainers pulls PostgreSQL 16 and Redis 7 images
+- Testcontainers pulls PostgreSQL 16 images
 - Tests run in isolation with fresh containers
 - Test logs uploaded as artifacts for debugging
 
@@ -337,7 +336,7 @@ Integration tests use in-memory alternatives for fast, deterministic testing:
 - Benefits: Zero configuration, instant startup, automatic cleanup
 
 **MemoryDistributedCache**:
-- Purpose: Distributed locking and caching (replaces Redis)
+- Purpose: Distributed locking and caching
 - Lifecycle: Shared across all tests
 - Benefits: No external service, fast, deterministic
 
@@ -617,7 +616,6 @@ docker-compose logs -f orchestrator-api
 docker-compose logs -f
 
 # Follow specific service
-docker-compose logs -f redis
 docker-compose logs -f jaeger
 ```
 
