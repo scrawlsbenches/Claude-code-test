@@ -1,14 +1,14 @@
 # Distributed Kernel Orchestration System
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-582%20total%20(568%20passing%2C%2014%20skipped)-brightgreen)]()
-[![Coverage](https://img.shields.io/badge/coverage-85%25+-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1688%20total%20(1681%20passing%2C%207%20skipped)-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-54%25-yellow)]()
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
 A **production-ready** distributed kernel orchestration system for managing hot-swappable kernel modules across distributed node clusters with automated deployment pipelines, real-time updates, and comprehensive observability.
 
-**Status:** ✅ Production Ready | **Compliance:** 97% | **Test Coverage:** 85%+ | **Sprint 2:** 🔄 In Progress
+**Status:** ✅ Production Ready | **Compliance:** 97% | **Test Coverage:** 54% | **Sprint 2:** 🔄 In Progress
 
 ---
 
@@ -21,7 +21,7 @@ A **production-ready** distributed kernel orchestration system for managing hot-
 - **🔐 Secret Rotation System** (Task #16) - Automated secret management with HashiCorp Vault integration
 - **📊 Knowledge Graph** - Entity-relationship modeling for deployment topology visualization
 - **🔔 Real-time Updates** (Task #6) - SignalR/WebSocket support for live deployment notifications
-- **📈 Enhanced Test Coverage** - 582 comprehensive tests (568 passing, 14 skipped)
+- **📈 Enhanced Test Coverage** - 1,688 comprehensive tests (1,681 passing, 7 skipped)
 - **🛡️ Security Hardening** - OWASP compliance review, security headers, input validation
 
 See [ENHANCEMENTS.md](ENHANCEMENTS.md) for complete details.
@@ -521,10 +521,10 @@ See [examples/SignalRClientExample/README.md](examples/SignalRClientExample/READ
 
 | Test Type | Count | Status | Coverage | Duration |
 |-----------|-------|--------|----------|----------|
-| **Unit Tests** | 568 passing, 14 skipped | ✅ Passing | 85%+ | ~18s |
-| **Integration Tests** | 69 passing | ✅ Passing | Critical paths | ~35s |
-| **Smoke Tests** | 6 passing | ✅ Passing | API endpoints | <60s |
-| **Total** | **582 tests** | ✅ **100% Pass** | **85%+** | **~2min** |
+| **Unit Tests** | 1,453 passing, 7 skipped | ✅ Passing | 54% line | ~5.5min |
+| **Integration Tests** | 74 passing | ✅ Passing | Critical paths | ~8min |
+| **Knowledge Graph Tests** | 154 passing | ✅ Passing | 74% line | ~1s |
+| **Total** | **1,688 tests (1,681 passing, 7 skipped)** | ✅ **100% Pass** | **54%** | **~14min** |
 
 ### Run All Tests
 
@@ -591,7 +591,7 @@ dotnet test --filter Category=Integration
 **Sprint 2 - COMPLETED ✅:**
 - [x] Secret rotation system with HashiCorp Vault
 - [x] OWASP Top 10 compliance review
-- [x] Comprehensive unit test coverage (85%+)
+- [x] Comprehensive unit test coverage (54% line, 58% branch)
 - [x] Integration tests for security features
 
 **Production Deployment - RECOMMENDED:**
@@ -666,7 +666,7 @@ This project includes specialized Claude Skills that automate complex developmen
 | **dotnet-setup** | Automate .NET SDK installation | New session setup |
 | **tdd-helper** | Guide Red-Green-Refactor TDD workflow | ANY code changes (mandatory) |
 | **precommit-check** | Validate before commits | Before EVERY commit (mandatory) |
-| **test-coverage-analyzer** | Maintain 85%+ coverage target | After features, weekly audits |
+| **test-coverage-analyzer** | Track and improve coverage (current: 54%) | After features, weekly audits |
 | **api-endpoint-builder** | REST API controller scaffolding | Adding new API endpoints |
 
 **Debugging & Optimization Skills:**
@@ -823,7 +823,7 @@ This project follows clean architecture principles and .NET best practices.
 - Follow **Test-Driven Development (TDD)** - tests before implementation (mandatory)
 - Run pre-commit checklist before every commit
 - Use **Claude Skills** (`/tdd-helper`, `/precommit-check`) for automation
-- Maintain 85%+ test coverage
+- Improve test coverage from current 54% (goal: 75%+)
 - Update documentation with code changes
 
 **Quick Start for Contributors:**
