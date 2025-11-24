@@ -99,71 +99,114 @@ public class TenantContextService : ITenantContextService
         return true;
     }
 
+    /// <summary>
+    /// Extracts tenant ID synchronously from trusted sources only (JWT claims).
+    /// SECURITY: This method does NOT trust client-provided headers or subdomains for authenticated users.
+    /// </summary>
     private Guid? ExtractTenantIdSync(HttpContext context)
     {
-        // Synchronous extraction - only from headers and JWT claims
-        // Subdomain resolution requires async DB lookup, so it's handled in ExtractTenantIdAsync
+        // SECURITY PRINCIPLE: For authenticated users, JWT claim is the ONLY source of truth
+        // This prevents horizontal privilege escalation where a user from Tenant A
+        // could access Tenant B's data by providing X-Tenant-ID: <tenant-b-guid>
 
-        // Option 1: From X-Tenant-ID header (for API access)
-        if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var headerValue))
-        {
-            if (Guid.TryParse(headerValue, out var tenantId))
-            {
-                _logger.LogDebug("Tenant resolved from header: {TenantId}", tenantId);
-                return tenantId;
-            }
-        }
-
-        // Option 2: From JWT claim
         var user = context.User;
-        var tenantClaim = user.FindFirst("tenant_id");
-        if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))
+        if (user.Identity?.IsAuthenticated == true)
         {
-            _logger.LogDebug("Tenant resolved from JWT claim: {TenantId}", claimTenantId);
-            return claimTenantId;
+            // For authenticated users, ONLY trust the JWT claim
+            var tenantClaim = user.FindFirst("tenant_id");
+            if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))
+            {
+                _logger.LogDebug("Tenant resolved from authenticated JWT claim: {TenantId}", claimTenantId);
+                return claimTenantId;
+            }
+
+            _logger.LogWarning("Authenticated user has no tenant_id claim in JWT");
+            return null;
         }
 
-        _logger.LogDebug("Could not extract tenant ID from header or JWT claim (subdomain resolution requires async)");
+        // For unauthenticated requests, subdomain resolution requires async DB lookup
+        _logger.LogDebug("Unauthenticated request - subdomain resolution requires async");
         return null;
     }
 
+    /// <summary>
+    /// Extracts tenant ID asynchronously with proper security validation.
+    /// SECURITY CRITICAL: Implements defense-in-depth against tenant impersonation attacks.
+    ///
+    /// Attack Scenarios Prevented:
+    /// 1. Horizontal Privilege Escalation: User from Tenant A cannot access Tenant B by sending X-Tenant-ID header
+    /// 2. Host Header Injection: Subdomain is only trusted for unauthenticated requests
+    /// 3. JWT Bypass: Headers/subdomains cannot override authenticated user's tenant
+    ///
+    /// Security Hierarchy (in order of trust):
+    /// - Authenticated: JWT claim is the ONLY source of truth (most secure)
+    /// - Unauthenticated: Subdomain lookup (for public pages, acceptable risk)
+    /// - Never: Client-provided headers for authenticated users (INSECURE)
+    /// </summary>
     private async Task<Guid?> ExtractTenantIdAsync(HttpContext context, CancellationToken cancellationToken = default)
     {
-        // Option 1: From subdomain (e.g., tenant1.platform.com)
+        var user = context.User;
+        var isAuthenticated = user.Identity?.IsAuthenticated == true;
+
+        // PRIORITY 1: For authenticated users, JWT claim is the ONLY source of truth
+        if (isAuthenticated)
+        {
+            var tenantClaim = user.FindFirst("tenant_id");
+            if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var jwtTenantId))
+            {
+                _logger.LogDebug("Tenant resolved from authenticated JWT claim: {TenantId}", jwtTenantId);
+                return jwtTenantId;
+            }
+
+            // SECURITY: Authenticated user MUST have tenant_id in JWT
+            // If missing, this is a configuration error - deny access
+            _logger.LogWarning("SECURITY: Authenticated user {UserId} has no tenant_id claim in JWT - denying access",
+                user.FindFirst("sub")?.Value ?? "unknown");
+            return null;
+        }
+
+        // PRIORITY 2: For unauthenticated requests, allow subdomain resolution
+        // This is safe for public pages (e.g., tenant1.platform.com/login)
         var host = context.Request.Host.Host;
         var parts = host.Split('.');
         if (parts.Length >= 3)
         {
             var subdomain = parts[0];
-            var tenant = await _tenantRepository.GetBySubdomainAsync(subdomain, cancellationToken);
-            if (tenant != null)
+
+            // Validate subdomain format to prevent injection
+            if (IsValidSubdomain(subdomain))
             {
-                _logger.LogDebug("Tenant resolved from subdomain: {Subdomain} -> {TenantId}",
-                    subdomain, tenant.TenantId);
-                return tenant.TenantId;
+                var tenant = await _tenantRepository.GetBySubdomainAsync(subdomain, cancellationToken);
+                if (tenant != null)
+                {
+                    _logger.LogDebug("Tenant resolved from subdomain (unauthenticated): {Subdomain} -> {TenantId}",
+                        subdomain, tenant.TenantId);
+                    return tenant.TenantId;
+                }
+            }
+            else
+            {
+                _logger.LogWarning("SECURITY: Invalid subdomain format rejected: {Subdomain}", subdomain);
             }
         }
 
-        // Option 2: From X-Tenant-ID header (for API access)
-        if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var headerValue))
-        {
-            if (Guid.TryParse(headerValue, out var tenantId))
-            {
-                _logger.LogDebug("Tenant resolved from header: {TenantId}", tenantId);
-                return tenantId;
-            }
-        }
-
-        // Option 3: From JWT claim
-        var user = context.User;
-        var tenantClaim = user.FindFirst("tenant_id");
-        if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))
-        {
-            _logger.LogDebug("Tenant resolved from JWT claim: {TenantId}", claimTenantId);
-            return claimTenantId;
-        }
-
-        _logger.LogWarning("Could not extract tenant ID from request");
+        _logger.LogDebug("Could not extract tenant ID from request (no JWT claim, no valid subdomain)");
         return null;
+    }
+
+    /// <summary>
+    /// Validates subdomain format to prevent injection attacks.
+    /// Subdomains must be lowercase alphanumeric with hyphens only.
+    /// </summary>
+    private static bool IsValidSubdomain(string subdomain)
+    {
+        if (string.IsNullOrWhiteSpace(subdomain) || subdomain.Length > 63)
+            return false;
+
+        // RFC 1123: subdomain must be lowercase alphanumeric with hyphens
+        // Cannot start or end with hyphen
+        return subdomain.All(c => char.IsLower(c) || char.IsDigit(c) || c == '-') &&
+               !subdomain.StartsWith('-') &&
+               !subdomain.EndsWith('-');
     }
 }
