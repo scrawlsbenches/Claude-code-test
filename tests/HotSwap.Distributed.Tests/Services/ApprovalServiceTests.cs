@@ -1,8 +1,13 @@
 using FluentAssertions;
 using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
+using HotSwap.Distributed.Infrastructure.Data;
+using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Interfaces;
+using HotSwap.Distributed.Infrastructure.Repositories;
 using HotSwap.Distributed.Orchestrator.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -14,6 +19,9 @@ public class ApprovalServiceTests : IDisposable
     private readonly Mock<ILogger<ApprovalService>> _mockLogger;
     private readonly Mock<INotificationService> _mockNotificationService;
     private readonly PipelineConfiguration _config;
+    private readonly SqliteConnection _connection;
+    private readonly AuditLogDbContext _dbContext;
+    private readonly IApprovalRepository _approvalRepository;
     private readonly ApprovalService _approvalService;
 
     public ApprovalServiceTests()
@@ -25,19 +33,30 @@ public class ApprovalServiceTests : IDisposable
             ApprovalTimeout = TimeSpan.FromHours(24)
         };
 
+        // Create in-memory SQLite database for testing
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<AuditLogDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _dbContext = new AuditLogDbContext(options);
+        _dbContext.Database.EnsureCreated();
+
+        _approvalRepository = new ApprovalRepository(_dbContext);
+
         _approvalService = new ApprovalService(
             _mockLogger.Object,
             _config,
+            _approvalRepository,
             _mockNotificationService.Object);
-
-        // Clear any approvals from previous tests
-        _approvalService.ClearAllApprovalsForTesting();
     }
 
     public void Dispose()
     {
-        // Clean up after each test to prevent test pollution
-        _approvalService.ClearAllApprovalsForTesting();
+        _dbContext?.Dispose();
+        _connection?.Dispose();
     }
 
     [Fact]
