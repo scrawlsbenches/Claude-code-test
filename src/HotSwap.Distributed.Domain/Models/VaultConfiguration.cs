@@ -56,11 +56,6 @@ public class VaultConfiguration
     /// Retry delay in milliseconds (default: 1000ms).
     /// </summary>
     public int RetryDelayMs { get; set; } = 1000;
-
-    /// <summary>
-    /// Enable TLS certificate validation (should be true in production).
-    /// </summary>
-    public bool ValidateCertificate { get; set; } = true;
 }
 
 /// <summary>

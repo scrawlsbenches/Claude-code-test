@@ -1,10 +1,10 @@
+using System.Text;
 using FluentAssertions;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Websites;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Text;
 using Xunit;
 
 namespace HotSwap.Distributed.Tests.Infrastructure.Storage;
