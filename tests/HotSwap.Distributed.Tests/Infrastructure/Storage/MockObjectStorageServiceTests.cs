@@ -245,12 +245,12 @@ public class MockObjectStorageServiceTests
     }
 
     [Fact]
-    public void GetBucketCount_ShouldReturnNumberOfBuckets()
+    public async Task GetBucketCount_ShouldReturnNumberOfBuckets()
     {
         // Arrange
-        _service.CreateBucketAsync("bucket1").Wait();
-        _service.CreateBucketAsync("bucket2").Wait();
-        _service.CreateBucketAsync("bucket3").Wait();
+        await _service.CreateBucketAsync("bucket1");
+        await _service.CreateBucketAsync("bucket2");
+        await _service.CreateBucketAsync("bucket3");
 
         // Act
         var count = _service.GetBucketCount();
