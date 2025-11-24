@@ -205,6 +205,43 @@ Entity-relationship modeling for deployment topology:
 - `HotSwap.KnowledgeGraph.Infrastructure` - Storage & indexing
 - `HotSwap.KnowledgeGraph.QueryEngine` - Query processing with cost-based optimizer
 
+### 🔄 Distributed Systems Implementation
+
+**PostgreSQL-based Distributed Coordination** (production-ready):
+
+**Distributed Locking** (`PostgresDistributedLock`):
+- Uses PostgreSQL advisory locks (`pg_advisory_lock`)
+- True distributed coordination across multiple API instances
+- Automatic lock release on connection close
+- SHA-256 hash-based lock keys for consistency
+- Configurable timeout with polling strategy
+
+**Message Queue** (`PostgresMessageQueue`):
+- Durable message storage in PostgreSQL tables
+- PostgreSQL LISTEN/NOTIFY for real-time message delivery
+- Priority-based message ordering
+- Message persistence across restarts
+- Dead letter queue support
+- Automatic retry with exponential backoff
+
+**In-Memory Fallbacks** (development/testing):
+- `InMemoryDistributedLock` - SemaphoreSlim-based locking
+- `InMemoryMessageQueue` - ConcurrentQueue-based queuing
+- Configurable via `appsettings.json`:
+  ```json
+  {
+    "DistributedSystems": {
+      "UsePostgresLocks": true,
+      "UsePostgresMessageQueue": true
+    }
+  }
+  ```
+
+**Implementation Files:**
+- `src/HotSwap.Distributed.Infrastructure/Coordination/PostgresDistributedLock.cs`
+- `src/HotSwap.Distributed.Infrastructure/Messaging/PostgresMessageQueue.cs`
+- Tests: 154 unit tests + 74 integration tests
+
 ---
 
 ## Architecture
@@ -555,8 +592,9 @@ Before deploying to production, additionally:
 **Horizontal Scaling:**
 - API: Multiple instances behind load balancer
 - SignalR: Requires sticky sessions or Azure SignalR Service
-- Caching: In-memory (single instance)
-- Locking: PostgreSQL advisory locks (distributed-safe)
+- Caching: In-memory (single instance only)
+- Locking: PostgreSQL advisory locks (distributed-safe, multi-instance ready)
+- Message Queue: PostgreSQL LISTEN/NOTIFY (distributed-safe, multi-instance ready)
 
 ---
 

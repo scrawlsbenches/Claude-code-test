@@ -121,12 +121,36 @@ public async Task DeployAsync_WithHealthyCluster_ReturnsSuccess()
 }
 ```
 
+**PostgreSQL Implementation Tests:**
+
+Unit tests include comprehensive coverage of PostgreSQL-based distributed systems:
+
+- **`PostgresDistributedLockTests.cs`** - Tests for PostgreSQL advisory locks
+  - Lock acquisition and release
+  - Timeout handling
+  - Concurrent lock attempts
+  - Connection lifecycle management
+
+- **`InMemoryDistributedLockTests.cs`** - Tests for in-memory fallback
+  - SemaphoreSlim-based locking behavior
+  - Resource isolation
+
+- **`InMemoryMessageQueueTests.cs`** - Tests for message queue
+  - Message enqueue/dequeue
+  - Priority ordering
+  - Message expiration
+  - Acknowledgment handling
+
 ### Integration Tests
 
-Integration tests verify complete workflows using in-memory alternatives (SQLite, MemoryDistributedCache, DeterministicMetricsProvider). These tests validate end-to-end scenarios with an in-memory API server.
+Integration tests verify complete workflows using in-memory alternatives (SQLite, InMemoryDistributedLock, InMemoryMessageQueue, DeterministicMetricsProvider). These tests validate end-to-end scenarios with an in-memory API server.
 
 **Key Features:**
-- **No Docker Dependencies**: Uses SQLite in-memory instead of PostgreSQL, MemoryDistributedCache for caching
+- **No Docker Dependencies**: Uses in-memory implementations instead of PostgreSQL
+  - SQLite in-memory for database
+  - `InMemoryDistributedLock` for distributed locking
+  - `InMemoryMessageQueue` for message queuing
+  - `MemoryDistributedCache` for caching
 - **Deterministic Metrics**: Uses `DeterministicMetricsProvider` for consistent, predictable test behavior
 - **Environment Parity**: Tests behave identically in local development and CI/CD environments
 - **Zero Flakiness**: All tests produce consistent results across all platforms
@@ -335,8 +359,20 @@ Integration tests use in-memory alternatives for fast, deterministic testing:
 - Lifecycle: Shared across all tests (fixture)
 - Benefits: Zero configuration, instant startup, automatic cleanup
 
+**InMemoryDistributedLock**:
+- Purpose: Distributed locking (replaces `PostgresDistributedLock`)
+- Implementation: SemaphoreSlim-based
+- Lifecycle: Shared across all tests
+- Benefits: No external service, fast, deterministic
+
+**InMemoryMessageQueue**:
+- Purpose: Message queuing (replaces `PostgresMessageQueue`)
+- Implementation: ConcurrentQueue-based
+- Lifecycle: Shared across all tests
+- Benefits: No external service, fast, deterministic
+
 **MemoryDistributedCache**:
-- Purpose: Distributed locking and caching
+- Purpose: Distributed caching
 - Lifecycle: Shared across all tests
 - Benefits: No external service, fast, deterministic
 
