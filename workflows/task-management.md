@@ -1,363 +1,241 @@
-# Task Management with TASK_LIST.md
+# Task Management with task-manager.sh
 
-**Purpose**: Guide for using TASK_LIST.md to track project work
+**Purpose**: Guide for using task-manager.sh to manage TASK_LIST.md
 
-**Last Updated**: 2025-11-16
+**Last Updated**: 2025-11-24
 
 ---
 
 ## Overview
 
-**TASK_LIST.md** is the project's comprehensive task roadmap containing 20+ prioritized tasks derived from analyzing all project documentation. It serves as the **single source of truth** for:
-- Planned enhancements
-- Known gaps
-- Future work
-- Sprint planning
+**TASK_LIST.md** is the project's comprehensive task roadmap. Use **task-manager.sh** to interact with it - don't manually parse the file.
+
+**Key principle:** Always use `./task-manager.sh` commands instead of manual `grep`/`cat` operations.
 
 ---
 
 ## Quick Reference
 
-| When | Action | Why |
-|------|--------|-----|
-| **Start of session** | Read TASK_LIST.md | Understand project priorities |
-| **User asks "what to do"** | Reference task list | Show planned work |
-| **Before new feature** | Check if task exists | Avoid duplicates |
-| **Planning work** | Review priorities/estimates | Plan efficiently |
-| **After completing** | Update task status | Keep list current |
-| **Discover new work** | Add new task | Document for future |
+| When | Command | Why |
+|------|---------|-----|
+| **Start of session** | `./task-manager.sh summary` | Quick overview + next task |
+| **Check progress** | `./task-manager.sh stats` | See completion rate |
+| **"What should I work on?"** | `./task-manager.sh next` | Get highest priority pending task |
+| **Find specific work** | `./task-manager.sh list pending` | See all available tasks |
+| **Planning work** | `./task-manager.sh show <id>` | Read task requirements |
+| **Starting work** | `./task-manager.sh start <id>` | Mark as in-progress |
+| **After completing** | `./task-manager.sh complete <id>` | Mark as completed |
+| **Before pushing** | `./task-manager.sh pre-push` | Interactive documentation |
 
 ---
 
-## Task List Structure
+## All Commands
 
-```
-TASK_LIST.md
-├── Major Tasks (High Priority)
-│   ├── Task #1-5: Critical items (Auth, Security, HTTPS)
-│   └── Detailed requirements, acceptance criteria, effort estimates
-│
-├── Minor Tasks (Medium Priority)
-│   ├── Task #6-10: Enhancements (WebSocket, Prometheus, Helm)
-│   └── Implementation guidance and benefits
-│
-├── Low Priority Tasks
-│   ├── Task #11-14: Nice-to-have features (GraphQL, ML, multi-tenancy)
-│   └── Optional enhancements
-│
-└── Summary Statistics
-    ├── Tasks by priority, status, effort
-    └── Recommended sprint planning
-```
-
----
-
-## Task Status Indicators
-
-| Indicator | Status | Meaning | When to Use |
-|-----------|--------|---------|-------------|
-| ⏳ | **Pending** | Not yet started | Default for new tasks |
-| 🔄 | **In Progress** | Currently being worked on | When starting work |
-| ✅ | **Completed** | Fully implemented and tested | After successful deployment |
-| ⚠️ | **Blocked** | Waiting on dependency/decision | Can't proceed without resolution |
-
----
-
-## Task Priority Levels
-
-| Priority | Level | Examples | When to Use |
-|----------|-------|----------|-------------|
-| 🔴 | **Critical** | Security, Auth, HTTPS | Required for production |
-| 🟡 | **High** | Approval workflow, Audit logs | Important for enterprise |
-| 🟢 | **Medium** | WebSocket, Prometheus, Helm | Valuable enhancements |
-| ⚪ | **Low** | GraphQL, ML, multi-tenancy | Nice-to-have features |
-
----
-
-## How to Use TASK_LIST.md
-
-### 1. Read Before Starting Work
-
-**Always review the task list at the start of a session:**
+### Status & Overview
 
 ```bash
-# Read the task list
-cat TASK_LIST.md
-
-# Or search for specific topics
-grep -i "authentication" TASK_LIST.md
-grep -i "🔴 Critical" TASK_LIST.md
+./task-manager.sh stats              # Full statistics with progress bar
+./task-manager.sh summary            # Quick overview + next recommended task
+./task-manager.sh next               # Show next task to work on (by priority)
 ```
 
-**Look for**:
-- Tasks relevant to your work area
-- High priority items that need attention
-- Dependencies between tasks
-- Estimated effort for planning
-
----
-
-### 2. Reference When Planning
-
-**Before starting a new feature:**
+### Listing Tasks
 
 ```bash
-# Check if task already exists
-grep -i "rate limiting" TASK_LIST.md
-grep -i "websocket" TASK_LIST.md
+./task-manager.sh list all           # All task titles
+./task-manager.sh list pending       # Tasks not yet started
+./task-manager.sh list completed     # Finished tasks
+./task-manager.sh list progress      # Tasks in progress
+./task-manager.sh list blocked       # Blocked tasks
+./task-manager.sh list critical      # Critical priority only
+./task-manager.sh list high          # High priority only
+./task-manager.sh list medium        # Medium priority only
+./task-manager.sh list low           # Low priority only
 ```
 
-**Use task information**:
-- ✅ **Priorities**: Work on Critical (🔴) before Low (⚪)
-- ✅ **Effort estimates**: Plan time accordingly (1-7 days)
-- ✅ **Dependencies**: Complete prerequisites first
-- ✅ **Requirements**: Follow documented acceptance criteria
+### Finding & Viewing Tasks
 
-**Example Planning**:
+```bash
+./task-manager.sh search "MinIO"     # Search by keyword
+./task-manager.sh show 25            # Show detailed task info
 ```
-User asks: "Add rate limiting to the API"
 
-1. Check TASK_LIST.md
-   → Find: Task #5: API Rate Limiting (🟢 Medium, ⏳ Pending, 1 day)
+### Updating Task Status
 
-2. Review requirements:
-   - Configurable limits per endpoint
-   - Sliding window algorithm
-   - Rate limit headers
+```bash
+./task-manager.sh start 25           # Mark as in-progress
+./task-manager.sh start 5 6 7        # Bulk: mark multiple as in-progress
+./task-manager.sh complete 25        # Mark as completed (with notes prompt)
+./task-manager.sh complete 1 2 3     # Bulk: mark multiple as completed
+./task-manager.sh update 25          # Interactive status change
+./task-manager.sh reject 14          # Mark as won't-do
+```
 
-3. Check dependencies:
-   - None listed
+### Adding & Pre-Push
 
-4. Start work:
-   - Update status: ⏳ → 🔄
-   - Commit: "docs: update TASK_LIST.md - mark rate limiting as in progress"
+```bash
+./task-manager.sh add                # Add new task interactively
+./task-manager.sh pre-push           # Interactive pre-push documentation
 ```
 
 ---
 
-### 3. Update After Implementation
+## Status Categories
 
-**When you complete a task from the list:**
+The script recognizes both emoji and text-based statuses:
 
-```bash
-# 1. Mark task as completed
-# Change: ⏳ Pending → ✅ Completed
-
-# 2. Add implementation notes
-Example:
-### 5. API Rate Limiting
-**Status**: ✅ **Completed** (2025-11-16)
-**Implementation**: Added RateLimitingMiddleware in src/Middleware/
-**Tests**: 8 unit tests added, all passing
-**Notes**: Used AspNetCoreRateLimit package v5.0.0
-
-# 3. Document any issues discovered
-**Known Issues**: Rate limiting doesn't work with WebSocket endpoints (see Task #12)
-
-# 4. Add new tasks if needed
-**Follow-up**: Task #15: Extend rate limiting to WebSocket endpoints
-```
-
-**Commit the update:**
-```bash
-git add TASK_LIST.md
-git commit -m "docs: update TASK_LIST.md - mark rate limiting as completed"
-```
+| Status | Emoji | Text Patterns |
+|--------|-------|---------------|
+| Pending | ⏳ | "Not Implemented", "Not Created", "Pending" |
+| In Progress | 🔄 | "In Progress", "WIP" |
+| Completed | ✅ | "Completed", "Complete", "COMPLETED" |
+| Blocked | ⚠️ | "Blocked", "On Hold" |
+| Rejected | ❌ | "Rejected", "Won't Do", "Cancelled" |
 
 ---
 
-### 4. Add New Tasks
+## Priority Levels
 
-**When you discover new work:**
-
-```markdown
-### N. New Task Name
-**Priority:** 🟢 Medium
-**Status:** ⏳ Not Implemented
-**Effort:** 2-3 days
-**Dependencies:** Task #5 (Rate Limiting)
-**References:** README.md:238, ENHANCEMENTS.md:42
-
-**Requirements:**
-- [ ] Requirement 1
-- [ ] Requirement 2
-- [ ] Requirement 3
-
-**Acceptance Criteria:**
-- Feature works as described
-- Tests pass (>80% coverage)
-- Documentation updated
-
-**Impact:** Medium - Improves user experience for X use case
-
-**Notes:**
-- Consider using library Y for implementation
-- May require database migration
-```
+| Priority | Emoji | Text | When to Use |
+|----------|-------|------|-------------|
+| Critical | 🔴 | "Critical" | Required for production |
+| High | 🟡 | "High" | Important for enterprise |
+| Medium | 🟢 | "Medium" | Valuable enhancements |
+| Low | ⚪ | "Low" | Nice-to-have features |
 
 ---
 
 ## Workflow Examples
 
-### Example 1: Implementing Existing Task
+### Example 1: Starting a Session
 
 ```bash
-# Scenario: User asks to implement JWT authentication (Task #1)
+# Quick overview of where things stand
+./task-manager.sh summary
 
-# Step 1: Check TASK_LIST.md
-grep -A 20 "JWT Authentication" TASK_LIST.md
-
-# Found:
-# Task #1: JWT Authentication
-# Priority: 🔴 Critical
-# Status: ⏳ Pending
-# Effort: 2 days
-
-# Step 2: Update status to In Progress
-# Edit TASK_LIST.md: ⏳ → 🔄
-git add TASK_LIST.md
-git commit -m "docs: update TASK_LIST.md - start JWT authentication task"
-
-# Step 3: Implement following TDD workflow
-# - Write tests
-# - Implement feature
-# - Refactor
-
-# Step 4: After completion, update status
-# Edit TASK_LIST.md: 🔄 → ✅
-# Add implementation notes
-git add TASK_LIST.md
-git commit -m "docs: update TASK_LIST.md - JWT authentication completed
-
-Implemented in:
-- src/Api/Services/AuthenticationService.cs
-- tests/AuthenticationServiceTests.cs
-
-Tests: 12 passing, 0 failing
-Coverage: 92%"
+# Output:
+# === Session Summary ===
+#   Progress: 21/28 tasks (75%)
+#   Pending:  5 | In Progress: 0
+#
+# === Next Recommended Task ===
+#   #25: MinIO Object Storage Implementation
+#   **Priority:** 🟢 Medium
+#   To start: ./task-manager.sh start 25
 ```
 
-### Example 2: Discovering New Task During Work
+### Example 2: Implementing a Task
 
 ```bash
-# Scenario: While implementing rate limiting, discover need for metrics
+# 1. Find the next task to work on
+./task-manager.sh next
 
-# Step 1: Finish current task (rate limiting)
-# Step 2: Add new task to TASK_LIST.md
+# 2. Review task details
+./task-manager.sh show 25
 
-### 15. Rate Limiting Metrics Dashboard
-**Priority:** 🟢 Medium
-**Status:** ⏳ Pending
-**Effort:** 1 day
-**Dependencies:** Task #5 (Rate Limiting - completed)
+# 3. Mark it as in-progress
+./task-manager.sh start 25
 
-**Requirements:**
-- [ ] Expose rate limit metrics via /metrics endpoint
-- [ ] Track requests per endpoint
-- [ ] Track rate limit violations
-- [ ] Add Prometheus integration
+# 4. Implement the feature (TDD workflow)
+# ... write tests, implement, refactor ...
 
-**Acceptance Criteria:**
-- Metrics endpoint returns Prometheus format
-- Grafana dashboard template included
-- Documentation updated
+# 5. Mark as completed
+./task-manager.sh complete 25
+# (Enter implementation notes when prompted)
 
-**Impact:** Medium - Enables monitoring of rate limiting effectiveness
-
-# Step 3: Commit new task
+# 6. Commit the updated TASK_LIST.md
 git add TASK_LIST.md
-git commit -m "docs: add Task #15 - rate limiting metrics dashboard
-
-Discovered during implementation of Task #5.
-Will be needed for production monitoring."
+git commit -m "docs: mark Task #25 as completed"
 ```
 
-### Example 3: Blocked Task
+### Example 3: Bulk Operations
 
 ```bash
-# Scenario: Can't implement approval workflow without user management
+# Mark multiple tasks as in-progress
+./task-manager.sh start 5 6 7
 
-# Update task status
-### 7. Multi-Stage Approval Workflow
-**Priority:** 🟡 High
-**Status:** ⚠️ **Blocked**
-**Effort:** 3-4 days
-**Blocked By:** Task #1 (JWT Authentication) must be completed first
+# Mark multiple tasks as completed (no interactive prompts)
+./task-manager.sh complete 1 2 3
+```
 
-**Reason for Block:**
-Approval workflow requires user roles and permissions,
-which depend on JWT authentication system (Task #1).
+### Example 4: Finding Specific Work
 
-**Unblock Criteria:**
-- Task #1 completed
-- User repository supports role queries
-- Integration tests for auth pass
+```bash
+# Search for authentication-related tasks
+./task-manager.sh search "authentication"
 
-# Commit update
-git add TASK_LIST.md
-git commit -m "docs: update TASK_LIST.md - mark approval workflow as blocked
+# List all critical priority tasks
+./task-manager.sh list critical
 
-Blocked by Task #1 (JWT Authentication).
-Cannot implement without user role system."
+# List all pending tasks
+./task-manager.sh list pending
+```
+
+### Example 5: Pre-Push Documentation
+
+```bash
+# Before pushing, document completed work
+./task-manager.sh pre-push
+
+# This will:
+# - Show tasks in progress
+# - Ask which tasks you completed
+# - Prompt for implementation notes
+# - Update TASK_LIST.md automatically
+# - Show summary
 ```
 
 ---
 
 ## Best Practices
 
-### Keep It Current ✅
+### Always Use the Script ✅
 
 ```bash
-# ✅ DO: Update immediately after completing work
-git commit -m "feat: add rate limiting
-docs: update TASK_LIST.md - mark Task #5 complete"
+# ✅ CORRECT: Use task-manager.sh
+./task-manager.sh search "MinIO"
+./task-manager.sh show 25
+./task-manager.sh complete 25
 
-# ❌ DON'T: Let task list get stale
-# (Forgetting to update leads to duplicate work)
+# ❌ AVOID: Manual grep/cat operations
+grep -i "MinIO" TASK_LIST.md
+cat TASK_LIST.md | grep "Status"
 ```
 
-### Maintain Quality ✅
+### Start Sessions with Summary ✅
 
 ```bash
-# ✅ DO: Include clear requirements
-Requirements:
-- [ ] Add JWT token generation
-- [ ] Add token validation middleware
-- [ ] Add refresh token support
+# ✅ CORRECT: Quick context at session start
+./task-manager.sh summary
 
-# ❌ DON'T: Vague requirements
-Requirements:
-- [ ] Do authentication stuff
+# This gives you:
+# - Current progress
+# - What's pending
+# - Next recommended task
 ```
 
-### Communicate Changes ✅
+### Mark Tasks In-Progress ✅
 
 ```bash
-# ✅ DO: Descriptive commit messages
-git commit -m "docs: update TASK_LIST.md - mark rate limiting as completed
+# ✅ CORRECT: Mark task before starting work
+./task-manager.sh start 25
+# ... do the work ...
+./task-manager.sh complete 25
 
-- Implemented RateLimitingMiddleware
-- Added 8 unit tests, all passing
-- Updated README with rate limiting configuration
-- Discovered need for metrics (added Task #15)"
-
-# ❌ DON'T: Vague commit messages
-git commit -m "update docs"
+# ❌ AVOID: Only marking complete at the end
+./task-manager.sh complete 25  # Others don't know you're working on it
 ```
 
-### Reference in Commits ✅
+### Use Bulk Operations for Efficiency ✅
 
 ```bash
-# ✅ DO: Reference task in feature commits
-git commit -m "feat: implement JWT authentication (Task #1 from TASK_LIST.md)
+# ✅ CORRECT: Bulk operations when appropriate
+./task-manager.sh complete 1 2 3
 
-- Add JwtTokenGenerator service
-- Add authentication middleware
-- Add 12 comprehensive tests
-- Update README with auth setup instructions"
-
-# ❌ DON'T: No reference to task
-git commit -m "add auth"
+# ❌ AVOID: One at a time when not needed
+./task-manager.sh complete 1
+./task-manager.sh complete 2
+./task-manager.sh complete 3
 ```
 
 ---
@@ -367,12 +245,19 @@ git commit -m "add auth"
 ### With TDD Workflow
 
 ```bash
-# 1. Check TASK_LIST.md for task details
-# 2. Follow TDD workflow:
+# 1. Find task
+./task-manager.sh next
+
+# 2. Start task
+./task-manager.sh start 25
+
+# 3. Follow TDD workflow:
 #    - 🔴 Write failing test
 #    - 🟢 Implement to pass
 #    - 🔵 Refactor
-# 3. Update TASK_LIST.md after completion
+
+# 4. Complete task
+./task-manager.sh complete 25
 ```
 
 ### With Pre-Commit Checklist
@@ -380,115 +265,25 @@ git commit -m "add auth"
 ```bash
 # Before committing:
 # 1. Run pre-commit checks (build, test)
-# 2. Update TASK_LIST.md if task completed
+dotnet build && dotnet test
+
+# 2. Update task status if completed
+./task-manager.sh complete 25
+
 # 3. Commit code + TASK_LIST.md together
+git add . && git commit -m "feat: implement feature (Task #25)"
 ```
 
 ### With Git Workflow
 
 ```bash
 # When creating feature branch:
-git checkout -b claude/implement-task5-rate-limiting-sessionid
+git checkout -b claude/implement-task25-minio-sessionid
 
-# When committing:
-git commit -m "feat: implement rate limiting (Task #5)
-
-docs: update TASK_LIST.md - mark Task #5 as completed"
-```
-
----
-
-## Task List Maintenance
-
-### Monthly Review
-
-**At the start of each month**, review TASK_LIST.md:
-
-```bash
-# 1. Check for stale "In Progress" tasks
-grep "🔄" TASK_LIST.md
-
-# 2. Update effort estimates based on reality
-# If task took 3 days but estimated 1 day, update estimate
-
-# 3. Re-prioritize based on current needs
-# Move tasks up/down based on business priorities
-
-# 4. Remove obsolete tasks
-# Tasks that are no longer relevant
-
-# 5. Add new tasks discovered
-# From user feedback, bug reports, tech debt
-```
-
-### Sprint Planning
-
-**Use TASK_LIST.md for sprint planning**:
-
-```bash
-# 1. Filter by priority and status
-grep "🔴 Critical.*⏳" TASK_LIST.md   # Critical pending tasks
-grep "🟡 High.*⏳" TASK_LIST.md       # High priority pending
-
-# 2. Sum effort estimates
-# Example: 3 tasks × 2 days each = 6 days of work
-
-# 3. Check dependencies
-# Ensure prerequisite tasks are completed
-
-# 4. Assign to sprint
-# Update task notes with sprint number
-```
-
----
-
-## Common Mistakes to Avoid
-
-| Mistake | Problem | Solution |
-|---------|---------|----------|
-| Not reading task list | Duplicate work, missed priorities | Always check TASK_LIST.md first |
-| Forgetting to update | Task list gets stale | Update immediately after work |
-| Vague task descriptions | Unclear what needs to be done | Include specific requirements |
-| No effort estimates | Can't plan sprints | Add time estimates (1-7 days) |
-| Ignoring priorities | Critical work delayed | Work on 🔴 before ⚪ |
-| Not documenting blockers | Work stalls without clarity | Mark as ⚠️ Blocked with reason |
-
----
-
-## Task Entry Template
-
-**Copy this template when adding new tasks**:
-
-```markdown
-### N. Task Name Here
-**Priority:** 🔴 Critical / 🟡 High / 🟢 Medium / ⚪ Low
-**Status:** ⏳ Pending
-**Effort:** X-Y days
-**Dependencies:** Task #Z (if any)
-**References:** [File:line references, documentation links]
-
-**Requirements:**
-- [ ] Specific requirement 1
-- [ ] Specific requirement 2
-- [ ] Specific requirement 3
-
-**Acceptance Criteria:**
-- Feature works as described
-- All tests pass (>80% coverage)
-- Documentation updated (CLAUDE.md, README.md)
-- Code reviewed and approved
-
-**Impact:** [High/Medium/Low] - [Brief description of impact]
-
-**Implementation Notes:**
-- Consider using [library/pattern name]
-- May require [database migration/API changes]
-- Reference implementation: [link or file]
-
-**Testing Notes:**
-- Unit tests: [what to test]
-- Integration tests: [what to test]
-- Manual testing: [what to verify]
+# After completing work:
+./task-manager.sh complete 25
+git add TASK_LIST.md
+git commit -m "docs: mark Task #25 as completed"
 ```
 
 ---
@@ -501,4 +296,4 @@ grep "🟡 High.*⏳" TASK_LIST.md       # High priority pending
 
 **Main Project Task List**: [TASK_LIST.md](../TASK_LIST.md)
 
-**Back to**: [Main CLAUDE.md](../CLAUDE.md#working-with-task_listmd)
+**Back to**: [Main CLAUDE.md](../CLAUDE.md#task-management-with-task-managersh)

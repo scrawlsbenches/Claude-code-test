@@ -24,12 +24,25 @@ PRIORITY_HIGH="🟡"
 PRIORITY_MEDIUM="🟢"
 PRIORITY_LOW="⚪"
 
+# Text-based priority patterns (more robust matching)
+PRIORITY_CRITICAL_TEXT="Critical"
+PRIORITY_HIGH_TEXT="High"
+PRIORITY_MEDIUM_TEXT="Medium"
+PRIORITY_LOW_TEXT="Low"
+
 # Status emoji mappings
 STATUS_PENDING="⏳"
 STATUS_IN_PROGRESS="🔄"
 STATUS_COMPLETED="✅"
 STATUS_BLOCKED="⚠️"
 STATUS_REJECTED="❌"
+
+# Text-based status patterns (for tasks without emojis)
+STATUS_PENDING_TEXT="Not Implemented|Not Created|Pending"
+STATUS_COMPLETED_TEXT="Completed|Complete|COMPLETED"
+STATUS_IN_PROGRESS_TEXT="In Progress|In-Progress|WIP"
+STATUS_BLOCKED_TEXT="Blocked|On Hold"
+STATUS_REJECTED_TEXT="Rejected|Won't Do|Wont Do|Cancelled"
 
 # Usage information
 usage() {
@@ -42,10 +55,13 @@ Commands:
   add              Add a new task interactively
   list [filter]    List tasks (all, pending, progress, completed, blocked, rejected)
   update <id>      Update task status
-  complete <id>    Mark task as completed with implementation notes
+  complete <id...> Mark task(s) as completed (supports multiple IDs)
+  start <id...>    Mark task(s) as in-progress (supports multiple IDs)
   reject <id>      Mark task as rejected/won't do
   search <term>    Search tasks by keyword
   stats            Show task statistics
+  next             Show the next recommended task to work on
+  summary          Quick overview: stats + next task (ideal for session start)
   pre-push         Interactive pre-push task documentation
   show <id>        Show detailed task information
   help             Show this help message
@@ -55,9 +71,13 @@ Examples:
   $0 list pending             # List all pending tasks
   $0 update 5                 # Update status of task #5
   $0 complete 3               # Mark task #3 as completed
+  $0 complete 1 2 3           # Mark multiple tasks as completed
+  $0 start 5 6                # Mark tasks #5 and #6 as in-progress
   $0 reject 7                 # Mark task #7 as rejected/won't do
   $0 search "authentication"  # Search for authentication tasks
   $0 stats                    # Show task statistics
+  $0 next                     # Show next recommended task
+  $0 summary                  # Quick session start overview
   $0 pre-push                 # Document work before push
   $0 show 2                   # Show details of task #2
 
@@ -232,45 +252,45 @@ list_tasks() {
     case $filter in
         all)
             print_header "All Tasks"
-            grep -E "^### \d+\." "$TASK_PATH" | while read -r line; do
+            grep -E "^### [0-9]+\." "$TASK_PATH" | while read -r line; do
                 echo "$line"
             done
             ;;
         pending|⏳)
             print_header "Pending Tasks"
-            show_tasks_by_status "$STATUS_PENDING"
+            show_tasks_by_status "$STATUS_PENDING" "$STATUS_PENDING_TEXT"
             ;;
         progress|in-progress|🔄)
             print_header "Tasks In Progress"
-            show_tasks_by_status "$STATUS_IN_PROGRESS"
+            show_tasks_by_status "$STATUS_IN_PROGRESS" "$STATUS_IN_PROGRESS_TEXT"
             ;;
         completed|done|✅)
             print_header "Completed Tasks"
-            show_tasks_by_status "$STATUS_COMPLETED"
+            show_tasks_by_status "$STATUS_COMPLETED" "$STATUS_COMPLETED_TEXT"
             ;;
         blocked|⚠️)
             print_header "Blocked Tasks"
-            show_tasks_by_status "$STATUS_BLOCKED"
+            show_tasks_by_status "$STATUS_BLOCKED" "$STATUS_BLOCKED_TEXT"
             ;;
         rejected|wont-do|wontdo|❌)
             print_header "Rejected Tasks"
-            show_tasks_by_status "$STATUS_REJECTED"
+            show_tasks_by_status "$STATUS_REJECTED" "$STATUS_REJECTED_TEXT"
             ;;
         critical|🔴)
             print_header "Critical Priority Tasks"
-            show_tasks_by_priority "$PRIORITY_CRITICAL"
+            show_tasks_by_priority "$PRIORITY_CRITICAL_TEXT"
             ;;
         high|🟡)
             print_header "High Priority Tasks"
-            show_tasks_by_priority "$PRIORITY_HIGH"
+            show_tasks_by_priority "$PRIORITY_HIGH_TEXT"
             ;;
         medium|🟢)
             print_header "Medium Priority Tasks"
-            show_tasks_by_priority "$PRIORITY_MEDIUM"
+            show_tasks_by_priority "$PRIORITY_MEDIUM_TEXT"
             ;;
         low|⚪)
             print_header "Low Priority Tasks"
-            show_tasks_by_priority "$PRIORITY_LOW"
+            show_tasks_by_priority "$PRIORITY_LOW_TEXT"
             ;;
         *)
             print_error "Unknown filter: $filter"
@@ -280,9 +300,10 @@ list_tasks() {
     esac
 }
 
-# Show tasks by status
+# Show tasks by status (supports both emoji and text patterns)
 show_tasks_by_status() {
     local status_emoji="$1"
+    local status_text="${2:-}"  # Optional text pattern
     local count=0
 
     # Read task file and extract tasks with matching status
@@ -295,10 +316,20 @@ show_tasks_by_status() {
             task_num="${BASH_REMATCH[1]}"
             task_name="${BASH_REMATCH[2]}"
             in_task=1
-        elif [[ $in_task -eq 1 && $line =~ ^\*\*Status:\*\*.*${status_emoji} ]]; then
-            echo "  #${task_num}: ${task_name}"
-            echo "    ${line}"
-            count=$((count + 1))
+        elif [[ $in_task -eq 1 && $line =~ ^\*\*Status:\*\* ]]; then
+            # Check for emoji match OR text pattern match
+            local matches=0
+            if [[ -n "$status_emoji" && $line =~ $status_emoji ]]; then
+                matches=1
+            elif [[ -n "$status_text" && $line =~ ($status_text) ]]; then
+                matches=1
+            fi
+
+            if [[ $matches -eq 1 ]]; then
+                echo "  #${task_num}: ${task_name}"
+                echo "    ${line}"
+                count=$((count + 1))
+            fi
             in_task=0
         elif [[ $line =~ ^### ]]; then
             in_task=0
@@ -313,9 +344,9 @@ show_tasks_by_status() {
     fi
 }
 
-# Show tasks by priority
+# Show tasks by priority (uses text-based matching for robustness)
 show_tasks_by_priority() {
-    local priority_emoji="$1"
+    local priority_text="$1"
     local count=0
 
     local in_task=0
@@ -327,10 +358,13 @@ show_tasks_by_priority() {
             task_num="${BASH_REMATCH[1]}"
             task_name="${BASH_REMATCH[2]}"
             in_task=1
-        elif [[ $in_task -eq 1 && $line =~ ^\*\*Priority:\*\*.*${priority_emoji} ]]; then
-            echo "  #${task_num}: ${task_name}"
-            echo "    ${line}"
-            count=$((count + 1))
+        elif [[ $in_task -eq 1 && $line =~ ^\*\*Priority:\*\* ]]; then
+            # Use text-based matching (e.g., "Critical" not just emoji)
+            if [[ $line =~ $priority_text ]]; then
+                echo "  #${task_num}: ${task_name}"
+                echo "    ${line}"
+                count=$((count + 1))
+            fi
             in_task=0
         elif [[ $line =~ ^### ]]; then
             in_task=0
@@ -414,7 +448,7 @@ update_task_status() {
 complete_task() {
     check_task_file
 
-    local task_id="$1"
+    local task_id="${1:-}"
 
     if [[ -z "$task_id" ]]; then
         print_error "Task ID required"
@@ -484,6 +518,189 @@ complete_task() {
     sed -i "s/\*\*Last Updated:\*\*.*/\*\*Last Updated:\*\* ${date_str}/" "$TASK_PATH"
 
     print_success "Marked task #${task_id} as completed"
+}
+
+# Bulk complete tasks (no interactive prompts)
+complete_tasks_bulk() {
+    check_task_file
+
+    if [[ $# -eq 0 ]]; then
+        print_error "At least one task ID required"
+        echo "Usage: $0 complete <id> [id2] [id3] ..."
+        exit 1
+    fi
+
+    local date_str=$(date +%Y-%m-%d)
+    local new_status="$STATUS_COMPLETED **Completed** (${date_str})"
+    local completed_count=0
+
+    for task_id in "$@"; do
+        # Find the task
+        if ! grep -q "^### ${task_id}\." "$TASK_PATH"; then
+            print_warning "Task #${task_id} not found, skipping"
+            continue
+        fi
+
+        # Update status to completed
+        awk -v task="### ${task_id}." -v new_status="**Status:** ${new_status}" '
+            /^###/ { in_task = ($0 ~ task) }
+            in_task && /^\*\*Status:\*\*/ {
+                print new_status
+                in_task = 0
+                next
+            }
+            { print }
+        ' "$TASK_PATH" > "${TASK_PATH}.tmp" && mv "${TASK_PATH}.tmp" "$TASK_PATH"
+
+        print_success "Marked task #${task_id} as completed"
+        completed_count=$((completed_count + 1))
+    done
+
+    # Update last updated date once
+    sed -i "s/\*\*Last Updated:\*\*.*/\*\*Last Updated:\*\* ${date_str}/" "$TASK_PATH"
+
+    echo ""
+    print_success "Completed $completed_count task(s)"
+}
+
+# Mark tasks as in-progress (bulk support)
+start_tasks() {
+    check_task_file
+
+    if [[ $# -eq 0 ]]; then
+        print_error "At least one task ID required"
+        echo "Usage: $0 start <id> [id2] [id3] ..."
+        exit 1
+    fi
+
+    local date_str=$(date +%Y-%m-%d)
+    local new_status="$STATUS_IN_PROGRESS **In Progress** (${date_str})"
+    local started_count=0
+
+    for task_id in "$@"; do
+        # Find the task
+        if ! grep -q "^### ${task_id}\." "$TASK_PATH"; then
+            print_warning "Task #${task_id} not found, skipping"
+            continue
+        fi
+
+        # Update status to in-progress
+        awk -v task="### ${task_id}." -v new_status="**Status:** ${new_status}" '
+            /^###/ { in_task = ($0 ~ task) }
+            in_task && /^\*\*Status:\*\*/ {
+                print new_status
+                in_task = 0
+                next
+            }
+            { print }
+        ' "$TASK_PATH" > "${TASK_PATH}.tmp" && mv "${TASK_PATH}.tmp" "$TASK_PATH"
+
+        print_success "Marked task #${task_id} as in-progress"
+        started_count=$((started_count + 1))
+    done
+
+    # Update last updated date once
+    sed -i "s/\*\*Last Updated:\*\*.*/\*\*Last Updated:\*\* ${date_str}/" "$TASK_PATH"
+
+    echo ""
+    print_success "Started $started_count task(s)"
+}
+
+# Show next recommended task (highest priority pending)
+next_task() {
+    check_task_file
+
+    print_header "Next Recommended Task"
+
+    local found=0
+    local in_main_task=0
+    local task_num=""
+    local task_name=""
+    local task_priority=""
+    local task_effort=""
+
+    # Priority order: Critical > High > Medium > Low
+    for priority in "Critical" "High" "Medium" "Low"; do
+        while IFS= read -r line; do
+            if [[ $line =~ ^###\ ([0-9]+)\.\ (.+)$ ]]; then
+                task_num="${BASH_REMATCH[1]}"
+                task_name="${BASH_REMATCH[2]}"
+                in_main_task=1
+                task_priority=""
+                task_effort=""
+            elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Priority:\*\* ]]; then
+                task_priority="$line"
+            elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Effort:\*\* ]]; then
+                task_effort="$line"
+            elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Status:\*\* ]]; then
+                # Check if pending AND matches current priority level
+                if [[ $line =~ ($STATUS_PENDING|Not\ Implemented|Not\ Created|Pending) ]]; then
+                    if [[ $task_priority =~ $priority ]]; then
+                        echo ""
+                        echo -e "  ${YELLOW}#${task_num}${NC}: ${task_name}"
+                        echo "    $task_priority"
+                        [[ -n "$task_effort" ]] && echo "    $task_effort"
+                        echo ""
+                        echo -e "  To start: ${GREEN}./task-manager.sh start ${task_num}${NC}"
+                        echo -e "  Details:  ${BLUE}./task-manager.sh show ${task_num}${NC}"
+                        found=1
+                        break 2  # Exit both loops
+                    fi
+                fi
+                in_main_task=0
+            elif [[ $line =~ ^### ]]; then
+                in_main_task=0
+            fi
+        done < "$TASK_PATH"
+    done
+
+    if [[ $found -eq 0 ]]; then
+        print_info "No pending tasks found - all done!"
+    fi
+}
+
+# Quick summary for session start
+show_summary() {
+    check_task_file
+
+    print_header "Session Summary"
+
+    # Quick stats (inline, not full stats output)
+    local total=$(grep -c "^### [0-9]\+\." "$TASK_PATH" 2>/dev/null || echo "0")
+    local pending=0
+    local in_progress=0
+    local completed=0
+
+    local in_main_task=0
+    while IFS= read -r line; do
+        if [[ $line =~ ^###\ [0-9]+\. ]]; then
+            in_main_task=1
+        elif [[ $line =~ ^#### ]]; then
+            in_main_task=0
+        elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Status:\*\* ]]; then
+            if [[ $line =~ ($STATUS_PENDING|Not\ Implemented|Not\ Created|Pending) ]]; then
+                pending=$((pending + 1))
+            elif [[ $line =~ ($STATUS_IN_PROGRESS|In\ Progress) ]]; then
+                in_progress=$((in_progress + 1))
+            elif [[ $line =~ ($STATUS_COMPLETED|Completed|Complete|COMPLETED) ]]; then
+                completed=$((completed + 1))
+            fi
+            in_main_task=0
+        fi
+    done < "$TASK_PATH"
+
+    local completion_rate=0
+    if [[ $total -gt 0 ]]; then
+        completion_rate=$((completed * 100 / total))
+    fi
+
+    echo ""
+    echo -e "  Progress: ${GREEN}${completed}${NC}/${total} tasks (${completion_rate}%)"
+    echo -e "  Pending:  ${YELLOW}${pending}${NC} | In Progress: ${BLUE}${in_progress}${NC}"
+    echo ""
+
+    # Show next task
+    next_task
 }
 
 # Mark task as rejected/won't do
@@ -625,16 +842,53 @@ show_stats() {
     print_header "Task Statistics"
 
     local total=$(grep -c "^### [0-9]\+\." "$TASK_PATH" 2>/dev/null || echo "0")
-    local pending=$(grep -c "$STATUS_PENDING" "$TASK_PATH" 2>/dev/null || echo "0")
-    local in_progress=$(grep -c "$STATUS_IN_PROGRESS" "$TASK_PATH" 2>/dev/null || echo "0")
-    local completed=$(grep -c "$STATUS_COMPLETED" "$TASK_PATH" 2>/dev/null || echo "0")
-    local blocked=$(grep -c "$STATUS_BLOCKED" "$TASK_PATH" 2>/dev/null || echo "0")
-    local rejected=$(grep -c "$STATUS_REJECTED" "$TASK_PATH" 2>/dev/null || echo "0")
 
-    local critical=$(grep -c "$PRIORITY_CRITICAL" "$TASK_PATH" 2>/dev/null || echo "0")
-    local high=$(grep -c "$PRIORITY_HIGH" "$TASK_PATH" 2>/dev/null || echo "0")
-    local medium=$(grep -c "$PRIORITY_MEDIUM" "$TASK_PATH" 2>/dev/null || echo "0")
-    local low=$(grep -c "$PRIORITY_LOW" "$TASK_PATH" 2>/dev/null || echo "0")
+    # Count statuses only for main tasks (### N.) - excludes sub-tasks (#### N.N)
+    local pending=0
+    local in_progress=0
+    local completed=0
+    local blocked=0
+    local rejected=0
+    local critical=0
+    local high=0
+    local medium=0
+    local low=0
+
+    local in_main_task=0
+
+    while IFS= read -r line; do
+        # Detect main task header (### N. not #### N.N)
+        if [[ $line =~ ^###\ [0-9]+\. ]]; then
+            in_main_task=1
+        elif [[ $line =~ ^#### ]]; then
+            in_main_task=0  # Sub-task, skip its status
+        elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Status:\*\* ]]; then
+            # Count status for main task only
+            if [[ $line =~ ($STATUS_PENDING|Not\ Implemented|Not\ Created|Pending) ]]; then
+                pending=$((pending + 1))
+            elif [[ $line =~ ($STATUS_IN_PROGRESS|In\ Progress) ]]; then
+                in_progress=$((in_progress + 1))
+            elif [[ $line =~ ($STATUS_COMPLETED|Completed|Complete|COMPLETED) ]]; then
+                completed=$((completed + 1))
+            elif [[ $line =~ ($STATUS_BLOCKED|Blocked) ]]; then
+                blocked=$((blocked + 1))
+            elif [[ $line =~ ($STATUS_REJECTED|Rejected) ]]; then
+                rejected=$((rejected + 1))
+            fi
+            in_main_task=0
+        elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Priority:\*\* ]]; then
+            # Count priority for main task (text-based matching)
+            if [[ $line =~ $PRIORITY_CRITICAL_TEXT ]]; then
+                critical=$((critical + 1))
+            elif [[ $line =~ $PRIORITY_HIGH_TEXT ]]; then
+                high=$((high + 1))
+            elif [[ $line =~ $PRIORITY_MEDIUM_TEXT ]]; then
+                medium=$((medium + 1))
+            elif [[ $line =~ $PRIORITY_LOW_TEXT ]]; then
+                low=$((low + 1))
+            fi
+        fi
+    done < "$TASK_PATH"
 
     echo ""
     echo "Total Tasks: $total"
@@ -803,7 +1057,15 @@ main() {
             update_task_status "$@"
             ;;
         complete|done)
-            complete_task "$@"
+            # Use bulk complete for multiple args, single complete for one
+            if [[ $# -gt 1 ]]; then
+                complete_tasks_bulk "$@"
+            else
+                complete_task "$@"
+            fi
+            ;;
+        start|begin)
+            start_tasks "$@"
             ;;
         reject|wont-do|wontdo)
             reject_task "$@"
@@ -813,6 +1075,12 @@ main() {
             ;;
         stats|statistics)
             show_stats
+            ;;
+        next)
+            next_task
+            ;;
+        summary|overview)
+            show_summary
             ;;
         pre-push|prepush|doc)
             pre_push_documentation

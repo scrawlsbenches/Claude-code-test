@@ -27,6 +27,7 @@ Runs before pushing to remote repository.
 2. ✅ No uncommitted changes
 3. ✅ Tests still pass (quick sanity check)
 4. ✅ Prevent direct push to main/master
+5. 📋 Task documentation reminder (non-blocking)
 
 **Execution time:** ~20-40 seconds
 
@@ -243,11 +244,51 @@ mv .git/hooks/pre-commit .git/hooks/pre-commit.disabled
 mv .git/hooks/pre-push .git/hooks/pre-push.disabled
 ```
 
+## Task Management Integration
+
+The `pre-push` hook includes a reminder to run `./task-manager.sh pre-push` for task documentation.
+
+### Why Document Tasks Before Pushing?
+
+When you complete work on tasks from `TASK_LIST.md`, updating the task status helps:
+- Track project progress
+- Communicate completion to team members
+- Maintain accurate roadmap documentation
+
+### Task Documentation Workflow
+
+```bash
+# Before pushing (optional but recommended)
+./task-manager.sh pre-push
+
+# This interactive command will:
+# - Show tasks currently in progress
+# - Ask which tasks you completed
+# - Prompt for implementation notes
+# - Update TASK_LIST.md automatically
+```
+
+### Quick Task Commands
+
+```bash
+# See current progress
+./task-manager.sh stats
+
+# Mark task as completed
+./task-manager.sh complete <task-id>
+
+# See what to work on next
+./task-manager.sh next
+```
+
+For full task-manager.sh documentation, see `workflows/task-management.md`.
+
 ## Related Documentation
 
 - `CLAUDE.md` - Complete development guide and pre-commit checklist
 - `SKILLS.md` - Claude Skills (includes `/precommit-check`)
 - `TESTING.md` - Testing standards and patterns
+- `workflows/task-management.md` - Task management workflow
 - `.github/workflows/build-and-test.yml` - CI/CD pipeline
 
 ## Questions?
@@ -257,5 +298,5 @@ See `CLAUDE.md` or ask the team lead.
 ---
 
 **Created:** 2025-11-20
-**Last Updated:** 2025-11-20
+**Last Updated:** 2025-11-24
 **Maintainer:** Development Team
