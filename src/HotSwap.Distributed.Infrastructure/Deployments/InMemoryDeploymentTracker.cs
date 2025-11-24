@@ -135,13 +135,14 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
         {
             // Create a failed pipeline execution result
             var now = DateTime.UtcNow;
+            var exceptionMessage = exception?.Message ?? "Unknown error";
             var result = new PipelineExecutionResult
             {
                 ExecutionId = executionId,
                 ModuleName = "Unknown", // Module name not available during failure
                 Version = new Version(0, 0, 0),
                 Success = false,
-                Message = $"Deployment failed with exception: {exception.Message}",
+                Message = $"Deployment failed with exception: {exceptionMessage}",
                 StartTime = now,
                 EndTime = now,
                 StageResults = new List<PipelineStageResult>
@@ -150,7 +151,7 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
                     {
                         StageName = "Exception",
                         Status = Domain.Enums.PipelineStageStatus.Failed,
-                        Message = exception.Message,
+                        Message = exceptionMessage,
                         StartTime = now,
                         EndTime = now // Duration will be calculated automatically
                     }

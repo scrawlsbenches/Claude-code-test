@@ -20,7 +20,11 @@ public class AuditLogRepository : IAuditLogRepository
     public async Task CreateAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
     {
         _context.AuditLogs.Add(auditLog);
-        await _context.SaveChangesAsync(cancellationToken);
+        // Only auto-save if not within a transaction (Unit of Work pattern support)
+        if (_context.Database.CurrentTransaction == null)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     /// <inheritdoc />

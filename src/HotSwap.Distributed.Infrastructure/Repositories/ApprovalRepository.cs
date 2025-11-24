@@ -32,7 +32,12 @@ public class ApprovalRepository : IApprovalRepository
         request.UpdatedAt = DateTime.UtcNow;
 
         _dbContext.ApprovalRequests.Add(request);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Only auto-save if not within a transaction (Unit of Work pattern support)
+        if (_dbContext.Database.CurrentTransaction == null)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         _logger.LogDebug("Created approval request {ApprovalId} for deployment {DeploymentId}",
             request.ApprovalId, request.DeploymentExecutionId);
@@ -81,7 +86,12 @@ public class ApprovalRepository : IApprovalRepository
         request.UpdatedAt = DateTime.UtcNow;
 
         _dbContext.ApprovalRequests.Update(request);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Only auto-save if not within a transaction (Unit of Work pattern support)
+        if (_dbContext.Database.CurrentTransaction == null)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         _logger.LogDebug("Updated approval request {ApprovalId} status to {Status}",
             request.ApprovalId, request.Status);

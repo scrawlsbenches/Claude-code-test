@@ -9,6 +9,7 @@ using HotSwap.Distributed.Orchestrator.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -44,7 +45,7 @@ public class ApprovalServiceTests : IDisposable
         _dbContext = new AuditLogDbContext(options);
         _dbContext.Database.EnsureCreated();
 
-        _approvalRepository = new ApprovalRepository(_dbContext);
+        _approvalRepository = new ApprovalRepository(_dbContext, _mockLogger.Object as ILogger<ApprovalRepository> ?? NullLogger<ApprovalRepository>.Instance);
 
         _approvalService = new ApprovalService(
             _mockLogger.Object,

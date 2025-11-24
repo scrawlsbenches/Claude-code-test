@@ -25,7 +25,16 @@ public class DeploymentOrchestrationServiceTests : IDisposable
 
     public DeploymentOrchestrationServiceTests()
     {
-        _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(MockBehavior.Loose);
+        // Create mocks for orchestrator constructor parameters
+        var mockOrchestratorLogger = new Mock<ILogger<DistributedKernelOrchestrator>>();
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+
+        _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(
+            MockBehavior.Loose,
+            mockOrchestratorLogger.Object,
+            mockLoggerFactory.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!);
+
         _mockDeploymentTracker = new Mock<IDeploymentTracker>();
         _mockLogger = new Mock<ILogger<DeploymentOrchestrationService>>();
 
@@ -109,6 +118,8 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var expectedResult = new PipelineExecutionResult
         {
             ExecutionId = executionId,
+            ModuleName = "TestModule",
+            Version = new Version(1, 0, 0),
             Success = true,
             Message = "Deployment successful",
             StartTime = DateTime.UtcNow,
@@ -144,7 +155,7 @@ public class DeploymentOrchestrationServiceTests : IDisposable
             Times.Once);
 
         _mockDeploymentTracker.Verify(
-            t => t.RemoveInProgressAsync(executionId),
+            t => t.RemoveInProgressAsync(executionId, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -224,6 +235,8 @@ public class DeploymentOrchestrationServiceTests : IDisposable
                 return new PipelineExecutionResult
                 {
                     ExecutionId = req.ExecutionId,
+                    ModuleName = req.Module.Name,
+                    Version = req.Module.Version,
                     Success = true,
                     StartTime = DateTime.UtcNow,
                     EndTime = DateTime.UtcNow,
@@ -276,6 +289,8 @@ public class DeploymentOrchestrationServiceTests : IDisposable
                 return new PipelineExecutionResult
                 {
                     ExecutionId = req.ExecutionId,
+                    ModuleName = req.Module.Name,
+                    Version = req.Module.Version,
                     Success = true,
                     StartTime = DateTime.UtcNow,
                     EndTime = DateTime.UtcNow,
@@ -311,8 +326,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var request = new DeploymentRequest
         {
             ExecutionId = Guid.NewGuid(),
-            ModuleName = "TestModule",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = "TestModule",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         };
 
@@ -331,8 +350,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var request = new DeploymentRequest
         {
             ExecutionId = Guid.NewGuid(),
-            ModuleName = "TestModule",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = "TestModule",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         };
 

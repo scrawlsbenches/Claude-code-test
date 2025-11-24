@@ -1,4 +1,5 @@
 using FluentAssertions;
+using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Infrastructure.Data;
 using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Repositories;
@@ -186,9 +187,9 @@ public class UnitOfWorkTests : IDisposable
             DeploymentExecutionId = Guid.NewGuid(),
             ApprovalId = Guid.NewGuid(),
             ModuleName = "TestModule",
-            Version = "1.0.0",
+            ModuleVersion = "1.0.0",
             TargetEnvironment = "Production",
-            Status = "Pending",
+            Status = ApprovalStatus.Pending,
             RequesterEmail = "test@example.com",
             RequestedAt = DateTime.UtcNow,
             TimeoutAt = DateTime.UtcNow.AddHours(1)
@@ -196,13 +197,13 @@ public class UnitOfWorkTests : IDisposable
 
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Approval",
-            EntityId = approval.ApprovalId,
+            EventType = "Approval",
+            EventCategory = "Test",
+            ResourceType = "Approval",
+            ResourceId = approval.ApprovalId.ToString(),
             Action = "Create",
             Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            Metadata = "{}"
         };
 
         // Act - Begin transaction, make changes, commit
@@ -230,9 +231,9 @@ public class UnitOfWorkTests : IDisposable
             DeploymentExecutionId = Guid.NewGuid(),
             ApprovalId = Guid.NewGuid(),
             ModuleName = "TestModule",
-            Version = "1.0.0",
+            ModuleVersion = "1.0.0",
             TargetEnvironment = "Production",
-            Status = "Pending",
+            Status = ApprovalStatus.Pending,
             RequesterEmail = "test@example.com",
             RequestedAt = DateTime.UtcNow,
             TimeoutAt = DateTime.UtcNow.AddHours(1)
@@ -240,13 +241,13 @@ public class UnitOfWorkTests : IDisposable
 
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Approval",
-            EntityId = approval.ApprovalId,
+            EventType = "Approval",
+            EventCategory = "Test",
+            ResourceType = "Approval",
+            ResourceId = approval.ApprovalId.ToString(),
             Action = "Create",
             Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            Metadata = "{}"
         };
 
         // Act - Begin transaction, make changes, simulate failure, rollback
@@ -316,7 +317,7 @@ public class UnitOfWorkTests : IDisposable
             .UseSqlite(_connection)
             .Options);
 
-        var newUnitOfWork = new UnitOfWork(newContext, NullLogger<UnitOfWork>.Instance);
+        var newUnitOfWork = new UnitOfWork(newContext, NullLogger<UnitOfWork>.Instance, NullLoggerFactory.Instance);
 
         // Assert
         var retrieved = await newUnitOfWork.AuditLogs.GetByIdAsync(auditLog.EventId);
@@ -339,9 +340,9 @@ public class UnitOfWorkTests : IDisposable
             DeploymentExecutionId = Guid.NewGuid(),
             ApprovalId = Guid.NewGuid(),
             ModuleName = "Module1",
-            Version = "1.0.0",
+            ModuleVersion = "1.0.0",
             TargetEnvironment = "Production",
-            Status = "Pending",
+            Status = ApprovalStatus.Pending,
             RequesterEmail = "test@example.com",
             RequestedAt = DateTime.UtcNow,
             TimeoutAt = DateTime.UtcNow.AddHours(1)
@@ -352,9 +353,9 @@ public class UnitOfWorkTests : IDisposable
             DeploymentExecutionId = Guid.NewGuid(),
             ApprovalId = Guid.NewGuid(),
             ModuleName = "Module2",
-            Version = "1.0.0",
+            ModuleVersion = "1.0.0",
             TargetEnvironment = "Production",
-            Status = "Pending",
+            Status = ApprovalStatus.Pending,
             RequesterEmail = "test@example.com",
             RequestedAt = DateTime.UtcNow,
             TimeoutAt = DateTime.UtcNow.AddHours(1)
