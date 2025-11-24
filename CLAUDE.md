@@ -181,6 +181,77 @@ git push -u origin claude/<branch-name>
 
 ---
 
+## Task Management with task-manager.sh
+
+**IMPORTANT:** Use `task-manager.sh` to interact with TASK_LIST.md. Don't manually parse the task list file.
+
+### Quick Reference
+
+```bash
+# View current status
+./task-manager.sh stats              # Show task statistics and completion rate
+./task-manager.sh list pending       # List tasks not yet started
+./task-manager.sh list completed     # List finished tasks
+./task-manager.sh list all           # List all task titles
+
+# Find and view tasks
+./task-manager.sh search "MinIO"     # Search tasks by keyword
+./task-manager.sh show 25            # Show detailed info for task #25
+
+# Update task status (interactive)
+./task-manager.sh complete 25        # Mark task #25 as completed (prompts for notes)
+./task-manager.sh update 25          # Change status of task #25
+./task-manager.sh reject 14          # Mark task #14 as won't do
+
+# Pre-push workflow
+./task-manager.sh pre-push           # Interactive documentation before pushing
+```
+
+### When to Use
+
+| Situation | Command |
+|-----------|---------|
+| **Start of session** | `./task-manager.sh stats` - See what's done and pending |
+| **"What should I work on?"** | `./task-manager.sh list pending` - Find available tasks |
+| **Planning work** | `./task-manager.sh show <id>` - Read task requirements |
+| **After completing work** | `./task-manager.sh complete <id>` - Document completion |
+| **Before pushing** | `./task-manager.sh pre-push` - Update task statuses |
+
+### Status Categories
+
+The script recognizes both emoji and text-based statuses:
+
+| Status | Emoji | Text Patterns |
+|--------|-------|---------------|
+| Pending | ⏳ | "Not Implemented", "Not Created", "Pending" |
+| In Progress | 🔄 | "In Progress", "WIP" |
+| Completed | ✅ | "Completed", "Complete", "COMPLETED" |
+| Blocked | ⚠️ | "Blocked", "On Hold" |
+| Rejected | ❌ | "Rejected", "Won't Do", "Cancelled" |
+
+### Example Workflow
+
+```bash
+# 1. Start of session - check status
+./task-manager.sh stats
+
+# 2. Find something to work on
+./task-manager.sh list pending
+
+# 3. Review task details
+./task-manager.sh show 19
+
+# 4. After completing the work
+./task-manager.sh complete 19
+# (Enter implementation notes when prompted)
+
+# 5. Commit the updated TASK_LIST.md
+git add TASK_LIST.md
+git commit -m "docs: mark Task #19 as completed"
+```
+
+---
+
 ## Running Tests (Important for AI Agents)
 
 ### Problem: Test Output Overwhelms Context

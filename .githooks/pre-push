@@ -44,5 +44,12 @@ while read local_ref local_sha remote_ref remote_sha; do
     fi
 done
 
+# Reminder about task documentation (non-blocking)
+echo ""
+echo "📋 Task Documentation Reminder:"
+echo "   If you completed any tasks, consider running:"
+echo "   ./task-manager.sh pre-push"
+echo ""
+
 echo "✅ All pre-push checks passed!"
 exit 0
