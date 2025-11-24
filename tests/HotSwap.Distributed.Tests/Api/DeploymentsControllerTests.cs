@@ -29,7 +29,7 @@ public class DeploymentsControllerTests
         _mockOrchestrator = new Mock<DistributedKernelOrchestrator>(
             mockLogger.Object,
             mockLoggerFactory.Object,
-            null!, null!, null!, null!, null!, null!, null!);
+            null!, null!, null!, null!, null!, null!, null!, null!);
 
         _mockTracker = new Mock<IDeploymentTracker>();
         _controller = new DeploymentsController(
