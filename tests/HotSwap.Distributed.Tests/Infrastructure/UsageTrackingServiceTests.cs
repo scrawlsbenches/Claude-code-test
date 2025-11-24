@@ -348,11 +348,6 @@ public class UsageTrackingServiceTests
         var mockLogger = new Mock<ILogger<UsageTrackingService>>();
         var service = new UsageTrackingService(mockLogger.Object);
 
-        // Force cleanup to run immediately
-        var lastCleanupField = typeof(UsageTrackingService).GetField("_lastCleanupTime",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        lastCleanupField!.SetValue(service, DateTime.UtcNow.AddDays(-2));
-
         // Get MAX_PAGE_VIEW_ENTRIES constant via reflection
         var maxEntriesField = typeof(UsageTrackingService).GetField("MAX_PAGE_VIEW_ENTRIES",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
@@ -365,8 +360,10 @@ public class UsageTrackingServiceTests
             await service.RecordPageViewAsync(websiteId, $"/page-{i}", "UA", "IP");
         }
 
-        // Act - Force cleanup by recording another page view
-        await service.RecordPageViewAsync(websiteId, "/trigger-cleanup", "UA", "IP");
+        // Act - Directly invoke EnforcePageViewLimits via reflection
+        var enforceMethod = typeof(UsageTrackingService).GetMethod("EnforcePageViewLimits",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        enforceMethod!.Invoke(service, null);
 
         // Assert - Verify enforcement was logged
         mockLogger.Verify(

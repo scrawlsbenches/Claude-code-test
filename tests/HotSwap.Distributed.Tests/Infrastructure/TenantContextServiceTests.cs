@@ -609,9 +609,9 @@ public class TenantContextServiceTests
     /// <summary>
     /// SECURITY TEST: Verifies subdomain validation rejects malicious input.
     /// Prevents subdomain injection attacks.
+    /// Note: UPPERCASE is handled by normalization to lowercase, not rejection.
     /// </summary>
     [Theory]
-    [InlineData("UPPERCASE")]  // Must be lowercase
     [InlineData("tenant_name")] // No underscores
     [InlineData("-tenant")]     // Cannot start with hyphen
     [InlineData("tenant-")]     // Cannot end with hyphen
