@@ -691,7 +691,6 @@ Implement the CachedBuildStrategy with Redis caching for maximum performance.
 **Requirements**:
 - [ ] Create `src/BuildServer.Orchestrator/Strategies/CachedBuildStrategy.cs`
 - [ ] Implement `IBuildStrategy` interface
-- [ ] Add Redis dependency (`StackExchange.Redis`)
 - [ ] Implement cache key generation:
   - Hash of source files
   - Hash of project file

@@ -27,7 +27,6 @@ This document outlines the complete implementation plan for adding comprehensive
 Integration Test Project
 ├── Fixtures/
 │   ├── PostgreSqlContainerFixture.cs      # PostgreSQL Testcontainer lifecycle
-│   ├── RedisContainerFixture.cs           # Redis Testcontainer lifecycle
 │   └── IntegrationTestFactory.cs          # Custom WebApplicationFactory
 ├── Helpers/
 │   ├── AuthHelper.cs                      # JWT token generation for tests
@@ -55,7 +54,6 @@ Integration Test Project
 2. Add NuGet packages:
    - `Testcontainers` (core) - v3.10.0+
    - `Testcontainers.PostgreSql` - v3.10.0+
-   - `Testcontainers.Redis` - v3.10.0+
    - `Microsoft.AspNetCore.Mvc.Testing` - v8.0.0
    - `xunit` - v2.6.2
    - `xunit.runner.visualstudio` - v2.5.4
@@ -112,13 +110,10 @@ public class PostgreSqlContainerFixture : IAsyncLifetime
 
 #### 2.2 Redis Container Fixture (1 hour)
 
-**File:** `Fixtures/RedisContainerFixture.cs`
 
 **Implementation:**
 ```csharp
-public class RedisContainerFixture : IAsyncLifetime
 {
-    public RedisContainer Container { get; private set; }
 
     public async Task InitializeAsync()
     {

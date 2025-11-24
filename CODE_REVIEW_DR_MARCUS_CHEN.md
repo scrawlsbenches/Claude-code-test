@@ -121,8 +121,6 @@ Result: Race condition, inconsistent node states, split-brain cluster
 **Recommendation**:
 Implement **Redis-based distributed locks** using Redlock algorithm:
 ```csharp
-// Use StackExchange.Redis + RedLock.net
-public class RedisDistributedLock : IDistributedLock
 {
     private readonly IDistributedLockFactory _redlockFactory;
 

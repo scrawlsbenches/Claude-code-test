@@ -287,7 +287,6 @@ Health:          Unlimited (bypassed)
 │  - TelemetryProvider (OpenTelemetry)        │
 │  - ModuleVerifier (RSA signatures)          │
 │  - MetricsProvider                          │
-│  - RedisDistributedLock                     │
 └─────────────────┬───────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────┐
@@ -662,7 +661,6 @@ appsettings.Development.json
 **Infrastructure:**
 - OpenTelemetry (1.7.0) - Distributed tracing
 - OpenTelemetry.Exporter.Jaeger (1.5.1)
-- StackExchange.Redis (2.7.10) - Distributed locks
 - System.Security.Cryptography.Pkcs (8.0.0) - Signatures
 
 **API:**
