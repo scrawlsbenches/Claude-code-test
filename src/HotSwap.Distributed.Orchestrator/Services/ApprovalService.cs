@@ -4,6 +4,7 @@ using HotSwap.Distributed.Domain.Enums;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Data.Entities;
 using HotSwap.Distributed.Infrastructure.Interfaces;
+using HotSwap.Distributed.Infrastructure.Repositories;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,7 @@ namespace HotSwap.Distributed.Orchestrator.Services;
 
 /// <summary>
 /// Service for managing deployment approval workflows.
+/// Uses PostgreSQL persistence for distributed system compatibility.
 /// </summary>
 public class ApprovalService : IApprovalService
 {
@@ -18,22 +20,22 @@ public class ApprovalService : IApprovalService
     private readonly PipelineConfiguration _config;
     private readonly INotificationService? _notificationService;
     private readonly IAuditLogService? _auditLogService;
+    private readonly IApprovalRepository _approvalRepository;
 
-    // In-memory storage for approval requests
-    // In production, this would be backed by a database
-    private static readonly ConcurrentDictionary<Guid, ApprovalRequest> _approvalRequests = new();
-
-    // Semaphore for waiting on approval decisions
+    // Keep in-memory waiters for process-local signaling (TaskCompletionSource can't be serialized)
+    // This is fine - it's just for signaling within a single process instance
     private static readonly ConcurrentDictionary<Guid, TaskCompletionSource<ApprovalRequest>> _approvalWaiters = new();
 
     public ApprovalService(
         ILogger<ApprovalService> logger,
         PipelineConfiguration config,
+        IApprovalRepository approvalRepository,
         INotificationService? notificationService = null,
         IAuditLogService? auditLogService = null)
     {
         _logger = logger;
         _config = config;
+        _approvalRepository = approvalRepository;
         _notificationService = notificationService;
         _auditLogService = auditLogService;
     }
@@ -53,12 +55,11 @@ public class ApprovalService : IApprovalService
             request.TimeoutAt = DateTime.UtcNow.Add(_config.ApprovalTimeout);
         }
 
-        // Store the approval request
-        if (!_approvalRequests.TryAdd(request.DeploymentExecutionId, request))
-        {
-            throw new InvalidOperationException(
-                $"Approval request already exists for deployment {request.DeploymentExecutionId}");
-        }
+        // Convert domain model to entity
+        var entity = ToEntity(request);
+
+        // Store in database
+        await _approvalRepository.CreateAsync(entity, cancellationToken);
 
         // Create a task completion source for waiting
         _approvalWaiters.TryAdd(request.DeploymentExecutionId, new TaskCompletionSource<ApprovalRequest>());
@@ -93,11 +94,14 @@ public class ApprovalService : IApprovalService
             "Processing approval for deployment {DeploymentId} by {Approver}",
             decision.DeploymentExecutionId, decision.ApproverEmail);
 
-        if (!_approvalRequests.TryGetValue(decision.DeploymentExecutionId, out var request))
+        var entity = await _approvalRepository.GetByIdAsync(decision.DeploymentExecutionId, cancellationToken);
+        if (entity == null)
         {
             throw new KeyNotFoundException(
                 $"Approval request not found for deployment {decision.DeploymentExecutionId}");
         }
+
+        var request = ToModel(entity);
 
         // Check if approval is still pending
         if (request.Status != ApprovalStatus.Pending)
@@ -110,6 +114,9 @@ public class ApprovalService : IApprovalService
         if (request.IsExpired)
         {
             request.Status = ApprovalStatus.Expired;
+            entity.Status = ApprovalStatus.Expired;
+            await _approvalRepository.UpdateAsync(entity, cancellationToken);
+
             throw new InvalidOperationException(
                 $"Approval request has expired at {request.TimeoutAt}");
         }
@@ -126,6 +133,14 @@ public class ApprovalService : IApprovalService
         request.RespondedAt = decision.DecidedAt;
         request.RespondedByEmail = decision.ApproverEmail;
         request.ResponseReason = decision.Reason;
+
+        // Update entity
+        entity.Status = ApprovalStatus.Approved;
+        entity.RespondedAt = decision.DecidedAt;
+        entity.RespondedByEmail = decision.ApproverEmail;
+        entity.ResponseReason = decision.Reason;
+
+        await _approvalRepository.UpdateAsync(entity, cancellationToken);
 
         _logger.LogInformation(
             "Deployment {DeploymentId} approved by {Approver}. Reason: {Reason}",
@@ -163,11 +178,14 @@ public class ApprovalService : IApprovalService
             "Processing rejection for deployment {DeploymentId} by {Approver}",
             decision.DeploymentExecutionId, decision.ApproverEmail);
 
-        if (!_approvalRequests.TryGetValue(decision.DeploymentExecutionId, out var request))
+        var entity = await _approvalRepository.GetByIdAsync(decision.DeploymentExecutionId, cancellationToken);
+        if (entity == null)
         {
             throw new KeyNotFoundException(
                 $"Approval request not found for deployment {decision.DeploymentExecutionId}");
         }
+
+        var request = ToModel(entity);
 
         // Check if approval is still pending
         if (request.Status != ApprovalStatus.Pending)
@@ -188,6 +206,14 @@ public class ApprovalService : IApprovalService
         request.RespondedAt = decision.DecidedAt;
         request.RespondedByEmail = decision.ApproverEmail;
         request.ResponseReason = decision.Reason;
+
+        // Update entity
+        entity.Status = ApprovalStatus.Rejected;
+        entity.RespondedAt = decision.DecidedAt;
+        entity.RespondedByEmail = decision.ApproverEmail;
+        entity.ResponseReason = decision.Reason;
+
+        await _approvalRepository.UpdateAsync(entity, cancellationToken);
 
         _logger.LogWarning(
             "Deployment {DeploymentId} rejected by {Approver}. Reason: {Reason}",
@@ -217,26 +243,24 @@ public class ApprovalService : IApprovalService
     }
 
     /// <inheritdoc />
-    public Task<ApprovalRequest?> GetApprovalRequestAsync(
+    public async Task<ApprovalRequest?> GetApprovalRequestAsync(
         Guid deploymentExecutionId,
         CancellationToken cancellationToken = default)
     {
-        _approvalRequests.TryGetValue(deploymentExecutionId, out var request);
-        return Task.FromResult(request);
+        var entity = await _approvalRepository.GetByIdAsync(deploymentExecutionId, cancellationToken);
+        return entity == null ? null : ToModel(entity);
     }
 
     /// <inheritdoc />
-    public Task<List<ApprovalRequest>> GetPendingApprovalsAsync(
+    public async Task<List<ApprovalRequest>> GetPendingApprovalsAsync(
         CancellationToken cancellationToken = default)
     {
-        var pending = _approvalRequests.Values
-            .Where(r => r.IsPending)
-            .OrderBy(r => r.RequestedAt)
-            .ToList();
+        var entities = await _approvalRepository.GetPendingAsync(cancellationToken);
+        var pending = entities.Select(ToModel).ToList();
 
         _logger.LogInformation("Found {Count} pending approval requests", pending.Count);
 
-        return Task.FromResult(pending);
+        return pending;
     }
 
     /// <inheritdoc />
@@ -248,11 +272,14 @@ public class ApprovalService : IApprovalService
             "Waiting for approval decision for deployment {DeploymentId}",
             deploymentExecutionId);
 
-        if (!_approvalRequests.TryGetValue(deploymentExecutionId, out var request))
+        var entity = await _approvalRepository.GetByIdAsync(deploymentExecutionId, cancellationToken);
+        if (entity == null)
         {
             throw new KeyNotFoundException(
                 $"Approval request not found for deployment {deploymentExecutionId}");
         }
+
+        var request = ToModel(entity);
 
         // If already resolved, return immediately
         if (request.IsResolved)
@@ -274,10 +301,16 @@ public class ApprovalService : IApprovalService
 
             if (completedTask == timeoutTask)
             {
-                // Timeout occurred
+                // Timeout occurred - expire in database
                 _logger.LogWarning(
                     "Approval request {ApprovalId} for deployment {DeploymentId} has timed out",
                     request.ApprovalId, deploymentExecutionId);
+
+                entity.Status = ApprovalStatus.Expired;
+                entity.RespondedAt = DateTime.UtcNow;
+                entity.ResponseReason = "Approval request timed out after 24 hours";
+
+                await _approvalRepository.UpdateAsync(entity, cancellationToken);
 
                 request.Status = ApprovalStatus.Expired;
                 request.RespondedAt = DateTime.UtcNow;
@@ -289,9 +322,16 @@ public class ApprovalService : IApprovalService
         else
         {
             // Already expired
+            entity.Status = ApprovalStatus.Expired;
+            entity.RespondedAt = DateTime.UtcNow;
+            entity.ResponseReason = "Approval request timed out";
+
+            await _approvalRepository.UpdateAsync(entity, cancellationToken);
+
             request.Status = ApprovalStatus.Expired;
             request.RespondedAt = DateTime.UtcNow;
             request.ResponseReason = "Approval request timed out";
+
             tcs.TrySetResult(request);
         }
 
@@ -302,20 +342,21 @@ public class ApprovalService : IApprovalService
     public async Task<int> ProcessExpiredApprovalsAsync(
         CancellationToken cancellationToken = default)
     {
-        var expiredCount = 0;
         var now = DateTime.UtcNow;
 
-        foreach (var request in _approvalRequests.Values)
-        {
-            if (request.Status == ApprovalStatus.Pending && now >= request.TimeoutAt)
-            {
-                _logger.LogWarning(
-                    "Auto-rejecting expired approval request {ApprovalId} for deployment {DeploymentId}",
-                    request.ApprovalId, request.DeploymentExecutionId);
+        // Use repository's efficient bulk update
+        var expiredCount = await _approvalRepository.ExpirePendingRequestsAsync(now, cancellationToken);
 
-                request.Status = ApprovalStatus.Expired;
-                request.RespondedAt = now;
-                request.ResponseReason = "Approval request automatically rejected due to timeout";
+        if (expiredCount > 0)
+        {
+            _logger.LogInformation("Auto-rejected {Count} expired approval requests", expiredCount);
+
+            // Get the expired requests to send notifications
+            var expiredRequests = await _approvalRepository.GetExpiredPendingAsync(cancellationToken);
+
+            foreach (var entity in expiredRequests)
+            {
+                var request = ToModel(entity);
 
                 // Send expiry notification
                 if (_notificationService != null)
@@ -328,28 +369,58 @@ public class ApprovalService : IApprovalService
                 {
                     tcs.TrySetResult(request);
                 }
-
-                expiredCount++;
             }
-        }
-
-        if (expiredCount > 0)
-        {
-            _logger.LogInformation("Auto-rejected {Count} expired approval requests", expiredCount);
         }
 
         return expiredCount;
     }
 
+    #region Helper Methods
+
     /// <summary>
-    /// Clears all approval requests and waiters from the in-memory storage.
-    /// WARNING: This method is for testing purposes only and should not be used in production.
+    /// Converts domain model to database entity.
     /// </summary>
-    public void ClearAllApprovalsForTesting()
+    private static ApprovalRequestEntity ToEntity(ApprovalRequest model)
     {
-        _approvalRequests.Clear();
-        _approvalWaiters.Clear();
-        _logger.LogDebug("Cleared all approval requests and waiters (testing only)");
+        return new ApprovalRequestEntity
+        {
+            DeploymentExecutionId = model.DeploymentExecutionId,
+            ApprovalId = model.ApprovalId,
+            RequesterEmail = model.RequesterEmail,
+            TargetEnvironment = model.TargetEnvironment.ToString(),
+            ModuleName = model.ModuleName,
+            ModuleVersion = model.Version.ToString(),
+            Status = model.Status,
+            ApproverEmails = model.ApproverEmails.ToList(),
+            RequestedAt = model.RequestedAt,
+            TimeoutAt = model.TimeoutAt,
+            RespondedAt = model.RespondedAt,
+            RespondedByEmail = model.RespondedByEmail,
+            ResponseReason = model.ResponseReason
+        };
+    }
+
+    /// <summary>
+    /// Converts database entity to domain model.
+    /// </summary>
+    private static ApprovalRequest ToModel(ApprovalRequestEntity entity)
+    {
+        return new ApprovalRequest
+        {
+            DeploymentExecutionId = entity.DeploymentExecutionId,
+            ApprovalId = entity.ApprovalId,
+            RequesterEmail = entity.RequesterEmail,
+            TargetEnvironment = Enum.Parse<EnvironmentType>(entity.TargetEnvironment),
+            ModuleName = entity.ModuleName,
+            Version = Version.Parse(entity.ModuleVersion),
+            Status = entity.Status,
+            ApproverEmails = entity.ApproverEmails.ToList(),
+            RequestedAt = entity.RequestedAt,
+            TimeoutAt = entity.TimeoutAt,
+            RespondedAt = entity.RespondedAt,
+            RespondedByEmail = entity.RespondedByEmail,
+            ResponseReason = entity.ResponseReason
+        };
     }
 
     /// <summary>
@@ -405,7 +476,6 @@ public class ApprovalService : IApprovalService
                 DecisionAt = request.RespondedAt,
                 DecisionReason = request.ResponseReason,
                 TimeoutAt = request.TimeoutAt,
-                // IsExpired is a computed column, cannot be set
                 Metadata = null,
                 CreatedAt = DateTime.UtcNow
             };
@@ -418,4 +488,6 @@ public class ApprovalService : IApprovalService
             _logger.LogError(ex, "Failed to write audit log for approval event {EventType}", eventType);
         }
     }
+
+    #endregion
 }

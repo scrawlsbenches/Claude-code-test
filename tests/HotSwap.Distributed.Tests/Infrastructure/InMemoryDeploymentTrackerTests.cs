@@ -94,6 +94,122 @@ public class InMemoryDeploymentTrackerTests
         results.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task StoreFailureAsync_ShouldStoreFailedDeploymentResult()
+    {
+        // Arrange
+        var executionId = Guid.NewGuid();
+        var exception = new InvalidOperationException("Deployment failed due to network error");
+
+        // Act
+        await _tracker.StoreFailureAsync(executionId, exception);
+
+        // Assert
+        var result = await _tracker.GetResultAsync(executionId);
+        result.Should().NotBeNull();
+        result!.ExecutionId.Should().Be(executionId);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Deployment failed with exception");
+        result.Message.Should().Contain("network error");
+    }
+
+    [Fact]
+    public async Task StoreFailureAsync_ShouldCreateStageResultWithExceptionDetails()
+    {
+        // Arrange
+        var executionId = Guid.NewGuid();
+        var exception = new ArgumentException("Invalid module name");
+
+        // Act
+        await _tracker.StoreFailureAsync(executionId, exception);
+
+        // Assert
+        var result = await _tracker.GetResultAsync(executionId);
+        result.Should().NotBeNull();
+        result!.StageResults.Should().HaveCount(1);
+
+        var stageResult = result.StageResults.First();
+        stageResult.StageName.Should().Be("Exception");
+        stageResult.Status.Should().Be(PipelineStageStatus.Failed);
+        stageResult.Message.Should().Be("Invalid module name");
+        stageResult.Duration.Should().Be(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task StoreFailureAsync_ShouldSetStartAndEndTimesCorrectly()
+    {
+        // Arrange
+        var executionId = Guid.NewGuid();
+        var exception = new Exception("Test failure");
+        var beforeStore = DateTime.UtcNow;
+
+        // Act
+        await _tracker.StoreFailureAsync(executionId, exception);
+
+        // Assert
+        var result = await _tracker.GetResultAsync(executionId);
+        result.Should().NotBeNull();
+        result!.StartTime.Should().BeOnOrAfter(beforeStore);
+        result.EndTime.Should().BeOnOrAfter(result.StartTime);
+        result.EndTime.Should().BeCloseTo(result.StartTime, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task StoreFailureAsync_WithNullException_ShouldHandleGracefully()
+    {
+        // Arrange
+        var executionId = Guid.NewGuid();
+
+        // Act
+        await _tracker.StoreFailureAsync(executionId, null!);
+
+        // Assert
+        var result = await _tracker.GetResultAsync(executionId);
+        result.Should().NotBeNull();
+        result!.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StoreFailureAsync_WithCancellationToken_ShouldRespectCancellation()
+    {
+        // Arrange
+        var executionId = Guid.NewGuid();
+        var exception = new Exception("Test");
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act - Should complete successfully even with cancelled token (fire and forget pattern)
+        await _tracker.StoreFailureAsync(executionId, exception, cts.Token);
+
+        // Assert - Should still store the failure
+        var result = await _tracker.GetResultAsync(executionId);
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task StoreFailureAsync_MultipleFailures_ShouldBeIndependent()
+    {
+        // Arrange
+        var executionId1 = Guid.NewGuid();
+        var executionId2 = Guid.NewGuid();
+        var exception1 = new InvalidOperationException("Error 1");
+        var exception2 = new ArgumentException("Error 2");
+
+        // Act
+        await _tracker.StoreFailureAsync(executionId1, exception1);
+        await _tracker.StoreFailureAsync(executionId2, exception2);
+
+        // Assert
+        var result1 = await _tracker.GetResultAsync(executionId1);
+        var result2 = await _tracker.GetResultAsync(executionId2);
+
+        result1.Should().NotBeNull();
+        result1!.Message.Should().Contain("Error 1");
+
+        result2.Should().NotBeNull();
+        result2!.Message.Should().Contain("Error 2");
+    }
+
     #endregion
 
     #region In-Progress Tracking Tests

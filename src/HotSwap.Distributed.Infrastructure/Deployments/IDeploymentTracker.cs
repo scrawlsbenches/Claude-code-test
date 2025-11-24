@@ -30,7 +30,12 @@ public interface IDeploymentTracker
     /// <summary>
     /// Removes a deployment from in-progress tracking
     /// </summary>
-    Task RemoveInProgressAsync(Guid executionId);
+    Task RemoveInProgressAsync(Guid executionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stores a deployment failure
+    /// </summary>
+    Task StoreFailureAsync(Guid executionId, Exception exception, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all completed deployment results

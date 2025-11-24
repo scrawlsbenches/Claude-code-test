@@ -111,7 +111,7 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
         return Task.CompletedTask;
     }
 
-    public Task RemoveInProgressAsync(Guid executionId)
+    public Task RemoveInProgressAsync(Guid executionId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -124,6 +124,55 @@ public class InMemoryDeploymentTracker : IDeploymentTracker
         {
             // Cache already disposed (application shutting down) - ignore
             _logger.LogDebug("Cache disposed while removing in-progress deployment {ExecutionId}", executionId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task StoreFailureAsync(Guid executionId, Exception exception, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Create a failed pipeline execution result
+            var now = DateTime.UtcNow;
+            var exceptionMessage = exception?.Message ?? "Unknown error";
+            var result = new PipelineExecutionResult
+            {
+                ExecutionId = executionId,
+                ModuleName = "Unknown", // Module name not available during failure
+                Version = new Version(0, 0, 0),
+                Success = false,
+                Message = $"Deployment failed with exception: {exceptionMessage}",
+                StartTime = now,
+                EndTime = now,
+                StageResults = new List<PipelineStageResult>
+                {
+                    new PipelineStageResult
+                    {
+                        StageName = "Exception",
+                        Status = Domain.Enums.PipelineStageStatus.Failed,
+                        Message = exceptionMessage,
+                        StartTime = now,
+                        EndTime = now // Duration will be calculated automatically
+                    }
+                }
+            };
+
+            var key = ResultKeyPrefix + executionId;
+            var options = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = ResultExpiration,
+                Priority = _cachePriority
+            };
+
+            _cache.Set(key, result, options);
+            _resultIds.TryAdd(executionId, 0);
+            _logger.LogError(exception, "Stored deployment failure for execution {ExecutionId}", executionId);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Cache already disposed (application shutting down) - ignore
+            _logger.LogDebug("Cache disposed while storing failure for deployment {ExecutionId}", executionId);
         }
 
         return Task.CompletedTask;
