@@ -7,166 +7,145 @@ namespace HotSwap.Distributed.Tests.Domain;
 public class RouteResultTests
 {
     [Fact]
-    public void CreateSuccess_WithValidParameters_ReturnsSuccessResult()
+    public void CreateSuccess_WithConsumers_ShouldCreateSuccessfulResult()
     {
-        // Arrange
-        var strategyName = "LoadBalanced";
-        var consumerIds = new List<string> { "consumer-1", "consumer-2" };
-        var reason = "Round-robin selection";
-        var metadata = new Dictionary<string, object> { { "index", 0 } };
+        var strategyName = "round-robin";
+        var consumerIds = new List<string> { "consumer-1", "consumer-2", "consumer-3" };
+        var reason = "Load balanced across 3 consumers";
 
-        // Act
-        var result = RouteResult.CreateSuccess(strategyName, consumerIds, reason, metadata);
+        var result = RouteResult.CreateSuccess(strategyName, consumerIds, reason);
 
-        // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
         result.StrategyName.Should().Be(strategyName);
         result.ConsumerIds.Should().BeEquivalentTo(consumerIds);
         result.Reason.Should().Be(reason);
-        result.Metadata.Should().ContainKey("index");
         result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
-    public void CreateSuccess_WithMinimalParameters_ReturnsSuccessResult()
+    public void CreateSuccess_WithMetadata_ShouldIncludeMetadata()
     {
-        // Arrange
-        var strategyName = "Direct";
-        var consumerIds = new List<string> { "consumer-1" };
+        var strategyName = "priority-based";
+        var consumerIds = new List<string> { "high-priority-consumer" };
+        var metadata = new Dictionary<string, object>
+        {
+            { "priority_score", 100 },
+            { "latency_ms", 50 }
+        };
 
-        // Act
-        var result = RouteResult.CreateSuccess(strategyName, consumerIds);
+        var result = RouteResult.CreateSuccess(strategyName, consumerIds, metadata: metadata);
 
-        // Assert
         result.Success.Should().BeTrue();
-        result.StrategyName.Should().Be(strategyName);
-        result.ConsumerIds.Should().ContainSingle();
-        result.Reason.Should().BeNull();
-        result.Metadata.Should().BeNull();
+        result.Metadata.Should().NotBeNull();
+        result.Metadata.Should().ContainKey("priority_score");
+        result.Metadata!["priority_score"].Should().Be(100);
     }
 
     [Fact]
-    public void CreateFailure_WithErrorMessage_ReturnsFailureResult()
+    public void CreateSuccess_WithEmptyConsumers_ShouldStillSucceed()
     {
-        // Arrange
-        var strategyName = "Priority";
-        var errorMessage = "No consumers available";
+        var strategyName = "broadcast";
+        var consumerIds = new List<string>();
 
-        // Act
+        var result = RouteResult.CreateSuccess(strategyName, consumerIds);
+
+        result.Success.Should().BeTrue();
+        result.ConsumerIds.Should().BeEmpty();
+        result.HasConsumers().Should().BeFalse();
+    }
+
+    [Fact]
+    public void CreateFailure_ShouldCreateFailedResult()
+    {
+        var strategyName = "sticky-session";
+        var errorMessage = "No available consumers in the target group";
+
         var result = RouteResult.CreateFailure(strategyName, errorMessage);
 
-        // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
         result.StrategyName.Should().Be(strategyName);
-        result.ConsumerIds.Should().BeEmpty();
         result.ErrorMessage.Should().Be(errorMessage);
+        result.ConsumerIds.Should().BeEmpty();
     }
 
     [Fact]
-    public void HasConsumers_WithConsumers_ReturnsTrue()
+    public void HasConsumers_WithConsumers_ShouldReturnTrue()
     {
-        // Arrange
-        var result = RouteResult.CreateSuccess("Direct", new List<string> { "consumer-1" });
+        var result = RouteResult.CreateSuccess("test", new List<string> { "consumer-1" });
 
-        // Act
-        var hasConsumers = result.HasConsumers();
-
-        // Assert
-        hasConsumers.Should().BeTrue();
+        result.HasConsumers().Should().BeTrue();
     }
 
     [Fact]
-    public void HasConsumers_WithNoConsumers_ReturnsFalse()
+    public void HasConsumers_WithEmptyList_ShouldReturnFalse()
     {
-        // Arrange
-        var result = RouteResult.CreateFailure("Direct", "No consumers");
+        var result = RouteResult.CreateSuccess("test", new List<string>());
 
-        // Act
-        var hasConsumers = result.HasConsumers();
-
-        // Assert
-        hasConsumers.Should().BeFalse();
-    }
-
-    [Fact]
-    public void GetConsumerCount_WithMultipleConsumers_ReturnsCorrectCount()
-    {
-        // Arrange
-        var consumerIds = new List<string> { "consumer-1", "consumer-2", "consumer-3" };
-        var result = RouteResult.CreateSuccess("FanOut", consumerIds);
-
-        // Act
-        var count = result.GetConsumerCount();
-
-        // Assert
-        count.Should().Be(3);
-    }
-
-    [Fact]
-    public void GetConsumerCount_WithNoConsumers_ReturnsZero()
-    {
-        // Arrange
-        var result = RouteResult.CreateFailure("Direct", "No consumers");
-
-        // Act
-        var count = result.GetConsumerCount();
-
-        // Assert
-        count.Should().Be(0);
-    }
-
-    [Fact]
-    public void CreateSuccess_WithEmptyConsumerList_ReturnsSuccessWithNoConsumers()
-    {
-        // Arrange
-        var strategyName = "ContentBased";
-        var emptyList = new List<string>();
-
-        // Act
-        var result = RouteResult.CreateSuccess(strategyName, emptyList);
-
-        // Assert
-        result.Success.Should().BeTrue();
         result.HasConsumers().Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasConsumers_WithNullList_ShouldReturnFalse()
+    {
+        var result = new RouteResult
+        {
+            Success = true,
+            StrategyName = "test",
+            ConsumerIds = null!
+        };
+
+        result.HasConsumers().Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetConsumerCount_WithMultipleConsumers_ShouldReturnCorrectCount()
+    {
+        var consumerIds = new List<string> { "c1", "c2", "c3", "c4", "c5" };
+        var result = RouteResult.CreateSuccess("test", consumerIds);
+
+        result.GetConsumerCount().Should().Be(5);
+    }
+
+    [Fact]
+    public void GetConsumerCount_WithEmptyList_ShouldReturnZero()
+    {
+        var result = RouteResult.CreateSuccess("test", new List<string>());
+
         result.GetConsumerCount().Should().Be(0);
     }
 
     [Fact]
-    public void RouteResult_WithMetadata_StoresAndRetrievesCorrectly()
+    public void GetConsumerCount_WithNullList_ShouldReturnZero()
     {
-        // Arrange
-        var metadata = new Dictionary<string, object>
+        var result = new RouteResult
         {
-            { "roundRobinIndex", 5 },
-            { "priorityScore", 8.7 },
-            { "consumerLoad", new List<int> { 10, 20, 15 } }
+            Success = true,
+            StrategyName = "test",
+            ConsumerIds = null!
         };
-        var result = RouteResult.CreateSuccess("LoadBalanced", new List<string> { "consumer-1" }, metadata: metadata);
 
-        // Act & Assert
-        result.Metadata.Should().NotBeNull();
-        result.Metadata.Should().HaveCount(3);
-        result.Metadata!["roundRobinIndex"].Should().Be(5);
-        result.Metadata["priorityScore"].Should().Be(8.7);
-        result.Metadata["consumerLoad"].Should().BeEquivalentTo(new List<int> { 10, 20, 15 });
+        result.GetConsumerCount().Should().Be(0);
     }
 
     [Fact]
-    public void RouteResult_RequiredProperties_CanBeSet()
+    public void RouteResult_CanSetAllProperties()
     {
-        // Arrange & Act
         var result = new RouteResult
         {
-            ConsumerIds = new List<string> { "test-consumer" },
-            StrategyName = "TestStrategy",
-            Success = true
+            Success = true,
+            StrategyName = "custom-strategy",
+            ConsumerIds = new List<string> { "consumer-1" },
+            Reason = "Custom routing logic",
+            Metadata = new Dictionary<string, object> { { "key", "value" } },
+            ErrorMessage = null
         };
 
-        // Assert
-        result.ConsumerIds.Should().ContainSingle();
-        result.StrategyName.Should().Be("TestStrategy");
         result.Success.Should().BeTrue();
+        result.StrategyName.Should().Be("custom-strategy");
+        result.ConsumerIds.Should().ContainSingle("consumer-1");
+        result.Reason.Should().Be("Custom routing logic");
+        result.Metadata.Should().ContainKey("key");
     }
 }
