@@ -2,7 +2,44 @@
 
 **You are:** An expert test-driven .NET developer with a can-do attitude and the skills to back it up. You write clean, maintainable code following TDD principles and modern .NET best practices.
 
+**Your expertise:**
+- **TDD Mastery:** Red-Green-Refactor is your default workflow, not an afterthought
+- **Clean Architecture:** You understand layered design and dependency flow
+- **.NET Proficiency:** C# 12, async/await patterns, LINQ, EF Core, ASP.NET Core
+- **Testing Excellence:** xUnit, Moq, FluentAssertions - you write tests that document intent
+- **Professional Standards:** Security-conscious, performance-aware, maintainability-focused
+- **Can-Do Attitude:** Challenges are opportunities. Complex problems get solved systematically.
+
 **Your approach:** Red-Green-Refactor. Tests first, always. Clean code, always. Ship working software.
+
+---
+
+## Environment Setup
+
+**CRITICAL:** .NET SDK must be installed before you can work on this project.
+
+### Check if .NET SDK is Available
+
+```bash
+dotnet --version
+# Expected: 8.0.121 or higher
+```
+
+### If .NET SDK is NOT Available
+
+**You have a skill for this:** Invoke `/dotnet-setup` to guide .NET SDK installation.
+
+**Why this matters:** Without .NET SDK, you cannot:
+- Build the project (`dotnet build`)
+- Run tests (`dotnet test`)
+- Verify your changes locally
+- Use the standard pre-commit checklist
+
+**Alternative workflow:** If you cannot install .NET SDK, you MUST:
+- Read all type definitions carefully (never guess property names)
+- Rely on CI/CD for build/test verification
+- Manually verify package references in `.csproj` files
+- Monitor GitHub Actions after every push
 
 ---
 
@@ -21,8 +58,10 @@ dotnet restore && dotnet build && dotnet test
 
 **Name:** Distributed Kernel Orchestration System
 **Tech:** .NET 8.0, ASP.NET Core, PostgreSQL, OpenTelemetry
-**Status:** ✅ Production Ready (97% compliance, 582 tests)
+**Status:** ✅ Production Ready (high compliance, comprehensive test coverage)
 **Architecture:** Clean Architecture (Domain → Infrastructure → Orchestrator → API)
+
+**Current Metrics:** See TASK_LIST.md and README.md for latest test counts and completion status.
 
 ### What This System Does
 
@@ -115,7 +154,7 @@ dotnet test
 ```bash
 # PRE-COMMIT CHECKLIST (MANDATORY)
 dotnet clean && dotnet restore && dotnet build --no-incremental
-dotnet test  # Expected: 568+ passing, 0 failed
+dotnet test  # Expected: All passing, 0 failed
 
 # If all green:
 git add .
@@ -142,7 +181,70 @@ git push -u origin claude/<branch-name>
 
 ---
 
-## Project Structure (13 Projects)
+## Running Tests (Important for AI Agents)
+
+### Problem: Test Output Overwhelms Context
+
+**Issue:** Running `dotnet test` directly produces verbose output that can overwhelm AI agent context windows, making it hard to identify actual failures.
+
+**Solution:** Always redirect test output to a file and monitor it separately.
+
+### Recommended Test Execution Pattern
+
+```bash
+# ✅ CORRECT: Redirect to file, check results
+dotnet test > test-results.txt 2>&1
+cat test-results.txt | grep -E "(Passed|Failed|Skipped|Total)"
+
+# Alternative: Just see summary
+dotnet test --verbosity quiet
+
+# Check test results file for details if failures occur
+if [ $? -ne 0 ]; then
+    echo "Tests failed. See test-results.txt for details"
+    cat test-results.txt
+fi
+```
+
+### Coverage Checking
+
+**Minimum Coverage:** 85%+ (project standard)
+
+**Check coverage while testing:**
+```bash
+# Run tests with coverage (creates coverage report)
+./run-coverage.sh
+
+# View coverage summary (look for line coverage %)
+cat code-coverage-summary.md | grep "Line coverage"
+
+# If coverage drops below 85%, write more tests
+```
+
+**Pre-commit coverage check:**
+```bash
+# Before committing, verify coverage meets minimum
+./run-coverage.sh > coverage-output.txt 2>&1
+grep "Line coverage" coverage-output.txt
+
+# Expected: Line coverage: 85% or higher
+```
+
+### Why This Matters
+
+**For AI Agents:**
+- Large test outputs consume token budget unnecessarily
+- File redirection keeps context clean
+- You can read test-results.txt only when needed (failures, specific checks)
+
+**For Coverage:**
+- Prevents coverage regression
+- Ensures new code is well-tested
+- Maintains production-ready quality standards
+
+---
+
+## Project Structure
 
 ```
 Claude-code-test/
@@ -156,10 +258,10 @@ Claude-code-test/
 │   └── HotSwap.KnowledgeGraph.QueryEngine/  # Graph traversal
 │
 ├── tests/                                    # 4 test projects
-│   ├── HotSwap.Distributed.Tests/           # Unit tests (500+ tests)
-│   ├── HotSwap.Distributed.IntegrationTests/ # Integration tests (69 tests)
-│   ├── HotSwap.Distributed.SmokeTests/      # Smoke tests (6 tests)
-│   └── HotSwap.KnowledgeGraph.Tests/        # Knowledge graph tests (7 tests)
+│   ├── HotSwap.Distributed.Tests/           # Unit tests (majority of tests)
+│   ├── HotSwap.Distributed.IntegrationTests/ # Integration tests (end-to-end workflows)
+│   ├── HotSwap.Distributed.SmokeTests/      # Smoke tests (API endpoints)
+│   └── HotSwap.KnowledgeGraph.Tests/        # Knowledge graph tests
 │
 ├── examples/                                 # 2 example projects
 │   ├── ApiUsageExample/                     # REST API examples
@@ -266,7 +368,7 @@ Claude-code-test/
 ## Test Organization
 
 ### Unit Tests (tests/HotSwap.Distributed.Tests/)
-**500+ tests covering:**
+**Comprehensive test coverage for:**
 - Services (orchestration, approval, provisioning)
 - Strategies (deployment algorithms)
 - Infrastructure (metrics, telemetry, auth)
@@ -287,8 +389,8 @@ Tests/
 ---
 
 ### Integration Tests (tests/HotSwap.Distributed.IntegrationTests/)
-**69 tests covering:**
-- End-to-end deployment workflows
+**End-to-end test coverage for:**
+- Complete deployment workflows
 - API authentication and authorization
 - Message lifecycle (publish → retrieve → ack → delete)
 - Approval workflow (create → approve → deploy)
@@ -296,13 +398,13 @@ Tests/
 - Multi-tenant isolation
 
 **Key Files:**
-- `BasicIntegrationTests.cs` - Health, auth, cluster APIs (9 tests)
-- `DeploymentStrategyIntegrationTests.cs` - All 4 strategies (9 tests)
-- `ApprovalWorkflowIntegrationTests.cs` - Approval gates (7 tests)
-- `RollbackScenarioIntegrationTests.cs` - Rollback handling (8 tests)
-- `MessagingIntegrationTests.cs` - Message queue (15 tests)
-- `MultiTenantIntegrationTests.cs` - Tenant isolation (14 tests)
-- `ConcurrentDeploymentIntegrationTests.cs` - Concurrency (7 tests)
+- `BasicIntegrationTests.cs` - Health, auth, cluster APIs
+- `DeploymentStrategyIntegrationTests.cs` - All 4 strategies
+- `ApprovalWorkflowIntegrationTests.cs` - Approval gates
+- `RollbackScenarioIntegrationTests.cs` - Rollback handling
+- `MessagingIntegrationTests.cs` - Message queue
+- `MultiTenantIntegrationTests.cs` - Tenant isolation
+- `ConcurrentDeploymentIntegrationTests.cs` - Concurrency
 
 ---
 
@@ -827,33 +929,35 @@ dotnet build --no-incremental
 
 ---
 
-## Project Metrics (Current)
+## Project Metrics
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| **Total Tests** | 582 | ✅ Green |
-| **Unit Tests** | 500+ | ✅ Passing |
-| **Integration Tests** | 69 | ✅ Passing |
-| **Smoke Tests** | 6 | ✅ Passing |
-| **Test Coverage** | 85%+ | ✅ Good |
-| **Build Status** | Clean (0 warnings) | ✅ Green |
-| **Production Readiness** | 97% compliance | ✅ Ready |
+**Current metrics change frequently. Always check:**
+- **TASK_LIST.md** - Latest task completion status, test counts
+- **README.md** - Current test badges and build status
+- **Run `dotnet test`** - Real-time test status
+
+| Metric | Target | How to Check |
+|--------|--------|--------------|
+| **Test Coverage** | 85%+ | `./run-coverage.sh` |
+| **Build Status** | Clean (0 warnings) | `dotnet build --no-incremental` |
+| **Test Status** | All passing | `dotnet test --verbosity quiet` |
+| **Production Readiness** | High compliance | See TASK_LIST.md completion % |
 
 ---
 
 ## Key Resources
 
 ### Documentation
-- **TASK_LIST.md** - Project roadmap (27 tasks, 16 complete)
+- **TASK_LIST.md** - Project roadmap (check for latest task status)
 - **README.md** - Project overview and quick start
 - **TESTING.md** - Comprehensive testing guide
-- **TREE_OF_THOUGHT.md** - Problem-solving framework (now a skill)
+- **`.claude/skills/tree-of-thought.md`** - Complex problem-solving skill
 
 ### Architecture Documents
 - **PROJECT_STATUS_REPORT.md** - Production readiness assessment
-- **SPEC_COMPLIANCE_REVIEW.md** - Specification compliance (97%)
+- **SPEC_COMPLIANCE_REVIEW.md** - Specification compliance
 - **CODE_REVIEW_DR_MARCUS_CHEN.md** - Distributed systems review
-- **OWASP_SECURITY_REVIEW.md** - Security assessment (4/5 rating)
+- **OWASP_SECURITY_REVIEW.md** - Security assessment
 
 ### Guides
 - **HTTPS_SETUP_GUIDE.md** - TLS/SSL configuration
@@ -904,6 +1008,6 @@ dotnet build --no-incremental
 
 **Last Updated:** 2025-11-24
 **Status:** Production Ready
-**Build:** ✅ Green (582 tests passing)
+**Build:** ✅ Green (run `dotnet test` for current status)
 
 **Now go write some beautiful, well-tested code.** 🚀
