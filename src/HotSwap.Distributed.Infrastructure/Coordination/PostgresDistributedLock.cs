@@ -92,7 +92,8 @@ public class PostgresDistributedLock : IDistributedLock
     }
 
     /// <summary>
-    /// Tries to acquire a PostgreSQL advisory lock with timeout using polling strategy.
+    /// Tries to acquire a PostgreSQL advisory lock with timeout using efficient blocking strategy.
+    /// Uses lock_timeout to avoid polling overhead.
     /// </summary>
     private async Task<bool> TryAcquireLockWithTimeoutAsync(
         NpgsqlConnection connection,
@@ -100,32 +101,38 @@ public class PostgresDistributedLock : IDistributedLock
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
-        var deadline = DateTime.UtcNow + timeout;
-        var pollInterval = TimeSpan.FromMilliseconds(100); // Poll every 100ms
-
-        while (DateTime.UtcNow < deadline && !cancellationToken.IsCancellationRequested)
+        try
         {
-            // Try to acquire the lock (non-blocking)
-            await using var cmd = new NpgsqlCommand("SELECT pg_try_advisory_lock(@lockKey)", connection);
-            cmd.Parameters.AddWithValue("lockKey", lockKey);
+            // Set lock_timeout for this connection (PostgreSQL blocks until timeout)
+            // This is much more efficient than polling
+            var timeoutMs = (int)timeout.TotalMilliseconds;
 
-            var result = await cmd.ExecuteScalarAsync(cancellationToken);
-            if (result is bool acquired && acquired)
-            {
-                return true; // Lock acquired!
-            }
+            await using var setTimeoutCmd = new NpgsqlCommand(
+                "SET lock_timeout = @timeoutMs", connection);
+            setTimeoutCmd.Parameters.AddWithValue("timeoutMs", timeoutMs);
+            await setTimeoutCmd.ExecuteNonQueryAsync(cancellationToken);
 
-            // Wait before retrying (with cancellation support)
-            var remainingTime = deadline - DateTime.UtcNow;
-            var waitTime = remainingTime < pollInterval ? remainingTime : pollInterval;
+            // Use blocking pg_advisory_lock - will wait up to lock_timeout
+            await using var lockCmd = new NpgsqlCommand(
+                "SELECT pg_advisory_lock(@lockKey)", connection);
+            lockCmd.Parameters.AddWithValue("lockKey", lockKey);
 
-            if (waitTime > TimeSpan.Zero)
-            {
-                await Task.Delay(waitTime, cancellationToken);
-            }
+            await lockCmd.ExecuteNonQueryAsync(cancellationToken);
+
+            // If we get here, lock was acquired
+            return true;
         }
-
-        return false; // Timeout expired
+        catch (PostgresException ex) when (ex.SqlState == "55P03") // lock_not_available
+        {
+            _logger.LogDebug("Lock acquisition timed out for key {LockKey} after {Timeout}ms",
+                lockKey, timeout.TotalMilliseconds);
+            return false;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogDebug("Lock acquisition cancelled for key {LockKey}", lockKey);
+            return false;
+        }
     }
 
     /// <summary>
