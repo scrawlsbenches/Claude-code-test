@@ -37,7 +37,7 @@ public class AuditLogRepository : IAuditLogRepository
         CancellationToken cancellationToken = default)
     {
         return await _context.AuditLogs
-            .Where(a => a.EntityType == entityType && a.EntityId == entityId.ToString())
+            .Where(a => a.ResourceType == entityType && a.ResourceId == entityId.ToString())
             .OrderByDescending(a => a.Timestamp)
             .ToListAsync(cancellationToken);
     }

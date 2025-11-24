@@ -5,6 +5,7 @@ using HotSwap.Distributed.Infrastructure.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -19,6 +20,7 @@ public class UnitOfWorkTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly AuditLogDbContext _dbContext;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly UnitOfWork _unitOfWork;
 
     public UnitOfWorkTests()
@@ -34,7 +36,9 @@ public class UnitOfWorkTests : IDisposable
         _dbContext = new AuditLogDbContext(options);
         _dbContext.Database.EnsureCreated();
 
-        _unitOfWork = new UnitOfWork(_dbContext, NullLogger<UnitOfWork>.Instance);
+        _loggerFactory = NullLoggerFactory.Instance;
+
+        _unitOfWork = new UnitOfWork(_dbContext, NullLogger<UnitOfWork>.Instance, _loggerFactory);
     }
 
     [Fact]
@@ -93,13 +97,11 @@ public class UnitOfWorkTests : IDisposable
 
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Test",
-            EntityId = Guid.NewGuid(),
+            EventType = "TestEvent",
+            EventCategory = "Test",
             Action = "Create",
-            Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            ResourceType = "Test",
+            ResourceId = Guid.NewGuid().ToString()
         };
 
         await _unitOfWork.AuditLogs.CreateAsync(auditLog);
@@ -110,7 +112,7 @@ public class UnitOfWorkTests : IDisposable
         // Assert
         _unitOfWork.CurrentTransaction.Should().BeNull();
 
-        var retrieved = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.Id);
+        var retrieved = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.EventId);
         retrieved.Should().NotBeNull();
         retrieved!.Action.Should().Be("Create");
     }
@@ -123,13 +125,11 @@ public class UnitOfWorkTests : IDisposable
 
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Test",
-            EntityId = Guid.NewGuid(),
+            EventType = "TestEvent",
+            EventCategory = "Test",
             Action = "Create",
-            Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            ResourceType = "Test",
+            ResourceId = Guid.NewGuid().ToString()
         };
 
         await _unitOfWork.AuditLogs.CreateAsync(auditLog);
@@ -140,7 +140,7 @@ public class UnitOfWorkTests : IDisposable
         // Assert
         _unitOfWork.CurrentTransaction.Should().BeNull();
 
-        var retrieved = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.Id);
+        var retrieved = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.EventId);
         retrieved.Should().BeNull(); // Should not exist after rollback
     }
 
@@ -158,13 +158,11 @@ public class UnitOfWorkTests : IDisposable
         // Arrange
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Test",
-            EntityId = Guid.NewGuid(),
+            EventType = "TestEvent",
+            EventCategory = "Test",
             Action = "Create",
-            Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            ResourceType = "Test",
+            ResourceId = Guid.NewGuid().ToString()
         };
 
         await _unitOfWork.AuditLogs.CreateAsync(auditLog);
@@ -175,7 +173,7 @@ public class UnitOfWorkTests : IDisposable
         // Assert
         changeCount.Should().Be(1);
 
-        var retrieved = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.Id);
+        var retrieved = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.EventId);
         retrieved.Should().NotBeNull();
     }
 
@@ -217,7 +215,7 @@ public class UnitOfWorkTests : IDisposable
 
         // Assert - Both should be saved atomically
         var retrievedApproval = await _unitOfWork.Approvals.GetByIdAsync(approval.DeploymentExecutionId);
-        var retrievedAuditLog = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.Id);
+        var retrievedAuditLog = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.EventId);
 
         retrievedApproval.Should().NotBeNull();
         retrievedAuditLog.Should().NotBeNull();
@@ -262,7 +260,7 @@ public class UnitOfWorkTests : IDisposable
 
         // Assert - Neither should be saved
         var retrievedApproval = await _unitOfWork.Approvals.GetByIdAsync(approval.DeploymentExecutionId);
-        var retrievedAuditLog = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.Id);
+        var retrievedAuditLog = await _unitOfWork.AuditLogs.GetByIdAsync(auditLog.EventId);
 
         retrievedApproval.Should().BeNull();
         retrievedAuditLog.Should().BeNull();
@@ -277,13 +275,11 @@ public class UnitOfWorkTests : IDisposable
         // Create an invalid entity that will fail on save
         var invalidAuditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = new string('X', 300), // Exceeds max length
-            EntityId = Guid.NewGuid(),
+            EventType = new string('X', 300), // Exceeds max length of 100
+            EventCategory = "Test",
             Action = "Create",
-            Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            ResourceType = "Test",
+            ResourceId = Guid.NewGuid().ToString()
         };
 
         await _unitOfWork.AuditLogs.CreateAsync(invalidAuditLog);
@@ -303,13 +299,11 @@ public class UnitOfWorkTests : IDisposable
 
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Test",
-            EntityId = Guid.NewGuid(),
+            EventType = "TestEvent",
+            EventCategory = "Test",
             Action = "Create",
-            Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            ResourceType = "Test",
+            ResourceId = Guid.NewGuid().ToString()
         };
 
         await _unitOfWork.AuditLogs.CreateAsync(auditLog);
@@ -325,7 +319,7 @@ public class UnitOfWorkTests : IDisposable
         var newUnitOfWork = new UnitOfWork(newContext, NullLogger<UnitOfWork>.Instance);
 
         // Assert
-        var retrieved = await newUnitOfWork.AuditLogs.GetByIdAsync(auditLog.Id);
+        var retrieved = await newUnitOfWork.AuditLogs.GetByIdAsync(auditLog.EventId);
         retrieved.Should().BeNull(); // Should not exist after dispose without commit
 
         newUnitOfWork.Dispose();

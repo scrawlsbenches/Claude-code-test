@@ -40,25 +40,23 @@ public class AuditLogRepositoryTests : IDisposable
         // Arrange
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Deployment",
-            EntityId = Guid.NewGuid(),
+            EventType = "DeploymentStarted",
+            EventCategory = "Deployment",
             Action = "Deploy",
-            Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{\"version\": \"1.0.0\"}"
+            ResourceType = "Module",
+            ResourceId = Guid.NewGuid().ToString(),
+            Metadata = "{\"version\": \"1.0.0\"}"
         };
 
         // Act
         await _repository.CreateAsync(auditLog);
-        await _dbContext.SaveChangesAsync();
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(auditLog.Id);
+        var retrieved = await _repository.GetByIdAsync(auditLog.EventId);
         retrieved.Should().NotBeNull();
-        retrieved!.EntityType.Should().Be("Deployment");
+        retrieved!.EventType.Should().Be("DeploymentStarted");
         retrieved.Action.Should().Be("Deploy");
-        retrieved.UserId.Should().Be("test-user");
+        retrieved.ResourceType.Should().Be("Module");
     }
 
     [Fact]
@@ -67,25 +65,22 @@ public class AuditLogRepositoryTests : IDisposable
         // Arrange
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Approval",
-            EntityId = Guid.NewGuid(),
+            EventType = "ApprovalRequested",
+            EventCategory = "Approval",
             Action = "Create",
-            Timestamp = DateTime.UtcNow,
-            UserId = "user@example.com",
-            Changes = "{}"
+            ResourceType = "Approval",
+            ResourceId = Guid.NewGuid().ToString()
         };
 
         await _repository.CreateAsync(auditLog);
-        await _dbContext.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByIdAsync(auditLog.Id);
+        var result = await _repository.GetByIdAsync(auditLog.EventId);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(auditLog.Id);
-        result.EntityType.Should().Be("Approval");
+        result!.EventId.Should().Be(auditLog.EventId);
+        result.EventType.Should().Be("ApprovalRequested");
     }
 
     [Fact]
@@ -102,54 +97,50 @@ public class AuditLogRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetByEntityAsync_ShouldReturnAuditLogsForEntity()
+    public async Task GetByEntityAsync_ShouldReturnAuditLogsForResource()
     {
         // Arrange
-        var entityId = Guid.NewGuid();
-        var entityType = "Deployment";
+        var resourceId = Guid.NewGuid();
+        var resourceType = "Deployment";
 
         var auditLogs = new[]
         {
             new AuditLog
             {
-                Id = Guid.NewGuid(),
-                EntityType = entityType,
-                EntityId = entityId,
+                EventType = "DeploymentCreated",
+                EventCategory = "Deployment",
                 Action = "Create",
-                Timestamp = DateTime.UtcNow.AddMinutes(-10),
-                UserId = "user1",
-                Changes = "{}"
+                ResourceType = resourceType,
+                ResourceId = resourceId.ToString(),
+                Timestamp = DateTime.UtcNow.AddMinutes(-10)
             },
             new AuditLog
             {
-                Id = Guid.NewGuid(),
-                EntityType = entityType,
-                EntityId = entityId,
+                EventType = "DeploymentUpdated",
+                EventCategory = "Deployment",
                 Action = "Update",
-                Timestamp = DateTime.UtcNow.AddMinutes(-5),
-                UserId = "user2",
-                Changes = "{}"
+                ResourceType = resourceType,
+                ResourceId = resourceId.ToString(),
+                Timestamp = DateTime.UtcNow.AddMinutes(-5)
             },
             new AuditLog
             {
-                Id = Guid.NewGuid(),
-                EntityType = entityType,
-                EntityId = entityId,
-                Action = "Delete",
-                Timestamp = DateTime.UtcNow,
-                UserId = "user3",
-                Changes = "{}"
+                EventType = "DeploymentCompleted",
+                EventCategory = "Deployment",
+                Action = "Complete",
+                ResourceType = resourceType,
+                ResourceId = resourceId.ToString(),
+                Timestamp = DateTime.UtcNow
             },
-            // Different entity - should not be returned
+            // Different resource - should not be returned
             new AuditLog
             {
-                Id = Guid.NewGuid(),
-                EntityType = entityType,
-                EntityId = Guid.NewGuid(),
+                EventType = "DeploymentCreated",
+                EventCategory = "Deployment",
                 Action = "Create",
-                Timestamp = DateTime.UtcNow,
-                UserId = "user4",
-                Changes = "{}"
+                ResourceType = resourceType,
+                ResourceId = Guid.NewGuid().ToString(),
+                Timestamp = DateTime.UtcNow
             }
         };
 
@@ -157,63 +148,58 @@ public class AuditLogRepositoryTests : IDisposable
         {
             await _repository.CreateAsync(log);
         }
-        await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _repository.GetByEntityAsync(entityType, entityId);
+        var results = await _repository.GetByEntityAsync(resourceType, resourceId);
 
         // Assert
         results.Should().HaveCount(3);
-        results.Should().OnlyContain(l => l.EntityId == entityId);
-        results.Should().OnlyContain(l => l.EntityType == entityType);
+        results.Should().OnlyContain(l => l.ResourceId == resourceId.ToString());
+        results.Should().OnlyContain(l => l.ResourceType == resourceType);
 
         // Should be ordered by timestamp descending (most recent first)
-        results[0].Action.Should().Be("Delete");
-        results[1].Action.Should().Be("Update");
-        results[2].Action.Should().Be("Create");
+        results[0].EventType.Should().Be("DeploymentCompleted");
+        results[1].EventType.Should().Be("DeploymentUpdated");
+        results[2].EventType.Should().Be("DeploymentCreated");
     }
 
     [Fact]
     public async Task GetByEntityAsync_WhenNoMatchingLogs_ShouldReturnEmptyList()
     {
         // Arrange
-        var entityId = Guid.NewGuid();
-        var entityType = "NonExistent";
+        var resourceId = Guid.NewGuid();
+        var resourceType = "NonExistent";
 
         // Act
-        var results = await _repository.GetByEntityAsync(entityType, entityId);
+        var results = await _repository.GetByEntityAsync(resourceType, resourceId);
 
         // Assert
         results.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task GetByEntityAsync_ShouldFilterByEntityType()
+    public async Task GetByEntityAsync_ShouldFilterByResourceType()
     {
         // Arrange
-        var entityId = Guid.NewGuid();
+        var resourceId = Guid.NewGuid();
 
         var auditLogs = new[]
         {
             new AuditLog
             {
-                Id = Guid.NewGuid(),
-                EntityType = "Deployment",
-                EntityId = entityId,
+                EventType = "DeploymentCreated",
+                EventCategory = "Deployment",
                 Action = "Create",
-                Timestamp = DateTime.UtcNow,
-                UserId = "user1",
-                Changes = "{}"
+                ResourceType = "Deployment",
+                ResourceId = resourceId.ToString()
             },
             new AuditLog
             {
-                Id = Guid.NewGuid(),
-                EntityType = "Approval",
-                EntityId = entityId, // Same entity ID, different type
+                EventType = "ApprovalRequested",
+                EventCategory = "Approval",
                 Action = "Create",
-                Timestamp = DateTime.UtcNow,
-                UserId = "user2",
-                Changes = "{}"
+                ResourceType = "Approval",
+                ResourceId = resourceId.ToString() // Same resource ID, different type
             }
         };
 
@@ -221,18 +207,17 @@ public class AuditLogRepositoryTests : IDisposable
         {
             await _repository.CreateAsync(log);
         }
-        await _dbContext.SaveChangesAsync();
 
         // Act
-        var deploymentResults = await _repository.GetByEntityAsync("Deployment", entityId);
-        var approvalResults = await _repository.GetByEntityAsync("Approval", entityId);
+        var deploymentResults = await _repository.GetByEntityAsync("Deployment", resourceId);
+        var approvalResults = await _repository.GetByEntityAsync("Approval", resourceId);
 
         // Assert
         deploymentResults.Should().HaveCount(1);
-        deploymentResults[0].EntityType.Should().Be("Deployment");
+        deploymentResults[0].ResourceType.Should().Be("Deployment");
 
         approvalResults.Should().HaveCount(1);
-        approvalResults[0].EntityType.Should().Be("Approval");
+        approvalResults[0].ResourceType.Should().Be("Approval");
     }
 
     [Fact]
@@ -241,13 +226,11 @@ public class AuditLogRepositoryTests : IDisposable
         // Arrange
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Test",
-            EntityId = Guid.NewGuid(),
+            EventType = "Test",
+            EventCategory = "Test",
             Action = "Create",
-            Timestamp = DateTime.UtcNow,
-            UserId = "test-user",
-            Changes = "{}"
+            ResourceType = "Test",
+            ResourceId = Guid.NewGuid().ToString()
         };
 
         var cts = new CancellationTokenSource();
@@ -283,10 +266,10 @@ public class AuditLogRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_WithComplexChanges_ShouldStoreJsonCorrectly()
+    public async Task CreateAsync_WithMetadata_ShouldStoreJsonCorrectly()
     {
         // Arrange
-        var complexChanges = @"{
+        var complexMetadata = @"{
             ""before"": {""status"": ""Pending"", ""version"": ""1.0.0""},
             ""after"": {""status"": ""Approved"", ""version"": ""1.0.0""},
             ""approver"": ""admin@example.com""
@@ -294,25 +277,23 @@ public class AuditLogRepositoryTests : IDisposable
 
         var auditLog = new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "Approval",
-            EntityId = Guid.NewGuid(),
-            Action = "StatusChange",
-            Timestamp = DateTime.UtcNow,
-            UserId = "admin@example.com",
-            Changes = complexChanges
+            EventType = "StatusChanged",
+            EventCategory = "Approval",
+            Action = "Update",
+            ResourceType = "Approval",
+            ResourceId = Guid.NewGuid().ToString(),
+            Metadata = complexMetadata
         };
 
         // Act
         await _repository.CreateAsync(auditLog);
-        await _dbContext.SaveChangesAsync();
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(auditLog.Id);
+        var retrieved = await _repository.GetByIdAsync(auditLog.EventId);
         retrieved.Should().NotBeNull();
-        retrieved!.Changes.Should().Contain("Pending");
-        retrieved.Changes.Should().Contain("Approved");
-        retrieved.Changes.Should().Contain("admin@example.com");
+        retrieved!.Metadata.Should().Contain("Pending");
+        retrieved.Metadata.Should().Contain("Approved");
+        retrieved.Metadata.Should().Contain("admin@example.com");
     }
 
     [Fact]
@@ -321,13 +302,12 @@ public class AuditLogRepositoryTests : IDisposable
         // Arrange
         var logs = Enumerable.Range(1, 10).Select(i => new AuditLog
         {
-            Id = Guid.NewGuid(),
-            EntityType = "TestEntity",
-            EntityId = Guid.NewGuid(),
+            EventType = $"Event{i}",
+            EventCategory = "Test",
             Action = $"Action{i}",
-            Timestamp = DateTime.UtcNow.AddMinutes(i),
-            UserId = $"user{i}",
-            Changes = $"{{\"change\": {i}}}"
+            ResourceType = "TestEntity",
+            ResourceId = Guid.NewGuid().ToString(),
+            Metadata = $"{{\"change\": {i}}}"
         }).ToList();
 
         // Act
@@ -335,15 +315,14 @@ public class AuditLogRepositoryTests : IDisposable
         {
             await _repository.CreateAsync(log);
         }
-        await _dbContext.SaveChangesAsync();
 
         // Assert
         foreach (var log in logs)
         {
-            var retrieved = await _repository.GetByIdAsync(log.Id);
+            var retrieved = await _repository.GetByIdAsync(log.EventId);
             retrieved.Should().NotBeNull();
-            retrieved!.Action.Should().Be(log.Action);
-            retrieved.UserId.Should().Be(log.UserId);
+            retrieved!.EventType.Should().Be(log.EventType);
+            retrieved.Action.Should().Be(log.Action);
         }
     }
 

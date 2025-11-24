@@ -45,8 +45,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var request = new DeploymentRequest
         {
             ExecutionId = executionId,
-            ModuleName = "TestModule",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = "TestModule",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         };
 
@@ -64,8 +68,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var requests = Enumerable.Range(1, 5).Select(i => new DeploymentRequest
         {
             ExecutionId = Guid.NewGuid(),
-            ModuleName = $"Module{i}",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = $"Module{i}",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         }).ToList();
 
@@ -89,8 +97,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var request = new DeploymentRequest
         {
             ExecutionId = executionId,
-            ModuleName = "TestModule",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = "TestModule",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         };
 
@@ -144,8 +156,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var request = new DeploymentRequest
         {
             ExecutionId = executionId,
-            ModuleName = "FailingModule",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = "FailingModule",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         };
 
@@ -184,8 +200,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var request = new DeploymentRequest
         {
             ExecutionId = executionId,
-            ModuleName = "TestModule",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = "TestModule",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         };
 
@@ -237,8 +257,12 @@ public class DeploymentOrchestrationServiceTests : IDisposable
         var requests = Enumerable.Range(1, 3).Select(i => new DeploymentRequest
         {
             ExecutionId = Guid.NewGuid(),
-            ModuleName = $"Module{i}",
-            Version = new Version(1, 0, 0),
+            Module = new ModuleDescriptor
+            {
+                Name = $"Module{i}",
+                Version = new Version(1, 0, 0)
+            },
+            RequesterEmail = "test@example.com",
             TargetEnvironment = EnvironmentType.Production
         }).ToList();
 

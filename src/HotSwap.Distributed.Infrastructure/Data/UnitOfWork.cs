@@ -13,6 +13,7 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly AuditLogDbContext _context;
     private readonly ILogger<UnitOfWork> _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private IDbContextTransaction? _transaction;
     private bool _disposed;
 
@@ -22,10 +23,12 @@ public class UnitOfWork : IUnitOfWork
 
     public UnitOfWork(
         AuditLogDbContext context,
-        ILogger<UnitOfWork> logger)
+        ILogger<UnitOfWork> logger,
+        ILoggerFactory loggerFactory)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
     }
 
     /// <inheritdoc />
@@ -33,7 +36,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _approvals ??= new ApprovalRepository(_context);
+            _approvals ??= new ApprovalRepository(_context, _loggerFactory.CreateLogger<ApprovalRepository>());
             return _approvals;
         }
     }

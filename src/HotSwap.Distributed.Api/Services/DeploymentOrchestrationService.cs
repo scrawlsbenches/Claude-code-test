@@ -53,16 +53,6 @@ public class DeploymentOrchestrationService : BackgroundService
         return request.ExecutionId;
     }
 
-    /// <summary>
-    /// Gets the count of pending jobs in the queue.
-    /// </summary>
-    public int GetPendingJobCount()
-    {
-        // Note: Channel doesn't expose Count, this is approximate
-        // For exact count, would need additional tracking
-        return _jobQueue.Reader.CanRead ? 1 : 0;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Deployment orchestration service started");
