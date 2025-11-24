@@ -396,6 +396,98 @@ public class TenantContextServiceTests
 
     #endregion
 
+    #region Async Refactoring Tests (CRITICAL-03 Fix)
+
+    /// <summary>
+    /// Tests async subdomain resolution in GetCurrentTenantAsync.
+    /// This test verifies the fix for CRITICAL-03: Remove synchronous blocking (.Result) in TenantContextService.
+    /// The fix ensures subdomain resolution uses async/await throughout, eliminating deadlock risk.
+    /// </summary>
+    [Fact]
+    public async Task GetCurrentTenantAsync_WithSubdomain_UsesAsyncRepositoryCall()
+    {
+        // Arrange
+        var tenant = CreateTestTenant(subdomain: "testcorp");
+        _httpContext.Request.Host = new HostString("testcorp.platform.com");
+
+        _mockTenantRepository.Setup(r => r.GetBySubdomainAsync("testcorp", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tenant);
+        _mockTenantRepository.Setup(r => r.GetByIdAsync(tenant.TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tenant);
+
+        // Act
+        var result = await _service.GetCurrentTenantAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.TenantId.Should().Be(tenant.TenantId);
+
+        // Verify async repository method was called (not blocking .Result)
+        _mockTenantRepository.Verify(
+            r => r.GetBySubdomainAsync("testcorp", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Tests that GetCurrentTenantId() does NOT perform async subdomain resolution.
+    /// The synchronous version only extracts from headers/JWT claims, not subdomain.
+    /// This ensures no blocking .Result calls in synchronous contexts.
+    /// </summary>
+    [Fact]
+    public void GetCurrentTenantId_WithSubdomainOnly_ReturnsNull()
+    {
+        // Arrange
+        var tenant = CreateTestTenant(subdomain: "testcorp");
+        _httpContext.Request.Host = new HostString("testcorp.platform.com");
+
+        _mockTenantRepository.Setup(r => r.GetBySubdomainAsync("testcorp", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tenant);
+
+        // Act
+        var result = _service.GetCurrentTenantId();
+
+        // Assert
+        // Should return null because subdomain resolution requires async
+        result.Should().BeNull();
+
+        // Verify repository was NOT called (no blocking .Result call)
+        _mockTenantRepository.Verify(
+            r => r.GetBySubdomainAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Tests that async tenant resolution honors cancellation tokens.
+    /// Ensures proper async/await pattern is followed throughout the chain.
+    /// </summary>
+    [Fact]
+    public async Task GetCurrentTenantAsync_WithCancellationToken_PropagatesToken()
+    {
+        // Arrange
+        var tenant = CreateTestTenant();
+        var tenantId = tenant.TenantId;
+        _httpContext.Request.Headers["X-Tenant-ID"] = tenantId.ToString();
+
+        var cts = new CancellationTokenSource();
+        var cancellationToken = cts.Token;
+
+        _mockTenantRepository.Setup(r => r.GetByIdAsync(tenantId, cancellationToken))
+            .ReturnsAsync(tenant);
+
+        // Act
+        var result = await _service.GetCurrentTenantAsync(cancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+
+        // Verify cancellation token was propagated to repository
+        _mockTenantRepository.Verify(
+            r => r.GetByIdAsync(tenantId, cancellationToken),
+            Times.Once);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static Tenant CreateTestTenant(Guid? tenantId = null, string subdomain = "test")

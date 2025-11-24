@@ -207,4 +207,76 @@ public class UsageTrackingServiceTests
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
     }
+
+    /// <summary>
+    /// Tests thread-safety of UsageTrackingService when recording concurrent page views.
+    /// This test verifies the fix for HIGH-01: Thread-safety issue in UsageTrackingService.
+    /// The fix replaced HashSet with ConcurrentDictionary to ensure thread-safe visitor tracking.
+    /// </summary>
+    [Fact]
+    public async Task RecordPageViewAsync_ConcurrentRequests_HandlesThreadSafelyWithoutDataLoss()
+    {
+        // Arrange
+        var websiteId = Guid.NewGuid();
+        var path = "/home";
+        var concurrentRequests = 100;
+        var uniqueVisitors = 50;
+
+        // Act - Simulate 100 concurrent requests from 50 unique visitors (each visitor makes 2 requests)
+        var tasks = new List<Task>();
+        for (int i = 0; i < concurrentRequests; i++)
+        {
+            var visitorNumber = i % uniqueVisitors; // Ensure we have 50 unique visitors
+            var userAgent = $"Mozilla/5.0 (Visitor {visitorNumber})";
+            var ipAddress = $"192.168.1.{visitorNumber}";
+
+            tasks.Add(_service.RecordPageViewAsync(websiteId, path, userAgent, ipAddress));
+        }
+
+        await Task.WhenAll(tasks);
+
+        // Assert
+        var analytics = await _service.GetTrafficAnalyticsAsync(websiteId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1));
+
+        // Verify all page views were recorded (no data loss from race conditions)
+        analytics.TotalPageViews.Should().Be(concurrentRequests);
+
+        // Verify unique visitors are counted correctly (no duplicate counting from race conditions)
+        analytics.UniqueVisitors.Should().Be(uniqueVisitors);
+    }
+
+    /// <summary>
+    /// Tests thread-safety when recording page views for the same visitor concurrently.
+    /// Ensures the ConcurrentDictionary-based implementation correctly handles same-visitor
+    /// concurrent requests without race conditions or exceptions.
+    /// </summary>
+    [Fact]
+    public async Task RecordPageViewAsync_SameVisitorConcurrentRequests_HandlesThreadSafely()
+    {
+        // Arrange
+        var websiteId = Guid.NewGuid();
+        var userAgent = "Mozilla/5.0";
+        var ipAddress = "192.168.1.100";
+        var paths = new[] { "/home", "/about", "/contact", "/services", "/blog" };
+        var concurrentRequests = 50;
+
+        // Act - Simulate 50 concurrent requests from the same visitor to different pages
+        var tasks = new List<Task>();
+        for (int i = 0; i < concurrentRequests; i++)
+        {
+            var path = paths[i % paths.Length];
+            tasks.Add(_service.RecordPageViewAsync(websiteId, path, userAgent, ipAddress));
+        }
+
+        await Task.WhenAll(tasks);
+
+        // Assert
+        var analytics = await _service.GetTrafficAnalyticsAsync(websiteId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1));
+
+        // Verify all page views were recorded
+        analytics.TotalPageViews.Should().Be(concurrentRequests);
+
+        // Verify only one unique visitor is counted (same IP+UA hash)
+        analytics.UniqueVisitors.Should().Be(1);
+    }
 }
