@@ -66,7 +66,21 @@ public class TenantContextService : ITenantContextService
         return ExtractTenantIdSync(httpContext);
     }
 
-    public void SetCurrentTenant(Tenant tenant)
+    /// <summary>
+    /// INTERNAL USE ONLY: Sets the current tenant in the HTTP context cache.
+    ///
+    /// SECURITY WARNING: This method bypasses all authentication and authorization checks.
+    /// It should ONLY be used in:
+    /// 1. Unit/integration tests to set up test context
+    /// 2. System-level operations with proper authorization validation
+    ///
+    /// DO NOT expose this through any public API endpoint or middleware.
+    /// Use GetCurrentTenantAsync() which enforces JWT-based security validation.
+    /// </summary>
+    /// <param name="tenant">Tenant to set in the current HttpContext</param>
+    /// <exception cref="ArgumentNullException">When tenant is null</exception>
+    /// <exception cref="InvalidOperationException">When HttpContext is not available</exception>
+    internal void SetCurrentTenantForTesting(Tenant tenant)
     {
         if (tenant == null)
             throw new ArgumentNullException(nameof(tenant));
@@ -171,7 +185,8 @@ public class TenantContextService : ITenantContextService
         var parts = host.Split('.');
         if (parts.Length >= 3)
         {
-            var subdomain = parts[0];
+            // Normalize subdomain to lowercase (DNS is case-insensitive)
+            var subdomain = parts[0].ToLowerInvariant();
 
             // Validate subdomain format to prevent injection
             if (IsValidSubdomain(subdomain))
@@ -195,12 +210,26 @@ public class TenantContextService : ITenantContextService
     }
 
     /// <summary>
-    /// Validates subdomain format to prevent injection attacks.
-    /// Subdomains must be lowercase alphanumeric with hyphens only.
+    /// Validates subdomain format to prevent injection attacks and reserved name conflicts.
+    /// Subdomains must be lowercase alphanumeric with hyphens only, and cannot be reserved names.
     /// </summary>
     private static bool IsValidSubdomain(string subdomain)
     {
         if (string.IsNullOrWhiteSpace(subdomain) || subdomain.Length > 63)
+            return false;
+
+        // Reserved subdomains that cannot be used for tenant names
+        // These are typically infrastructure/platform services
+        var reservedSubdomains = new[]
+        {
+            "www", "api", "admin", "app", "cdn", "ftp", "mail", "smtp",
+            "pop", "imap", "webmail", "ns", "ns1", "ns2", "dns", "status",
+            "help", "support", "docs", "blog", "forum", "shop", "store",
+            "assets", "static", "images", "img", "files", "downloads",
+            "dev", "staging", "test", "qa", "demo", "sandbox"
+        };
+
+        if (reservedSubdomains.Contains(subdomain))
             return false;
 
         // RFC 1123: subdomain must be lowercase alphanumeric with hyphens

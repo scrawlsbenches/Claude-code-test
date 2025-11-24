@@ -245,38 +245,54 @@ public class TenantContextServiceTests
 
     #endregion
 
-    #region SetCurrentTenant Tests
+    #region SetCurrentTenantForTesting Tests
+
+    /// <summary>
+    /// SECURITY TEST: Verifies that SetCurrentTenant is not exposed in the public interface.
+    /// This prevents accidental exposure of tenant override functionality in production code.
+    /// </summary>
+    [Fact]
+    public void ITenantContextService_DoesNotExposeSetCurrentTenantMethod()
+    {
+        // Verify SetCurrentTenant is NOT in the public interface
+        var interfaceType = typeof(ITenantContextService);
+        var setMethod = interfaceType.GetMethod("SetCurrentTenant");
+        var setForTestingMethod = interfaceType.GetMethod("SetCurrentTenantForTesting");
+
+        setMethod.Should().BeNull("SetCurrentTenant should not be in the public interface for security reasons");
+        setForTestingMethod.Should().BeNull("SetCurrentTenantForTesting should be internal only");
+    }
 
     [Fact]
-    public void SetCurrentTenant_WithNullTenant_ThrowsArgumentNullException()
+    public void SetCurrentTenantForTesting_WithNullTenant_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = () => _service.SetCurrentTenant(null!);
+        var act = () => _service.SetCurrentTenantForTesting(null!);
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("tenant");
     }
 
     [Fact]
-    public void SetCurrentTenant_WithNoHttpContext_ThrowsInvalidOperationException()
+    public void SetCurrentTenantForTesting_WithNoHttpContext_ThrowsInvalidOperationException()
     {
         // Arrange
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
         var tenant = CreateTestTenant();
 
         // Act & Assert
-        var act = () => _service.SetCurrentTenant(tenant);
+        var act = () => _service.SetCurrentTenantForTesting(tenant);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("HttpContext is not available");
     }
 
     [Fact]
-    public void SetCurrentTenant_WithValidTenant_SetsCacheInHttpContext()
+    public void SetCurrentTenantForTesting_WithValidTenant_SetsCacheInHttpContext()
     {
         // Arrange
         var tenant = CreateTestTenant();
 
         // Act
-        _service.SetCurrentTenant(tenant);
+        _service.SetCurrentTenantForTesting(tenant);
 
         // Assert
         _httpContext.Items["TenantId"].Should().Be(tenant.TenantId);
@@ -643,6 +659,138 @@ public class TenantContextServiceTests
             r => r.GetBySubdomainAsync(validSubdomain, It.IsAny<CancellationToken>()),
             Times.Once,
             "Valid subdomain should be queried");
+    }
+
+    #endregion
+
+    #region Subdomain Normalization and Reserved Names Tests
+
+    /// <summary>
+    /// SECURITY TEST: Verifies that subdomain extraction is case-insensitive.
+    /// DNS is case-insensitive, so "TenantA.platform.com" should resolve same as "tenanta.platform.com".
+    /// </summary>
+    [Theory]
+    [InlineData("TenantA")]
+    [InlineData("TENANTA")]
+    [InlineData("TeNaNtA")]
+    [InlineData("tenanta")]
+    public async Task GetCurrentTenantAsync_WithMixedCaseSubdomain_NormalizesToLowercase(string mixedCaseSubdomain)
+    {
+        // Arrange
+        var tenant = CreateTestTenant(subdomain: "tenanta");
+        _httpContext.Request.Host = new HostString($"{mixedCaseSubdomain}.platform.com");
+
+        // Repository should be called with lowercase subdomain
+        _mockTenantRepository.Setup(r => r.GetBySubdomainAsync("tenanta", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tenant);
+        _mockTenantRepository.Setup(r => r.GetByIdAsync(tenant.TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tenant);
+
+        // Act
+        var result = await _service.GetCurrentTenantAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.TenantId.Should().Be(tenant.TenantId, "Mixed case subdomain should be normalized to lowercase");
+
+        // Verify repository was called with lowercase subdomain
+        _mockTenantRepository.Verify(
+            r => r.GetBySubdomainAsync("tenanta", It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Subdomain should be normalized to lowercase before repository lookup");
+    }
+
+    /// <summary>
+    /// SECURITY TEST: Verifies that reserved subdomains are rejected.
+    /// This prevents tenants from creating subdomains that conflict with platform infrastructure.
+    /// </summary>
+    [Theory]
+    [InlineData("www")]
+    [InlineData("api")]
+    [InlineData("admin")]
+    [InlineData("app")]
+    [InlineData("cdn")]
+    [InlineData("mail")]
+    [InlineData("smtp")]
+    [InlineData("docs")]
+    [InlineData("blog")]
+    [InlineData("dev")]
+    [InlineData("staging")]
+    [InlineData("test")]
+    public async Task GetCurrentTenantAsync_WithReservedSubdomain_ReturnsNull(string reservedSubdomain)
+    {
+        // Arrange
+        _httpContext.Request.Host = new HostString($"{reservedSubdomain}.platform.com");
+
+        // Act
+        var result = await _service.GetCurrentTenantAsync();
+
+        // Assert
+        result.Should().BeNull($"Reserved subdomain '{reservedSubdomain}' should be rejected");
+
+        // Verify repository was never called
+        _mockTenantRepository.Verify(
+            r => r.GetBySubdomainAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "Reserved subdomains should not reach the repository");
+    }
+
+    /// <summary>
+    /// SECURITY TEST: Verifies that non-reserved, valid subdomains are still accepted.
+    /// </summary>
+    [Theory]
+    [InlineData("acmecorp")]
+    [InlineData("company1")]
+    [InlineData("tenant-abc")]
+    [InlineData("my-tenant")]
+    [InlineData("123tenant")]
+    public async Task GetCurrentTenantAsync_WithValidNonReservedSubdomain_AcceptsSubdomain(string validSubdomain)
+    {
+        // Arrange
+        var tenant = CreateTestTenant(subdomain: validSubdomain);
+        _httpContext.Request.Host = new HostString($"{validSubdomain}.platform.com");
+
+        _mockTenantRepository.Setup(r => r.GetBySubdomainAsync(validSubdomain, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tenant);
+        _mockTenantRepository.Setup(r => r.GetByIdAsync(tenant.TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tenant);
+
+        // Act
+        var result = await _service.GetCurrentTenantAsync();
+
+        // Assert
+        result.Should().NotBeNull($"Valid non-reserved subdomain '{validSubdomain}' should be accepted");
+        result!.TenantId.Should().Be(tenant.TenantId);
+
+        // Verify repository was called
+        _mockTenantRepository.Verify(
+            r => r.GetBySubdomainAsync(validSubdomain, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// SECURITY TEST: Verifies that case-insensitive reserved names are also rejected.
+    /// </summary>
+    [Theory]
+    [InlineData("WWW")]
+    [InlineData("Api")]
+    [InlineData("ADMIN")]
+    [InlineData("CDN")]
+    public async Task GetCurrentTenantAsync_WithUppercaseReservedSubdomain_ReturnsNull(string reservedSubdomain)
+    {
+        // Arrange
+        _httpContext.Request.Host = new HostString($"{reservedSubdomain}.platform.com");
+
+        // Act
+        var result = await _service.GetCurrentTenantAsync();
+
+        // Assert
+        result.Should().BeNull($"Uppercase reserved subdomain '{reservedSubdomain}' should be rejected after normalization");
+
+        // Verify repository was never called
+        _mockTenantRepository.Verify(
+            r => r.GetBySubdomainAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     #endregion

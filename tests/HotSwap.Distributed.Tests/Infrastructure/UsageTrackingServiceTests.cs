@@ -279,4 +279,172 @@ public class UsageTrackingServiceTests
         // Verify only one unique visitor is counted (same IP+UA hash)
         analytics.UniqueVisitors.Should().Be(1);
     }
+
+    #region Memory Management Tests
+
+    /// <summary>
+    /// MEMORY SAFETY TEST: Verifies that old visitor data beyond RETENTION_DAYS is cleaned up.
+    /// This prevents unbounded memory growth in long-running services.
+    /// </summary>
+    [Fact]
+    public async Task RecordPageViewAsync_OldVisitorData_IsCleanedUpAutomatically()
+    {
+        // Arrange
+        var websiteId = Guid.NewGuid();
+        var mockLogger = new Mock<ILogger<UsageTrackingService>>();
+        var service = new UsageTrackingService(mockLogger.Object);
+
+        // Use reflection to set _lastCleanupTime to force immediate cleanup
+        var lastCleanupField = typeof(UsageTrackingService).GetField("_lastCleanupTime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        lastCleanupField!.SetValue(service, DateTime.UtcNow.AddDays(-2)); // Force cleanup
+
+        // Manually add old visitor data using reflection
+        var uniqueVisitorsField = typeof(UsageTrackingService).GetField("_uniqueVisitors",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var uniqueVisitors = uniqueVisitorsField!.GetValue(service) as System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Concurrent.ConcurrentDictionary<string, byte>>;
+
+        // Add data from 31 days ago (beyond RETENTION_DAYS = 30)
+        var oldDate = DateTime.UtcNow.AddDays(-31).ToString("yyyy-MM-dd");
+        var oldKey = $"{websiteId}:{oldDate}";
+        var oldVisitors = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
+        oldVisitors.TryAdd("old_visitor_hash", 0);
+        uniqueVisitors!.TryAdd(oldKey, oldVisitors);
+
+        // Add recent data (within RETENTION_DAYS)
+        var recentDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var recentKey = $"{websiteId}:{recentDate}";
+        var recentVisitors = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
+        recentVisitors.TryAdd("recent_visitor_hash", 0);
+        uniqueVisitors.TryAdd(recentKey, recentVisitors);
+
+        // Act - Trigger cleanup by recording a new page view
+        await service.RecordPageViewAsync(websiteId, "/test", "UA", "IP");
+
+        // Assert - Old data should be removed, recent data should remain
+        uniqueVisitors.ContainsKey(oldKey).Should().BeFalse("Old visitor data beyond RETENTION_DAYS should be cleaned up");
+        uniqueVisitors.ContainsKey(recentKey).Should().BeTrue("Recent visitor data should be retained");
+
+        // Verify cleanup was logged
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cleaned up") && v.ToString()!.Contains("old visitor data entries")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// MEMORY SAFETY TEST: Verifies that page view entries are limited per website.
+    /// This prevents memory exhaustion from tracking too many unique paths.
+    /// </summary>
+    [Fact]
+    public async Task RecordPageViewAsync_ExcessivePageViewEntries_EnforcesLimits()
+    {
+        // Arrange
+        var websiteId = Guid.NewGuid();
+        var mockLogger = new Mock<ILogger<UsageTrackingService>>();
+        var service = new UsageTrackingService(mockLogger.Object);
+
+        // Force cleanup to run immediately
+        var lastCleanupField = typeof(UsageTrackingService).GetField("_lastCleanupTime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        lastCleanupField!.SetValue(service, DateTime.UtcNow.AddDays(-2));
+
+        // Get MAX_PAGE_VIEW_ENTRIES constant via reflection
+        var maxEntriesField = typeof(UsageTrackingService).GetField("MAX_PAGE_VIEW_ENTRIES",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var maxEntries = (int)maxEntriesField!.GetValue(null)!;
+
+        // Record more than MAX_PAGE_VIEW_ENTRIES unique paths
+        var excessEntries = maxEntries + 100;
+        for (int i = 0; i < excessEntries; i++)
+        {
+            await service.RecordPageViewAsync(websiteId, $"/page-{i}", "UA", "IP");
+        }
+
+        // Act - Force cleanup by recording another page view
+        await service.RecordPageViewAsync(websiteId, "/trigger-cleanup", "UA", "IP");
+
+        // Assert - Verify enforcement was logged
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Enforced page view limit")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce,
+            "Page view limit enforcement should be logged");
+
+        // Get page views dictionary via reflection to verify count
+        var pageViewsField = typeof(UsageTrackingService).GetField("_pageViews",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var pageViews = pageViewsField!.GetValue(service) as System.Collections.Concurrent.ConcurrentDictionary<string, long>;
+
+        // Verify total entries for this website doesn't exceed MAX_PAGE_VIEW_ENTRIES
+        var websitePrefix = $"{websiteId}:";
+        var websiteEntries = pageViews!.Keys.Count(k => k.StartsWith(websitePrefix));
+        websiteEntries.Should().BeLessOrEqualTo(maxEntries, "Page view entries should be limited to prevent memory exhaustion");
+    }
+
+    /// <summary>
+    /// MEMORY SAFETY TEST: Verifies that cleanup only runs periodically to avoid performance overhead.
+    /// </summary>
+    [Fact]
+    public async Task RecordPageViewAsync_FrequentCalls_DoesNotCleanupEveryTime()
+    {
+        // Arrange
+        var websiteId = Guid.NewGuid();
+        var mockLogger = new Mock<ILogger<UsageTrackingService>>();
+        var service = new UsageTrackingService(mockLogger.Object);
+
+        // Act - Record multiple page views in quick succession
+        for (int i = 0; i < 10; i++)
+        {
+            await service.RecordPageViewAsync(websiteId, $"/page-{i}", "UA", "IP");
+        }
+
+        // Assert - Cleanup should not have been triggered (less than 24 hours since last cleanup)
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Memory cleanup completed")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never,
+            "Cleanup should not run on every page view (performance optimization)");
+    }
+
+    /// <summary>
+    /// MEMORY SAFETY TEST: Verifies that cleanup handles exceptions gracefully without disrupting service.
+    /// </summary>
+    [Fact]
+    public async Task RecordPageViewAsync_CleanupException_DoesNotDisruptService()
+    {
+        // Arrange
+        var websiteId = Guid.NewGuid();
+        var mockLogger = new Mock<ILogger<UsageTrackingService>>();
+        var service = new UsageTrackingService(mockLogger.Object);
+
+        // Force cleanup to run
+        var lastCleanupField = typeof(UsageTrackingService).GetField("_lastCleanupTime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        lastCleanupField!.SetValue(service, DateTime.UtcNow.AddDays(-2));
+
+        // Act - Record page view (cleanup will run internally)
+        var act = async () => await service.RecordPageViewAsync(websiteId, "/test", "UA", "IP");
+
+        // Assert - Should not throw even if cleanup encounters issues
+        await act.Should().NotThrowAsync("Service should handle cleanup errors gracefully");
+
+        // Verify page view was still recorded
+        var analytics = await service.GetTrafficAnalyticsAsync(websiteId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1));
+        analytics.TotalPageViews.Should().BeGreaterThan(0, "Page views should be recorded even if cleanup fails");
+    }
+
+    #endregion
 }

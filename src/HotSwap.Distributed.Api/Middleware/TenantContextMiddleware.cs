@@ -37,7 +37,7 @@ public class TenantContextMiddleware
             await context.Response.WriteAsJsonAsync(new
             {
                 error = "Tenant context required",
-                message = "Please specify tenant via subdomain, X-Tenant-ID header, or JWT claim"
+                message = "Please specify tenant via subdomain (for public pages) or JWT claim (for authenticated requests)"
             });
             return;
         }

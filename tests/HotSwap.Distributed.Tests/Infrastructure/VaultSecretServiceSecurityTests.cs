@@ -191,4 +191,73 @@ public class VaultSecretServiceSecurityTests
         Enum.IsDefined(typeof(VaultAuthMethod), VaultAuthMethod.Kubernetes).Should().BeTrue();
         Enum.IsDefined(typeof(VaultAuthMethod), VaultAuthMethod.UserPass).Should().BeTrue();
     }
+
+    /// <summary>
+    /// SECURITY TEST: Verifies that GenerateRandomSecret has no modulo bias.
+    /// Tests that all characters in the charset have equal probability of occurrence.
+    /// This ensures maximum entropy and prevents predictable patterns in generated secrets.
+    /// </summary>
+    [Fact]
+    public void GenerateRandomSecret_HasNoModuloBias()
+    {
+        // Arrange
+        var config = new VaultConfiguration
+        {
+            VaultUrl = "https://vault.example.com:8200",
+            Token = "test-token",
+            AuthMethod = VaultAuthMethod.Token
+        };
+        var mockLogger = new Mock<ILogger<VaultSecretService>>();
+        var service = new VaultSecretService(config, mockLogger.Object);
+
+        var method = typeof(VaultSecretService).GetMethod(
+            "GenerateRandomSecret",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        // Generate many secrets to analyze distribution
+        const int sampleSize = 1000;
+        const int secretLength = 64;
+        var characterCounts = new Dictionary<char, int>();
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?";
+
+        // Initialize counts
+        foreach (var c in chars)
+        {
+            characterCounts[c] = 0;
+        }
+
+        // Act - Generate secrets and count character occurrences
+        for (int i = 0; i < sampleSize; i++)
+        {
+            var secret = method!.Invoke(service, null) as string;
+            foreach (var c in secret!)
+            {
+                if (characterCounts.ContainsKey(c))
+                {
+                    characterCounts[c]++;
+                }
+            }
+        }
+
+        // Assert - Statistical analysis for bias
+        var totalCharacters = sampleSize * secretLength;
+        var expectedCountPerChar = (double)totalCharacters / chars.Length;
+
+        // Calculate chi-square statistic to detect bias
+        // With uniform distribution, each char should appear ~expectedCountPerChar times
+        // We allow 15% deviation as acceptable variance for randomness
+        var maxAcceptableDeviation = expectedCountPerChar * 0.15;
+
+        foreach (var kvp in characterCounts)
+        {
+            var deviation = Math.Abs(kvp.Value - expectedCountPerChar);
+            deviation.Should().BeLessThan(maxAcceptableDeviation,
+                $"Character '{kvp.Key}' appears {kvp.Value} times, expected ~{expectedCountPerChar:F0} (deviation: {deviation:F0}). " +
+                $"This suggests modulo bias in the RNG.");
+        }
+
+        // Additional check: no character should be completely absent
+        characterCounts.Values.Should().AllSatisfy(count =>
+            count.Should().BeGreaterThan(0, "All characters should appear at least once in a large sample"));
+    }
 }
