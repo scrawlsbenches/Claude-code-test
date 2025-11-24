@@ -1,0 +1,313 @@
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 HotSwap.Distributed.Api                                             │
+│                                (ASP.NET Core Web API)                                               │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  Controllers:                        Middleware:                   Hubs:                            │
+│  • TenantsController                • ExceptionHandlingMiddleware  • DeploymentHub (SignalR)       │
+│  • TopicsController                 • RateLimitingMiddleware                                        │
+│  • MessagesController               • SecurityHeadersMiddleware    BackgroundServices:             │
+│  • DeploymentsController            • TenantContextMiddleware      • OrchestratorInitializationService│
+│  • TenantDeploymentsController      • AuthenticationMiddleware     • ApprovalTimeoutBackgroundService│
+│  • WebsitesController               • AuthorizationMiddleware      • AuditLogRetentionBackgroundService│
+│  • ContentController                                               • SecretRotationBackgroundService│
+│  • AnalyticsController              Program.cs:                    • RateLimitCleanupService       │
+│  • AuthenticationController         • DI Configuration                                             │
+│  • ApprovalsController              • OpenTelemetry Setup                                          │
+│  • SchemasController                • JWT Authentication                                           │
+│  • ClustersController               • Swagger/OpenAPI                                              │
+│  • AuditLogsController              • CORS Configuration                                           │
+└───────────────────┬─────────────────────────────────────────────────┬───────────────────────────────┘
+                    │                                                 │
+                    │ Depends On                                      │ Depends On
+                    ▼                                                 ▼
+┌──────────────────────────────────────────────┐  ┌──────────────────────────────────────────────────┐
+│  HotSwap.Distributed.Orchestrator            │  │  HotSwap.Distributed.Infrastructure              │
+│     (Business Logic Layer)                   │  │     (Infrastructure Services)                    │
+├──────────────────────────────────────────────┤  ├──────────────────────────────────────────────────┤
+│  Core:                                       │  │  Data:                                           │
+│  • DistributedKernelOrchestrator◄────────────┼──┤  • AuditLogDbContext                             │
+│  • EnvironmentCluster                        │  │  • AuditLogDbContextFactory                      │
+│  • KernelNode                                │  │  • Entities/                                     │
+│                                              │  │    - ApprovalRequestEntity                       │
+│  Deployment Strategies:                      │  │    - ApprovalAuditEvent                          │
+│  • IDeploymentStrategy                       │  │    - AuthenticationAuditEvent                    │
+│    - DirectDeploymentStrategy                │  │    - ConfigurationAuditEvent                     │
+│    - RollingDeploymentStrategy               │  │    - DeploymentAuditEvent                        │
+│    - BlueGreenDeploymentStrategy             │  │    - DeploymentJobEntity                         │
+│    - CanaryDeploymentStrategy                │  │    - MessageEntity                               │
+│                                              │  │    - AuditLog                                    │
+│  Pipeline:                                   │  │                                                  │
+│  • DeploymentPipeline                        │  │  Repositories:                                   │
+│  • PipelineStage                             │  │  • IApprovalRepository                           │
+│  • PipelineExecutionContext                  │  │  • ApprovalRepository                            │
+│                                              │  │  • ITenantRepository                             │
+│  Schema Management:                          │  │  • TenantRepository                              │
+│  • ISchemaRegistry                           │  │  • InMemoryTenantRepository                      │
+│  • InMemorySchemaRegistry                    │  │                                                  │
+│  • ISchemaValidator                          │  │  Messaging:                                      │
+│  • SchemaValidator                           │  │  • IMessageQueue                                 │
+│  • ISchemaCompatibilityChecker               │  │  • PostgresMessageQueue                          │
+│  • SchemaCompatibilityChecker                │  │  • InMemoryMessageQueue                          │
+│  • ISchemaApprovalService                    │  │  • IMessagePersistence                           │
+│  • SchemaApprovalService                     │  │  • InMemoryMessagePersistence                    │
+│                                              │  │  • MessageConsumerService                        │
+│  Routing:                                    │  │                                                  │
+│  • IRoutingStrategy                          │  │  Service Discovery:                              │
+│    - DirectRoutingStrategy                   │  │  • IServiceDiscovery                             │
+│    - LoadBalancedRoutingStrategy             │  │  • ConsulServiceDiscovery                        │
+│    - PriorityRoutingStrategy                 │  │  • InMemoryServiceDiscovery                      │
+│    - ContentBasedRoutingStrategy             │  │                                                  │
+│    - FanOutRoutingStrategy                   │  │  Coordination:                                   │
+│  • MessageRouter                             │  │  • IDistributedLock                              │
+│                                              │  │  • PostgresDistributedLock                       │
+│  Delivery:                                   │  │  • InMemoryDistributedLock                       │
+│  • IDeliveryService                          │  │  • IIdempotencyStore                             │
+│  • DeliveryService                           │  │  • InMemoryIdempotencyStore                      │
+│  • ExactlyOnceDeliveryService                │  │                                                  │
+│  • DeadLetterQueueService                    │  │  Authentication:                                 │
+│  • DeliveryResult                            │  │  • IJwtTokenService                              │
+│  • ExactlyOnceDeliveryResult                 │  │  • JwtTokenService                               │
+│  • DeliveryOptions                           │  │  • IUserRepository                               │
+│                                              │  │  • InMemoryUserRepository                        │
+│  Services:                                   │  │                                                  │
+│  • IApprovalService                          │  │  Security:                                       │
+│  • ApprovalService                           │  │  • IModuleVerifier                               │
+│  • ApprovalServiceRefactored                 │  │  • ModuleVerifier                                │
+│  • ITopicService                             │  │                                                  │
+│  • IClusterRegistry                          │  │  Secret Management:                              │
+│  • ResourceStabilizationService              │  │  • ISecretService                                │
+│  • BrokerHealthMonitor                       │  │  • InMemorySecretService                         │
+│  • AckTimeoutBackgroundService               │  │  • VaultSecretService                            │
+│                                              │  │  • SecretRotationBackgroundService               │
+│  Interfaces:                                 │  │                                                  │
+│  • ISchemaRegistry                           │  │  Telemetry:                                      │
+│  • ISchemaValidator                          │  │  • TelemetryProvider                             │
+│  • ISchemaCompatibilityChecker               │  │  • MessageTelemetryProvider                      │
+│  • ISchemaApprovalService                    │  │                                                  │
+│  • IApprovalService                          │  │  Metrics:                                        │
+│  • ITopicService                             │  │  • IMetricsProvider                              │
+│  • IDeliveryService                          │  │  • InMemoryMetricsProvider                       │
+│  • IDeploymentStrategy                       │  │  • MessageMetricsProvider                        │
+│  • IClusterRegistry                          │  │  • DeploymentMetrics                             │
+│  • IRoutingStrategy                          │  │                                                  │
+└────────────────┬─────────────────────────────┘  │  Deployments:                                    │
+                 │                                │  • IDeploymentTracker                            │
+                 │                                │  • InMemoryDeploymentTracker                     │
+                 │ Depends On                     │  • ITenantDeploymentService                      │
+                 │                                │  • TenantDeploymentService                       │
+                 │                                │  • DeploymentJobProcessor                        │
+                 │                                │                                                  │
+                 │                                │  Tenants:                                        │
+                 │                                │  • ITenantContextService                         │
+                 │                                │  • TenantContextService                          │
+                 │                                │  • TenantProvisioningService                     │
+                 │                                │  • IQuotaService                                 │
+                 │                                │  • QuotaService                                  │
+                 │                                │  • SubscriptionService                           │
+                 │                                │                                                  │
+                 │                                │  Websites:                                       │
+                 │                                │  • IWebsiteRepositories                          │
+                 │                                │  • InMemoryWebsiteRepository                     │
+                 │                                │  • IWebsiteServices                              │
+                 │                                │  • WebsiteProvisioningService                    │
+                 │                                │  • ContentService                                │
+                 │                                │  • ThemeService                                  │
+                 │                                │  • PluginService                                 │
+                 │                                │                                                  │
+                 │                                │  Storage:                                        │
+                 │                                │  • MinioStorageService                           │
+                 │                                │                                                  │
+                 │                                │  Analytics:                                      │
+                 │                                │  • IAnalyticsServices                            │
+                 │                                │  • UsageAnalyticsService                         │
+                 │                                │  • UsageTrackingService                          │
+                 │                                │  • CostAttributionService                        │
+                 │                                │                                                  │
+                 │                                │  Notifications:                                  │
+                 │                                │  • INotificationService                          │
+                 │                                │  • LoggingNotificationService                    │
+                 │                                │  • SignalRDeploymentNotifier                     │
+                 │                                │                                                  │
+                 │                                │  Audit:                                          │
+                 │                                │  • IAuditLogService                              │
+                 │                                │  • AuditLogService                               │
+                 │                                │                                                  │
+                 │                                │  Migrations:                                     │
+                 │                                │  • 20251116202007_InitialAuditLogSchema          │
+                 │                                │  • 20251123033111_AddPostgreSQLDistributedSystems│
+                 │                                └──────────────────┬───────────────────────────────┘
+                 │                                                   │
+                 │                                                   │ Depends On
+                 ▼                                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                HotSwap.Distributed.Domain                                           │
+│                                   (Pure Domain Layer)                                               │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  Models:                                         Enums:                                             │
+│  • Tenant                                        • TenantStatus                                     │
+│  • Topic                                         • TopicType (PubSub, Queue)                        │
+│  • Message                                       • MessageStatus                                    │
+│  • BrokerNode                                    • BrokerRole (Leader, Follower)                    │
+│  • Subscription                                  • BrokerHealthStatus                               │
+│  • Website                                       • SubscriptionType                                 │
+│  • Page                                          • SubscriptionTier (Free, Basic, Pro, Enterprise)  │
+│  • Plugin                                        • WebsiteStatus                                    │
+│  • Theme                                         • PageStatus                                       │
+│  • User                                          • PluginCategory                                   │
+│  • MessageSchema                                 • EnvironmentType (Dev, QA, Staging, Production)   │
+│  • DeploymentRequest                             • SchemaStatus                                     │
+│  • DeploymentResult                              • SchemaCompatibility                              │
+│  • ModuleDescriptor                              • DeploymentStrategy                               │
+│  • NodeConfiguration                             • ApprovalStatus (Pending, Approved, Rejected)     │
+│  • NodeMetrics                                   • NodeStatus                                       │
+│  • NodeHealth                                    • ResourceType                                     │
+│  • PipelineModels                                • DeliveryGuarantee (AtMostOnce, AtLeastOnce,      │
+│  • PipelineExecutionState                          ExactlyOnce)                                     │
+│  • ApprovalRequest                               • PipelineStageStatus                              │
+│  • ApprovalDecision                              • UserRole                                         │
+│  • ResourceQuota                                 • RouteResultType                                  │
+│  • SecretModels                                  • RoutingMode                                      │
+│  • MediaAsset                                                                                       │
+│  • SeoMetadata                                                                                      │
+│  • UsageReport                                                                                      │
+│  • VaultConfiguration                                                                               │
+│  • AuthenticationModels                                                                             │
+│  • TenantDeploymentModels                                                                           │
+│  • MessageFilter                                                                                    │
+│  • RouteResult                                                                                      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                               Knowledge Graph Subsystem                                             │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────┐
+│   HotSwap.KnowledgeGraph.QueryEngine             │
+│      (Graph Query Processing)                    │
+├──────────────────────────────────────────────────┤
+│  Core:                                           │
+│  • IQueryEngine                                  │
+│  • GraphQueryEngine                              │
+│                                                  │
+│  Optimization:                                   │
+│  • IQueryOptimizer                               │
+│  • CostBasedOptimizer                            │
+│  • QueryExecutionPlan                            │
+│  • QueryOptimizerStatistics                      │
+│                                                  │
+│  Path Finding:                                   │
+│  • IPathFinder                                   │
+│  • DijkstraPathFinder                            │
+│                                                  │
+│  Services:                                       │
+│  • IGraphTraversalService                        │
+│  • GraphTraversalService                         │
+│  • IQueryCacheService                            │
+│  • QueryCacheService                             │
+│  • CachedQueryResult                             │
+└────────────────────┬─────────────────────────────┘
+                     │
+                     │ Depends On
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  HotSwap.KnowledgeGraph.Infrastructure           │
+│      (Graph Data Access Layer)                   │
+├──────────────────────────────────────────────────┤
+│  Data:                                           │
+│  • GraphDbContext (EF Core)                      │
+│                                                  │
+│  Repositories:                                   │
+│  • IGraphRepository                              │
+│  • PostgresGraphRepository                       │
+│                                                  │
+│  Configuration:                                  │
+│  • Entity configurations (Fluent API)            │
+└────────────────────┬─────────────────────────────┘
+                     │
+                     │ Depends On
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  HotSwap.KnowledgeGraph.Domain                   │
+│      (Graph Domain Models)                       │
+├──────────────────────────────────────────────────┤
+│  Models:                                         │
+│  • Entity (Graph Node)                           │
+│    - EntityId                                    │
+│    - EntityType                                  │
+│    - Properties (dynamic)                        │
+│  • Relationship (Graph Edge)                     │
+│    - RelationshipId                              │
+│    - SourceEntityId                              │
+│    - TargetEntityId                              │
+│    - RelationshipType                            │
+│    - Properties (dynamic)                        │
+│    - Weight                                      │
+│  • GraphQuery                                    │
+│    - QueryFilters                                │
+│    - QueryConditions                             │
+│  • GraphQueryResult                              │
+│  • GraphSchema                                   │
+│    - SchemaId                                    │
+│    - EntityTypeDefinitions                       │
+│    - RelationshipTypeDefinitions                 │
+│  • PathResult                                    │
+│                                                  │
+│  Enums:                                          │
+│  • Direction (Incoming, Outgoing, Both)          │
+│  • QueryOperator (Equals, Contains, GreaterThan, │
+│    LessThan, In, NotIn, StartsWith, EndsWith)    │
+│  • PropertyType (String, Integer, Boolean, Date, │
+│    Double, Array, Object)                        │
+│  • IndexType (BTree, Hash, GIN, GIST)            │
+└──────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  External Dependencies                                              │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  Storage & Data:                      Observability:                  Communication:                │
+│  • PostgreSQL                         • OpenTelemetry                 • SignalR                     │
+│    - Message Queue                    • Prometheus                    • REST API                    │
+│    - Audit Logs                       • Jaeger                                                      │
+│    - Graph Storage                                                                                  │
+│    - Distributed Locks                Infrastructure:                Security:                      │
+│    - Entity Framework Core            • Consul (Service Discovery)    • JWT                         │
+│  • MinIO/S3 (Object Storage)          • Kubernetes (Orchestration)    • Vault (Secret Management)   │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    Architectural Patterns                                           │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  1. Clean Architecture         - Clear separation: Domain → Infrastructure → Orchestrator → API    │
+│  2. Repository Pattern          - Abstraction over data access with interface contracts             │
+│  3. Strategy Pattern            - Pluggable deployment strategies (Direct, Rolling, BlueGreen,      │
+│                                   Canary)                                                            │
+│  4. Pipeline Pattern            - Multi-stage deployment workflow with validation gates             │
+│  5. CQRS-lite                   - Separation of read/write concerns in repositories                 │
+│  6. Event-Driven                - SignalR for real-time deployment notifications                    │
+│  7. Multi-Tenancy               - Tenant isolation: subdomain, schema, namespace, cache, storage    │
+│  8. Microservices Ready         - Service discovery, distributed locking, message queuing           │
+│  9. Observability               - Telemetry, metrics, audit logging with OpenTelemetry              │
+│  10. Security-First             - JWT auth, rate limiting, secret management, security headers      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                      Key Features                                                   │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  Distributed Messaging:                Multi-Tenant CMS:                  Deployment Orchestration: │
+│  • Topic-based pub/sub             • Tenant isolation                  • Environment-based strategies│
+│  • Message queue                   • Website provisioning              • Blue-Green deployments     │
+│  • Schema registry                 • Theme management                  • Canary releases            │
+│  • Multiple routing strategies     • Plugin system                     • Rolling updates            │
+│  • Delivery guarantees             • Content management                • Approval workflows         │
+│  • Dead letter queue               • Media assets                      • Pipeline stages            │
+│  • Exactly-once delivery           • SEO metadata                      • Rollback support           │
+│                                    • Resource quotas                                                │
+│  Knowledge Graph:                  • Usage analytics                   Security & Compliance:       │
+│  • Entity-relationship model       • Cost attribution                  • JWT authentication         │
+│  • Graph traversal                                                     • Role-based authorization   │
+│  • Path finding (Dijkstra)         Observability:                      • Secret rotation            │
+│  • Query optimization              • Audit logging                     • Module verification        │
+│  • Query caching                   • OpenTelemetry tracing             • Rate limiting              │
+│                                    • Prometheus metrics                • Security headers           │
+│                                    • Real-time SignalR updates                                      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
