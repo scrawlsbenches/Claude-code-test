@@ -93,7 +93,6 @@ Claude-code-test/
 
 ### Core Infrastructure
 - **OpenTelemetry 1.9.0** - Distributed tracing and observability
-- **StackExchange.Redis 2.7.10** - Distributed locking and caching
 - **Serilog.AspNetCore 8.0.0** - Structured logging
 - **System.Security.Cryptography.Pkcs 8.0.0** - Module signature verification
 

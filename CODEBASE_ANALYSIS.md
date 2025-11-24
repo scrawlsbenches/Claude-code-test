@@ -759,7 +759,6 @@ The code follows **Clean Architecture** principles with 4 distinct layers, organ
 │  - TelemetryProvider (OpenTelemetry)                        │
 │  - ModuleVerifier (RSA signature verification)              │
 │  - MetricsProvider                                          │
-│  - RedisDistributedLock                                     │
 │  - JwtTokenService                                          │
 │  - Dependency: Domain only                                  │
 └─────────────────────┬───────────────────────────────────────┘
@@ -813,7 +812,6 @@ Claude-code-test/
 │   │   │   ├── MetricsProvider.cs         # Metrics collection and caching
 │   │   │   └── DeploymentMetrics.cs       # Custom business metrics (Prometheus)
 │   │   ├── Locking/
-│   │   │   └── RedisDistributedLock.cs    # Distributed lock implementation
 │   │   ├── RateLimiting/
 │   │   │   └── RateLimitingMiddleware.cs  # API rate limiting
 │   │   ├── Approval/

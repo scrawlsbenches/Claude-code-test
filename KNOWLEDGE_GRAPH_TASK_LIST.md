@@ -983,7 +983,6 @@ dotnet test --collect:"XPlat Code Coverage"
 
 **Requirements:**
 - [ ] Create `IQueryCacheService` interface
-- [ ] Implement `RedisQueryCacheService`
 - [ ] Cache query results with TTL (configurable, default 5 min)
 - [ ] Implement cache invalidation on entity/relationship changes
 - [ ] Add cache hit/miss metrics
@@ -996,7 +995,6 @@ dotnet test --collect:"XPlat Code Coverage"
 - ✓ 12 unit tests passing
 - ✓ >80% cache hit rate for repeated queries
 
-**File:** `src/HotSwap.KnowledgeGraph.Infrastructure/Caching/RedisQueryCacheService.cs`
 
 ---
 

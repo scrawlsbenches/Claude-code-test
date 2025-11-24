@@ -139,7 +139,6 @@ if (cacheDescriptor != null)
 services.AddDistributedMemoryCache();
 ```
 
-3. **InMemoryDistributedLock** (replacing RedisDistributedLock):
 ```csharp
 // New file: InMemoryDistributedLock.cs
 public class InMemoryDistributedLock : IDistributedLock
@@ -168,7 +167,6 @@ public class InMemoryDistributedLock : IDistributedLock
 <!-- REMOVED -->
 <PackageReference Include="Testcontainers" Version="3.10.0" />
 <PackageReference Include="Testcontainers.PostgreSql" Version="3.10.0" />
-<PackageReference Include="Testcontainers.Redis" Version="3.10.0" />
 
 <!-- ADDED -->
 <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.1" />

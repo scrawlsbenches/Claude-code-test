@@ -1043,7 +1043,6 @@ GET    /api/v1/graph/visualization/statistics - Get graph statistics
 ### New Dependencies
 - **Npgsql.EntityFrameworkCore.PostgreSQL 8.0.0** - PostgreSQL provider
 - **Npgsql.Json.NET 8.0.0** - JSONB support
-- **StackExchange.Redis 2.7.10** - Already available (query caching)
 - **Microsoft.Extensions.Caching.Memory 8.0.0** - In-memory caching
 
 ### Testing Dependencies (Existing)
@@ -1091,7 +1090,6 @@ Claude-code-test/
 │   │   │   └── PostgreSqlGraphRepository.cs
 │   │   ├── Caching/
 │   │   │   ├── IQueryCacheService.cs
-│   │   │   └── RedisQueryCacheService.cs
 │   │   └── Indexing/
 │   │       ├── IGraphIndexService.cs
 │   │       └── PostgreSqlIndexService.cs

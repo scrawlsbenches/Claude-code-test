@@ -1,7 +1,7 @@
+using System.Collections.Generic;
 using Consul;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 
 namespace HotSwap.Distributed.Infrastructure.ServiceDiscovery;
 

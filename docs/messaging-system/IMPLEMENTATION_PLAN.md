@@ -186,18 +186,15 @@ This implementation follows **Test-Driven Development (TDD)** and builds on the 
 
 **Acceptance Criteria:**
 - IMessagePersistence interface created
-- RedisMessagePersistence implementation working
 - Messages stored/retrieved from Redis
 - Integration tests pass (10+ tests)
 
 **Tasks:**
 - [ ] Create `IMessagePersistence.cs` interface
-- [ ] Create `RedisMessagePersistence.cs` implementation
 - [ ] Implement `StoreAsync(Message)` method
 - [ ] Implement `RetrieveAsync(messageId)` method
 - [ ] Implement `DeleteAsync(messageId)` method
 - [ ] Implement `GetByTopicAsync(topicName, limit)` method
-- [ ] Configure Redis connection (reuse existing StackExchange.Redis)
 - [ ] Write 10+ integration tests (requires Redis)
 
 **Estimated Effort:** 2 days
@@ -626,7 +623,6 @@ This implementation follows **Test-Driven Development (TDD)** and builds on the 
 
 **Tasks:**
 - [ ] Create `ExactlyOnceDeliveryService.cs`
-- [ ] Integrate RedisDistributedLock (reuse existing)
 - [ ] Implement idempotency key storage (Redis)
 - [ ] Check for duplicate messages before delivery
 - [ ] Acquire lock per idempotency key

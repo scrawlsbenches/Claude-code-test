@@ -626,20 +626,7 @@ public class VaultSecretService : ISecretService
             VaultServiceTimeout = TimeSpan.FromSeconds(_config.TimeoutSeconds)
         };
 
-        if (!_config.ValidateCertificate)
-        {
-            _logger.LogWarning("TLS certificate validation is DISABLED - this is insecure for production");
-            vaultClientSettings.MyHttpClientProviderFunc = handler =>
-            {
-                var httpClientHandler = handler as HttpClientHandler;
-                if (httpClientHandler != null)
-                {
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
-                }
-                return new HttpClient(handler);
-            };
-        }
-
+        // TLS certificate validation is always enabled for security
         return new VaultClient(vaultClientSettings);
     }
 
@@ -663,9 +650,35 @@ public class VaultSecretService : ISecretService
     {
         const int length = 64;
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?";
-        var random = new Random();
-        return new string(Enumerable.Repeat(chars, length)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
+
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+
+        // Eliminate modulo bias by rejecting bytes that would cause uneven distribution
+        // With 87 characters and 256 byte values, we reject bytes >= 261 (256 - (256 % 87))
+        // This ensures each character has exactly the same probability of being selected
+        var maxValid = 256 - (256 % chars.Length); // 261 for 87 chars
+        var result = new char[length];
+        var position = 0;
+
+        while (position < length)
+        {
+            var buffer = new byte[length - position];
+            rng.GetBytes(buffer);
+
+            foreach (var b in buffer)
+            {
+                if (b < maxValid)
+                {
+                    result[position] = chars[b % chars.Length];
+                    position++;
+                    if (position >= length)
+                        break;
+                }
+                // Reject bytes >= maxValid to eliminate modulo bias
+            }
+        }
+
+        return new string(result);
     }
 
     #endregion

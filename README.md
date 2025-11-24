@@ -2,47 +2,57 @@
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![Tests](https://img.shields.io/badge/tests-1688%20total%20(1681%20passing%2C%207%20skipped)-brightgreen)]()
-[![Coverage](https://img.shields.io/badge/coverage-54%25-yellow)]()
+[![Coverage](https://img.shields.io/badge/coverage-67%25%20enforced-yellow)]()
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
-A **production-ready** distributed kernel orchestration system for managing hot-swappable kernel modules across distributed node clusters with automated deployment pipelines, real-time updates, and comprehensive observability.
+A **sophisticated distributed kernel orchestration system** for managing hot-swappable kernel modules across distributed node clusters with automated deployment pipelines, real-time updates, and comprehensive observability.
 
-**Status:** ✅ Production Ready | **Compliance:** 97% | **Test Coverage:** 54% | **Sprint 2:** 🔄 In Progress
+**Status:** ⚠️ **NEAR PRODUCTION** - Critical fixes required | **Coverage:** 67% enforced | **Last Reviewed:** November 24, 2025
 
 ---
 
-## ✨ What's New
+## ⚠️ Important Notice
 
-### Sprint 2 Enhancements (November 2025)
+**This system is NOT production-ready without addressing critical issues identified in the comprehensive code review.**
 
-🎉 **Major new capabilities added:**
+### Critical Issues Requiring Immediate Attention:
 
-- **🔐 Secret Rotation System** (Task #16) - Automated secret management with HashiCorp Vault integration
-- **📊 Knowledge Graph** - Entity-relationship modeling for deployment topology visualization
-- **🔔 Real-time Updates** (Task #6) - SignalR/WebSocket support for live deployment notifications
-- **📈 Enhanced Test Coverage** - 1,688 comprehensive tests (1,681 passing, 7 skipped)
-- **🛡️ Security Hardening** - OWASP compliance review, security headers, input validation
+1. 🔴 **TLS Certificate Validation Bypass** - Can be disabled, enabling MITM attacks on Vault communications
+2. 🔴 **Weak Cryptographic RNG** - Uses `Random()` instead of `RandomNumberGenerator` for secret generation
+3. 🔴 **Synchronous Blocking Calls** - `.Result` calls causing deadlock risks in middleware pipeline
+4. 🟠 **Thread-Safety Bugs** - HashSet locking issues in concurrent collections
+5. 🟠 **JWT Configuration Bug** - Audience configuration uses wrong key
 
-See [ENHANCEMENTS.md](ENHANCEMENTS.md) for complete details.
+**See [CODE_REVIEW_REPORT.md](CODE_REVIEW_REPORT.md) for complete analysis and fixes.**
+
+**Estimated timeline to production:** 1-2 weeks after critical fixes applied.
 
 ---
 
 ## Overview
 
-This system provides enterprise-grade orchestration for deploying kernel modules across multi-environment clusters (Development, QA, Staging, Production) with zero downtime. Built with .NET 8 and following clean architecture principles, it delivers **7,600+ lines of production-ready C# code** across a 4-layer architecture with knowledge graph capabilities.
+This system provides enterprise-grade orchestration for deploying kernel modules across multi-environment clusters (Development, QA, Staging, Production) with zero downtime. Built with .NET 8 and following clean architecture principles.
 
-### Key Capabilities
+### What This System Does Well ✅
 
-✅ **4 Deployment Strategies** - Direct, Rolling, Blue-Green, Canary with automatic rollback
-✅ **Real-time Updates** - SignalR/WebSocket notifications for deployment status
-✅ **Knowledge Graph** - Track deployment relationships and topology
-✅ **JWT Authentication** - Role-based access control (Admin, Deployer, Viewer)
-✅ **Approval Workflow** - Mandatory gates for Staging/Production deployments
-✅ **Distributed Tracing** - OpenTelemetry integration with Jaeger support
-✅ **Secret Rotation** - Automated secret management with HashiCorp Vault
-✅ **API Rate Limiting** - Per-endpoint and per-user throttling
-✅ **Module Verification** - RSA-2048 cryptographic signature validation
+- **Excellent Architecture** - Clean 4-layer design with proper separation of concerns
+- **Comprehensive Testing** - 1,688 tests (1,681 passing, 7 skipped) with 67% coverage enforcement
+- **Multiple Deployment Strategies** - Direct, Rolling, Blue-Green, Canary with automatic rollback
+- **Strong Observability** - OpenTelemetry, Prometheus metrics, Serilog structured logging
+- **Real-time Updates** - SignalR/WebSocket notifications for deployment status
+- **JWT Authentication** - Role-based access control (Admin, Deployer, Viewer)
+- **Comprehensive Documentation** - 21 markdown files (~10,000+ lines)
+
+### What Needs Improvement ⚠️
+
+Based on the comprehensive code review (November 24, 2025):
+
+- **Security Issues** - 12 vulnerabilities found (3 critical, 5 high, 4 medium)
+- **Async/Await Patterns** - 14 anti-patterns including blocking calls and fire-and-forget
+- **Test Coverage Gaps** - 7 approval workflow integration tests hanging
+- **Thread Safety** - Concurrent collection issues in 5 locations
+- **Production Hardening** - Demo credentials, default secrets, permissive CORS
 
 ---
 
@@ -53,13 +63,32 @@ This system provides enterprise-grade orchestration for deploying kernel modules
 - **.NET 8.0 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
 - **Docker & Docker Compose** - [Download](https://www.docker.com/products/docker-desktop) (optional)
 
-### Running with Docker Compose (Recommended)
+### Running Locally
 
 ```bash
 # Clone repository
 git clone https://github.com/scrawlsbenches/Claude-code-test.git
 cd Claude-code-test
 
+# Restore dependencies
+dotnet restore
+
+# Build solution
+dotnet build
+
+# Run tests
+dotnet test
+
+# Run API
+dotnet run --project src/HotSwap.Distributed.Api
+
+# API available at http://localhost:5000
+# Swagger UI at http://localhost:5000/swagger
+```
+
+### Running with Docker Compose
+
+```bash
 # Start all services
 docker-compose up -d
 
@@ -73,44 +102,9 @@ docker-compose down
 **Services Available:**
 - **API**: http://localhost:5000
 - **Swagger UI**: http://localhost:5000/swagger
-- **Jaeger UI**: http://localhost:16686 (tracing)
-- **Health**: http://localhost:5000/health
-
-### Running Locally
-
-```bash
-# Restore dependencies
-dotnet restore
-
-# Build solution
-dotnet build
-
-# Run tests (standard - ~3 minutes)
-dotnet test
-
-# ⚡ Run tests FAST (60% faster - ~1.5 minutes)
-./test-fast.sh
-
-# Run API
-dotnet run --project src/HotSwap.Distributed.Api
-
-# API available at http://localhost:5000
-```
-
-### ⚡ Performance Tip
-
-Tests run **60% faster** with optimized logging configuration:
-
-```bash
-# Fast tests (recommended for development)
-./test-fast.sh
-
-# Or manually
-export DOTNET_ENVIRONMENT=Test
-dotnet test
-```
-
-**Why?** Debug logging to console is slow. Test environment uses Warning/Error only, reducing test time from ~3 minutes to ~1.5 minutes. See [BUILD_PERFORMANCE_ANALYSIS.md](BUILD_PERFORMANCE_ANALYSIS.md) for details.
+- **Jaeger UI**: http://localhost:16686 (distributed tracing)
+- **Prometheus Metrics**: http://localhost:5000/metrics
+- **Health Check**: http://localhost:5000/health
 
 ---
 
@@ -118,273 +112,281 @@ dotnet test
 
 ### 🎯 Deployment Strategies
 
-| Strategy | Environment | Behavior | Time | Use Case |
-|----------|-------------|----------|------|----------|
-| **Direct** | Development | All nodes simultaneously | ~10s | Fast iteration |
-| **Rolling** | QA | Sequential batches with health checks | ~2-5m | Controlled testing |
-| **Blue-Green** | Staging | Parallel environment with smoke tests | ~5-10m | Pre-production validation |
-| **Canary** | Production | Gradual rollout (10%→30%→50%→100%) | ~15-30m | Risk mitigation |
+| Strategy | Environment | Nodes | Behavior | Duration | Use Case |
+|----------|-------------|-------|----------|----------|----------|
+| **Direct** | Development | 3 | All nodes simultaneously | ~10s | Fast iteration |
+| **Rolling** | QA | 5 | Sequential batches with health checks | ~2-5m | Controlled testing |
+| **Blue-Green** | Staging | 10 | Parallel environment with smoke tests | ~5-10m | Pre-production validation |
+| **Canary** | Production | 20 | Gradual rollout (10%→30%→50%→100%) | ~15-30m | Risk mitigation |
 
 **Features:**
-- Automatic rollback on failure or health check degradation
-- Metrics-based decision making (CPU, memory, latency, error rates)
-- Configurable thresholds per environment
-- Complete audit trail with approval workflow
+- ✅ Automatic rollback on failure
+- ✅ Health check validation between batches
+- ✅ Metrics-based decision making
+- ✅ Configurable thresholds per environment
+- ✅ Complete audit trail
 
-### 🔔 Real-time Updates (SignalR/WebSocket)
+### 🔔 Real-time Updates (SignalR)
 
-**NEW in Sprint 2** - Live deployment notifications via SignalR
+Live deployment notifications via WebSocket:
 
-**Features:**
-- Real-time deployment status updates
-- Subscription management (all deployments or specific deployment)
-- Progress tracking (percentage complete, current stage)
-- Auto-reconnection with exponential backoff
-- JavaScript and C# client examples included
-
-**Example Usage:**
 ```bash
-# Run SignalR client example
+# SignalR Hub: /hubs/deployment
+- SubscribeToDeployment(executionId)
+- SubscribeToAllDeployments()
+- Receive: DeploymentStarted, DeploymentProgress, DeploymentCompleted, DeploymentFailed
+```
+
+**Example Client:**
+```bash
 cd examples/SignalRClientExample
 dotnet run
-
-# Or use JavaScript client (see examples/)
 ```
 
-**SignalR Hub Endpoints:**
-```
-/deploymentHub
-  - SubscribeToDeployment(executionId)
-  - UnsubscribeFromDeployment(executionId)
-  - SubscribeToAllDeployments()
-  - UnsubscribeFromAllDeployments()
-```
+### 🛡️ Authentication & Security
 
-**Events:**
-```
-- DeploymentStarted
-- DeploymentProgress
-- DeploymentCompleted
-- DeploymentFailed
-- DeploymentRolledBack
-```
+**JWT Authentication** with role-based access control:
 
-See [examples/SignalRClientExample/README.md](examples/SignalRClientExample/README.md) for complete documentation.
+| Role | Permissions | Description |
+|------|-------------|-------------|
+| **Admin** | Full access + approvals | Administrative control |
+| **Deployer** | Create/manage deployments | DevOps team |
+| **Viewer** | Read-only access | Monitoring team |
 
-### 📊 Knowledge Graph
+**Demo Credentials (Development Only):**
+- Username: `admin` / Password: `Admin123!`
+- Username: `deployer` / Password: `Deploy123!`
+- Username: `viewer` / Password: `Viewer123!`
 
-**NEW in Sprint 2** - Entity-relationship modeling for deployment topology
+⚠️ **Security Note:** Replace demo credentials with proper user management before production.
 
-**Capabilities:**
-- Track entities (nodes, deployments, modules) and relationships
-- Query deployment topology with graph traversal
-- Visualize dependencies and impact analysis
-- Support for bidirectional relationships
-- Schema validation and indexing
-
-**Example Queries:**
-```graphql
-# Find all nodes running a specific module
-MATCH (n:Node)-[:RUNS]->(m:Module {name: 'payment-processor'})
-RETURN n
-
-# Find deployment path to production
-MATCH (d:Deployment)-[:TARGETS*]->(n:Node {environment: 'Production'})
-RETURN d, n
-```
-
-**Projects:**
-- `HotSwap.KnowledgeGraph.Domain` - Graph domain models
-- `HotSwap.KnowledgeGraph.Infrastructure` - Graph storage and indexing
-- `HotSwap.KnowledgeGraph.QueryEngine` - Graph query processing
-
-### 🛡️ Security & Authentication
-
-#### JWT Authentication & Authorization
-- **Bearer token authentication** with configurable expiration
-- **Role-based access control (RBAC):**
-  - **Admin**: Full access including approvals
-  - **Deployer**: Create and manage deployments
-  - **Viewer**: Read-only access
-- BCrypt password hashing
-- Swagger UI integration
-
-**Demo Credentials:**
-| Username | Password | Roles | Description |
-|----------|----------|-------|-------------|
-| admin | Admin123! | Admin, Deployer, Viewer | Full administrative access |
-| deployer | Deploy123! | Deployer, Viewer | Can create deployments |
-| viewer | Viewer123! | Viewer | Read-only access |
-
-#### Secret Rotation System (Task #16)
-- **HashiCorp Vault integration** for secret storage
-- **Automated rotation** with configurable intervals
-- **Zero-downtime rotation** with blue-green secret swap
-- **Audit trail** for all rotation events
-- **Compliance support** for regulatory requirements
-
-**Features:**
-- Vault KV v2 secrets engine support
-- Rotation policies (daily, weekly, monthly, custom)
-- Automatic rollback on validation failure
-- Comprehensive logging and alerting
-
-See [SECRET_ROTATION_GUIDE.md](SECRET_ROTATION_GUIDE.md) for setup instructions.
-
-#### Additional Security Features
-- **HTTPS/TLS** - TLS 1.2+ with HSTS enforcement
-- **API Rate Limiting** - Per-endpoint and per-user throttling
-- **Security Headers** - CSP, X-Frame-Options, HSTS, etc.
-- **Input Validation** - Comprehensive request validation
-- **Module Signatures** - RSA-2048 cryptographic verification
-- **Approval Workflow** - Mandatory gates for Staging/Production
+**Additional Security Features:**
+- ✅ BCrypt password hashing
+- ✅ JWT token expiration (configurable)
+- ✅ HTTPS/TLS with HSTS enforcement
+- ✅ API rate limiting (per-endpoint and per-user)
+- ✅ Security headers (CSP, X-Frame-Options, HSTS)
+- ✅ Input validation and sanitization
+- ✅ RSA-2048 module signature verification
+- ⚠️ **CRITICAL ISSUES** - See [CODE_REVIEW_REPORT.md](CODE_REVIEW_REPORT.md)
 
 ### 📡 Observability & Monitoring
 
-#### Distributed Tracing
-- **OpenTelemetry** integration with W3C trace context
-- **Multiple exporters** - Console, Jaeger, OTLP
-- **Parent-child spans** for all operations
-- **Baggage propagation** for cross-cutting concerns
+**Distributed Tracing:**
+- OpenTelemetry integration with W3C trace context
+- Jaeger exporter support (http://localhost:16686)
+- Parent-child span relationships
+- Trace ID correlation in logs
 
-#### Metrics Collection
-- **9+ metric types** - CPU, memory, latency, error rates
-- **Real-time aggregation** at node and cluster levels
-- **10-second cache** for performance
-- **Historical data support** for trend analysis
+**Metrics Collection:**
+- Prometheus metrics endpoint (`/metrics`)
+- 9+ metric types: CPU, memory, latency, error rates
+- Real-time aggregation at node and cluster levels
+- 10-second caching for performance
 
-#### Structured Logging
-- **Serilog integration** with JSON formatting
-- **Trace ID correlation** for distributed debugging
-- **Multiple sinks** - Console, file, log aggregation
-- **Contextual enrichment** with deployment metadata
+**Structured Logging:**
+- Serilog with JSON formatting
+- Trace ID correlation for distributed debugging
+- Multiple sinks (Console, File, aggregation-ready)
+- Contextual enrichment with deployment metadata
+
+### 📊 Knowledge Graph
+
+Entity-relationship modeling for deployment topology:
+
+- Track entities (nodes, deployments, modules) and relationships
+- Query deployment topology with graph traversal
+- Visualize dependencies and impact analysis
+- PostgreSQL-backed storage with JSON columns
+- Test Coverage: 154 tests, 74% line coverage
+
+**Projects:**
+- `HotSwap.KnowledgeGraph.Domain` - Graph domain models
+- `HotSwap.KnowledgeGraph.Infrastructure` - Storage & indexing
+- `HotSwap.KnowledgeGraph.QueryEngine` - Query processing with cost-based optimizer
+
+### 🔄 Distributed Systems Implementation
+
+**PostgreSQL-based Distributed Coordination** (production-ready):
+
+**Distributed Locking** (`PostgresDistributedLock`):
+- Uses PostgreSQL advisory locks (`pg_advisory_lock`)
+- True distributed coordination across multiple API instances
+- Automatic lock release on connection close
+- SHA-256 hash-based lock keys for consistency
+- Configurable timeout with polling strategy
+
+**Message Queue** (`PostgresMessageQueue`):
+- Durable message storage in PostgreSQL tables
+- PostgreSQL LISTEN/NOTIFY for real-time message delivery
+- Priority-based message ordering
+- Message persistence across restarts
+- Dead letter queue support
+- Automatic retry with exponential backoff
+
+**In-Memory Fallbacks** (development/testing):
+- `InMemoryDistributedLock` - SemaphoreSlim-based locking
+- `InMemoryMessageQueue` - ConcurrentQueue-based queuing
+- Configurable via `appsettings.json`:
+  ```json
+  {
+    "DistributedSystems": {
+      "UsePostgresLocks": true,
+      "UsePostgresMessageQueue": true
+    }
+  }
+  ```
+
+**Implementation Files:**
+- `src/HotSwap.Distributed.Infrastructure/Coordination/PostgresDistributedLock.cs`
+- `src/HotSwap.Distributed.Infrastructure/Messaging/PostgresMessageQueue.cs`
+- Tests: 154 unit tests + 74 integration tests
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│              REST API Layer                         │
-│  - DeploymentsController                            │
-│  - ClustersController                               │
-│  - ApprovalsController                              │
-│  - AuthenticationController                         │
-│  - SignalR DeploymentHub (Real-time)                │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│        Orchestration Layer                          │
-│  - DistributedKernelOrchestrator                    │
-│  - DeploymentPipeline                               │
-│  - Approval Management                              │
-│  - Real-time Notification Service                   │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│          Strategy Layer                             │
-│  - DirectDeploymentStrategy                         │
-│  - RollingDeploymentStrategy                        │
-│  - BlueGreenDeploymentStrategy                      │
-│  - CanaryDeploymentStrategy                         │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│      Infrastructure Layer                           │
-│  - TelemetryProvider (OpenTelemetry)                │
-│  - ModuleVerifier (RSA Signatures)                  │
-│  - MetricsProvider                                  │
-│  - InMemoryDistributedLock (C# SemaphoreSlim)       │
-│  - JwtTokenService                                  │
-│  - SecretRotationService (Vault)                    │
-│  - Knowledge Graph Engine                           │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│           Domain Layer                              │
-│  - Deployment Models                                │
-│  - Node & Cluster Models                            │
-│  - Authentication Models                            │
-│  - Graph Domain Models                              │
-│  - Validation Logic                                 │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  API Layer (REST + SignalR)                             │
+│  - 13 Controllers, 1 SignalR Hub, 4 Middleware          │
+├─────────────────────────────────────────────────────────┤
+│  Orchestration Layer                                    │
+│  - DistributedKernelOrchestrator, DeploymentPipeline    │
+│  - 4 Deployment Strategies, Approval Service            │
+├─────────────────────────────────────────────────────────┤
+│  Infrastructure Layer                                   │
+│  - Auth, Telemetry, Metrics, Messaging, Coordination    │
+│  - SecretManagement, ServiceDiscovery, Storage          │
+├─────────────────────────────────────────────────────────┤
+│  Domain Layer                                           │
+│  - 33 Models, 19 Enums, Business Logic, Validation      │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Layer Responsibilities:**
+**Design Patterns Used:**
+- ✅ Strategy Pattern (deployment strategies)
+- ✅ Repository Pattern (data access)
+- ✅ Factory Pattern (service instantiation)
+- ✅ Observer Pattern (SignalR notifications)
+- ✅ Middleware Pipeline (ASP.NET Core)
+- ✅ Dependency Injection (Microsoft.Extensions.DependencyInjection)
 
-- **API Layer** - HTTP endpoints, SignalR hubs, request/response handling
-- **Orchestration Layer** - Deployment coordination, pipeline execution
-- **Strategy Layer** - Deployment strategy implementations
-- **Infrastructure Layer** - Cross-cutting concerns (telemetry, security, storage)
-- **Domain Layer** - Business logic, domain models, validation
+**Code Statistics:**
+- **222 source files** (~7,600+ lines of production C#)
+- **142 test files** (1,688 tests)
+- **21 documentation files** (~10,000+ lines)
+- **7 projects** (4 distributed kernel + 3 knowledge graph)
 
 ---
 
 ## 📋 API Reference
 
-### Authentication API
+### Authentication
 
 ```bash
-POST   /api/v1/authentication/login           # Login and get JWT token
-GET    /api/v1/authentication/me              # Get current user info
-GET    /api/v1/authentication/demo-credentials # Get demo credentials (dev only)
+POST   /api/v1/authentication/login           # Get JWT token
+GET    /api/v1/authentication/me              # Current user info
+GET    /api/v1/authentication/demo-credentials # Demo credentials (dev only)
 ```
 
-### Deployments API
+### Deployments
 
 ```bash
-POST   /api/v1/deployments                    # Create deployment (Deployer/Admin)
-GET    /api/v1/deployments                    # List deployments (All roles)
-GET    /api/v1/deployments/{id}               # Get deployment status (All roles)
-POST   /api/v1/deployments/{id}/rollback      # Rollback deployment (Deployer/Admin)
+POST   /api/v1/deployments                    # Create deployment
+GET    /api/v1/deployments                    # List deployments
+GET    /api/v1/deployments/{id}               # Get deployment status
+POST   /api/v1/deployments/{id}/rollback      # Rollback deployment
 ```
 
-### Approvals API
+### Approvals (Admin Only)
 
 ```bash
-GET    /api/v1/approvals/pending                      # Get pending approvals (All roles)
-GET    /api/v1/approvals/deployments/{id}             # Get approval details (All roles)
-POST   /api/v1/approvals/deployments/{id}/approve     # Approve deployment (Admin only)
-POST   /api/v1/approvals/deployments/{id}/reject      # Reject deployment (Admin only)
+GET    /api/v1/approvals/pending                      # Pending approvals
+GET    /api/v1/approvals/deployments/{id}             # Approval details
+POST   /api/v1/approvals/deployments/{id}/approve     # Approve
+POST   /api/v1/approvals/deployments/{id}/reject      # Reject
 ```
 
-### Clusters API
+### Clusters
 
 ```bash
-GET    /api/v1/clusters                       # List all clusters (All roles)
-GET    /api/v1/clusters/{environment}         # Get cluster info (All roles)
-GET    /api/v1/clusters/{environment}/metrics # Get time-series metrics (All roles)
+GET    /api/v1/clusters                       # List all clusters
+GET    /api/v1/clusters/{environment}         # Cluster details
+GET    /api/v1/clusters/{environment}/metrics # Time-series metrics
 ```
 
-### System API
+### System
 
 ```bash
-GET    /health                                # Health check endpoint (Public)
-GET    /swagger                               # Interactive API documentation (Public)
+GET    /health                                # Health check
+GET    /metrics                               # Prometheus metrics
+GET    /swagger                               # API documentation
 ```
 
-### Example: Create Deployment
-
+**Example:**
 ```bash
-# Login to get JWT token
+# Login
 curl -X POST http://localhost:5000/api/v1/authentication/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"Admin123!"}'
 
-# Response: { "token": "eyJhbGc...", "expiresAt": "2025-11-21T12:00:00Z" }
-
-# Create deployment with JWT token
+# Create deployment
 curl -X POST http://localhost:5000/api/v1/deployments \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your-token>" \
   -d '{
     "moduleName": "payment-processor",
     "version": "2.1.0",
     "targetEnvironment": "Production",
     "requesterEmail": "user@example.com"
   }'
+```
 
-# Response: { "executionId": "abc-123", "status": "Accepted" }
+---
+
+## Testing
+
+### Test Coverage Summary
+
+| Test Project | Count | Status | Coverage | Notes |
+|--------------|-------|--------|----------|-------|
+| **Unit Tests** | 1,453 passing, 7 skipped | ✅ Passing | 67% enforced | Domain, Infrastructure, Orchestrator |
+| **Integration Tests** | 74 (24 passing, 45 skipped†, 5 other) | ⚠️ Partial | Critical paths | †Performance/hang issues |
+| **Knowledge Graph** | 154 passing | ✅ Passing | 71.27% line, 78.78% branch | Query engine 95.95% |
+| **Smoke Tests** | 6 passing | ✅ Passing | API validation | Health, deployments, clusters |
+| **Total** | **1,688 tests** | **1,681 passing, 7 skipped** | **67% enforced** | - |
+
+### Coverage by Component
+
+| Component | Line Coverage | Branch Coverage | Status |
+|-----------|---------------|-----------------|--------|
+| **Query Engine** | 95.95% | 93.93% | ⭐ Excellent |
+| **Infrastructure** | 81.09% | 87.87% | ✅ Good |
+| **Domain Models** | 34.92% | 44.44% | ⚠️ Needs improvement |
+
+### Known Test Issues
+
+⚠️ **Approval Workflow Tests Hanging** - 7 integration tests in `ApprovalWorkflowIntegrationTests.cs` are skipped due to test hangs. Root cause under investigation.
+
+### Run Tests
+
+```bash
+# All tests
+dotnet test
+
+# Unit tests only
+dotnet test --filter FullyQualifiedName~HotSwap.Distributed.Tests
+
+# Integration tests (requires running API)
+dotnet test --filter Category=Integration
+
+# Knowledge graph tests
+dotnet test --filter FullyQualifiedName~HotSwap.KnowledgeGraph.Tests
+
+# With coverage
+dotnet test --collect:"XPlat Code Coverage"
+./check-coverage.sh  # Enforces 67% threshold
 ```
 
 ---
@@ -392,30 +394,38 @@ curl -X POST http://localhost:5000/api/v1/deployments \
 ## Technology Stack
 
 ### Core Framework
-- **.NET 8.0** - Latest LTS with C# 12
+- **.NET 8.0** (LTS) with **C# 12**
 - **ASP.NET Core 8.0** - Web API framework
 - **SignalR 8.0** - Real-time WebSocket communication
+- **Entity Framework Core 9.0** - ORM for PostgreSQL
 
-### Infrastructure
-- **OpenTelemetry 1.9.0** - Distributed tracing and metrics
-- **Microsoft.Extensions.Caching.Memory** - In-memory distributed caching (C# built-in)
-- **Serilog.AspNetCore 8.0.0** - Structured logging
-- **System.Security.Cryptography.Pkcs 8.0.0** - Module signature verification
-- **Microsoft.AspNetCore.Authentication.JwtBearer 8.0.0** - JWT authentication
+### Observability
+- **OpenTelemetry 1.9.0** - Distributed tracing & metrics
+- **Prometheus Exporter** - Metrics endpoint (`/metrics`)
+- **Serilog 8.0** - Structured logging with JSON
+- **Jaeger** - Trace visualization (optional)
 
-### API & Documentation
-- **Swashbuckle.AspNetCore 6.5.0** - OpenAPI/Swagger documentation
-- **Microsoft.AspNetCore.OpenApi 8.0.0** - OpenAPI specification
+### Security
+- **Microsoft.AspNetCore.Authentication.JwtBearer 8.0.0** - JWT auth
+- **BCrypt.Net-Next 4.0.3** - Password hashing
+- **System.IdentityModel.Tokens.Jwt 8.0.0** - JWT tokens
+- **VaultSharp 1.17.5.1** - HashiCorp Vault integration (optional)
+
+### Data & Messaging
+- **Npgsql.EntityFrameworkCore.PostgreSQL 9.0.4** - PostgreSQL provider
+- **PostgreSQL LISTEN/NOTIFY** - Message queue
+- **PostgreSQL Advisory Locks** - Distributed locking
 
 ### Testing
 - **xUnit 2.6.2** - Unit testing framework
 - **Moq 4.20.70** - Mocking library
-- **FluentAssertions 6.12.0** - Fluent assertion library
-- **Microsoft.AspNetCore.TestHost 8.0.0** - Integration testing
+- **FluentAssertions 6.12.0** - Fluent assertions
+- **Microsoft.AspNetCore.Mvc.Testing 8.0.0** - Integration testing
+- **coverlet.collector 6.0.0** - Code coverage
 
-### External Dependencies
-- **HashiCorp Vault** (optional) - Secret management
-- **Jaeger** (optional) - Distributed tracing visualization
+### API Documentation
+- **Swashbuckle.AspNetCore 6.5.0** - Swagger/OpenAPI
+- **Microsoft.AspNetCore.OpenApi 8.0.0** - OpenAPI spec
 
 ---
 
@@ -424,283 +434,129 @@ curl -X POST http://localhost:5000/api/v1/deployments \
 ```
 Claude-code-test/
 ├── src/
-│   ├── HotSwap.Distributed.Domain/          # Domain models, enums, validation
-│   ├── HotSwap.Distributed.Infrastructure/  # Telemetry, security, metrics
-│   ├── HotSwap.Distributed.Orchestrator/    # Core orchestration, strategies
-│   ├── HotSwap.Distributed.Api/             # REST API controllers, SignalR hubs
+│   ├── HotSwap.Distributed.Domain/          # 33 models, 19 enums
+│   ├── HotSwap.Distributed.Infrastructure/  # 19 subdirectories (auth, metrics, etc.)
+│   ├── HotSwap.Distributed.Orchestrator/    # Core orchestration, 4 strategies
+│   ├── HotSwap.Distributed.Api/             # 13 controllers, 1 hub, 4 middleware
 │   ├── HotSwap.KnowledgeGraph.Domain/       # Graph domain models
-│   ├── HotSwap.KnowledgeGraph.Infrastructure/ # Graph storage and indexing
-│   └── HotSwap.KnowledgeGraph.QueryEngine/  # Graph query processing
+│   ├── HotSwap.KnowledgeGraph.Infrastructure/ # Graph storage
+│   └── HotSwap.KnowledgeGraph.QueryEngine/  # Query processing (4,165 LOC)
 ├── tests/
-│   ├── HotSwap.Distributed.Tests/           # Unit tests (582 tests)
-│   ├── HotSwap.Distributed.IntegrationTests/ # Integration tests (API, SignalR)
-│   ├── HotSwap.Distributed.SmokeTests/      # Smoke tests (6 API tests)
-│   └── HotSwap.KnowledgeGraph.Tests/        # Knowledge graph tests
+│   ├── HotSwap.Distributed.Tests/           # 1,453 unit tests + 7 skipped
+│   ├── HotSwap.Distributed.IntegrationTests/ # 74 integration tests
+│   ├── HotSwap.Distributed.SmokeTests/      # 6 smoke tests
+│   └── HotSwap.KnowledgeGraph.Tests/        # 154 tests
 ├── examples/
-│   ├── ApiUsageExample/                     # Comprehensive API usage examples
-│   └── SignalRClientExample/                # Real-time SignalR client example
-├── .github/workflows/
-│   └── build-and-test.yml                   # CI/CD pipeline
-├── .claude/skills/                           # Claude Skills (18 skills)
-├── Dockerfile                                # Multi-stage Docker build
+│   ├── ApiUsageExample/                     # Complete API demos
+│   └── SignalRClientExample/                # Real-time client
+├── docs/                                     # 21 markdown files
+├── .github/workflows/                        # CI/CD pipeline
 ├── docker-compose.yml                        # Full stack deployment
-├── DistributedKernel.sln                     # Solution file
-├── CLAUDE.md                                 # AI assistant guide
-├── SKILLS.md                                 # Claude Skills documentation
-├── TASK_LIST.md                              # Task roadmap (20+ tasks)
-├── ENHANCEMENTS.md                           # Recent enhancements
-├── SECRET_ROTATION_GUIDE.md                  # Secret rotation documentation
-├── JWT_AUTHENTICATION_GUIDE.md               # Authentication guide
-├── APPROVAL_WORKFLOW_GUIDE.md                # Approval workflow guide
+├── CODE_REVIEW_REPORT.md                     # ⚠️ READ THIS FIRST
 └── README.md                                 # This file
 ```
-
-**Project Statistics:**
-- **7 source projects** (4 distributed kernel + 3 knowledge graph)
-- **4 test projects** (unit, integration, smoke, graph)
-- **2 example projects** (API usage, SignalR client)
-- **18 Claude Skills** (~12,000+ lines of automation)
-- **7,600+ lines** of production C# code
-- **10+ comprehensive docs** (3,500+ lines)
-
----
-
-## Examples
-
-### 1. API Usage Example
-
-Complete demonstration of **all API endpoints** with real-world scenarios.
-
-**Features:**
-- ✅ All deployment strategies (Direct, Rolling, Blue-Green, Canary)
-- ✅ JWT authentication flow
-- ✅ Approval workflow integration
-- ✅ Cluster monitoring and health checks
-- ✅ Time-series metrics retrieval
-- ✅ Rollback scenarios
-- ✅ Error handling and retry logic
-
-**Run Examples:**
-```bash
-cd examples/ApiUsageExample
-./run-example.sh
-
-# Or with custom API URL
-./run-example.sh http://your-api:5000
-```
-
-See [examples/ApiUsageExample/README.md](examples/ApiUsageExample/README.md) for detailed documentation.
-
-### 2. SignalR Client Example
-
-**NEW in Sprint 2** - Real-time deployment notifications
-
-**Features:**
-- ✅ Real-time status updates via SignalR
-- ✅ Subscription management (specific deployment or all deployments)
-- ✅ Progress tracking with percentage complete
-- ✅ Auto-reconnection with exponential backoff
-- ✅ Both JavaScript and C# client implementations
-
-**Run Example:**
-```bash
-cd examples/SignalRClientExample
-dotnet run
-
-# In another terminal, trigger a deployment via API
-# Watch real-time updates in SignalR client
-```
-
-See [examples/SignalRClientExample/README.md](examples/SignalRClientExample/README.md) for detailed documentation.
-
----
-
-## Testing
-
-### Test Coverage Summary
-
-| Test Type | Count | Status | Coverage | Duration |
-|-----------|-------|--------|----------|----------|
-| **Unit Tests** | 1,453 passing, 7 skipped | ✅ Passing | 54% line | ~5.5min |
-| **Integration Tests** | 74 passing | ✅ Passing | Critical paths | ~8min |
-| **Knowledge Graph Tests** | 154 passing | ✅ Passing | 74% line | ~1s |
-| **Total** | **1,688 tests (1,681 passing, 7 skipped)** | ✅ **100% Pass** | **54%** | **~14min** |
-
-### Run All Tests
-
-```bash
-# Unit tests (requires .NET 8 SDK)
-dotnet test                         # 582 tests, ~18s
-
-# Integration tests (requires running API)
-dotnet test --filter Category=Integration
-
-# Smoke tests (requires API running)
-./run-smoke-tests.sh                # 6 tests, ~8s
-
-# Critical path validation
-./test-critical-paths.sh
-
-# Code validation
-./validate-code.sh
-```
-
-### Test Categories
-
-**Unit Tests** (`HotSwap.Distributed.Tests/`)
-- ✅ Deployment strategy tests (Direct, Rolling, Blue-Green, Canary)
-- ✅ JWT authentication tests (token generation, validation, expiration)
-- ✅ User repository tests (CRUD, authentication, roles)
-- ✅ Rate limiting middleware tests
-- ✅ Security headers middleware tests
-- ✅ Input validation tests
-- ✅ Module verification tests
-- ✅ Metrics provider tests
-
-**Integration Tests** (`HotSwap.Distributed.IntegrationTests/`)
-- ✅ End-to-end deployment workflows
-- ✅ API endpoint integration
-- ✅ SignalR hub communication
-- ✅ Approval workflow integration
-- ✅ Rollback scenarios
-- ✅ Multi-environment deployments
-
-**Smoke Tests** (`HotSwap.Distributed.SmokeTests/`)
-- ✅ Health check API
-- ✅ List clusters endpoint
-- ✅ Create deployment endpoint
-- ✅ Get deployment status endpoint
-- ✅ List deployments endpoint
-- ✅ Get cluster metrics endpoint
-
----
-
-## 🛡️ Security
-
-### Production Security Checklist
-
-**Sprint 1 - COMPLETED ✅:**
-- [x] JWT authentication with RBAC
-- [x] HTTPS/TLS with HSTS enforcement
-- [x] API rate limiting per endpoint/user
-- [x] Approval workflow for Staging/Production
-- [x] Security headers (CSP, X-Frame-Options, HSTS, etc.)
-- [x] Input validation and sanitization
-- [x] Global exception handling (no info disclosure)
-
-**Sprint 2 - COMPLETED ✅:**
-- [x] Secret rotation system with HashiCorp Vault
-- [x] OWASP Top 10 compliance review
-- [x] Comprehensive unit test coverage (54% line, 58% branch)
-- [x] Integration tests for security features
-
-**Production Deployment - RECOMMENDED:**
-- [ ] Replace demo users with database-backed user management
-- [ ] Store JWT secret in HashiCorp Vault or Azure Key Vault
-- [ ] Enable MFA for admin accounts
-- [ ] Configure Web Application Firewall (WAF)
-- [ ] Set up security scanning (SAST/DAST)
-- [ ] Enable audit log retention (PostgreSQL)
-- [ ] Configure network policies (Kubernetes)
-- [ ] Implement certificate monitoring and renewal
-
-### OWASP Top 10 Coverage
-
-| OWASP Category | Mitigation | Status |
-|----------------|------------|--------|
-| A01:2021 - Broken Access Control | JWT + RBAC | ✅ Complete |
-| A02:2021 - Cryptographic Failures | HTTPS/TLS, RSA signatures | ✅ Complete |
-| A03:2021 - Injection | Input validation | ✅ Complete |
-| A04:2021 - Insecure Design | Approval workflow, secure patterns | ✅ Complete |
-| A05:2021 - Security Misconfiguration | Security headers, secure defaults | ✅ Complete |
-| A07:2021 - Identification/Auth Failures | JWT with expiration, BCrypt | ✅ Complete |
-| A08:2021 - Software/Data Integrity | Module signatures, validation | ✅ Complete |
 
 ---
 
 ## Documentation
 
-### Comprehensive Documentation Suite
+### Essential Reading
 
-| Document | Purpose | Lines | Status |
-|----------|---------|-------|--------|
-| **[README.md](README.md)** | Quick start & overview | 800+ | ✅ Complete |
-| **[CLAUDE.md](CLAUDE.md)** | AI assistant development guide | 3,500+ | ✅ Complete |
-| **[SKILLS.md](SKILLS.md)** | 18 Claude Skills automation | 1,100+ | ✅ Complete |
-| **[TESTING.md](TESTING.md)** | Testing guide & procedures | 400+ | ✅ Complete |
-| **[PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md)** | Production readiness status | 1,100+ | ✅ Complete |
-| **[SPEC_COMPLIANCE_REVIEW.md](SPEC_COMPLIANCE_REVIEW.md)** | Specification compliance | 370+ | ✅ Complete |
-| **[TASK_LIST.md](TASK_LIST.md)** | Task roadmap (20+ tasks) | 800+ | ✅ Complete |
-| **[ENHANCEMENTS.md](ENHANCEMENTS.md)** | Sprint enhancement details | 900+ | ✅ Complete |
-| **[JWT_AUTHENTICATION_GUIDE.md](JWT_AUTHENTICATION_GUIDE.md)** | Authentication setup | 400+ | ✅ Complete |
-| **[APPROVAL_WORKFLOW_GUIDE.md](APPROVAL_WORKFLOW_GUIDE.md)** | Approval workflow guide | 300+ | ✅ Complete |
-| **[HTTPS_SETUP_GUIDE.md](HTTPS_SETUP_GUIDE.md)** | HTTPS/TLS configuration | 250+ | ✅ Complete |
-| **[SECRET_ROTATION_GUIDE.md](SECRET_ROTATION_GUIDE.md)** | Secret rotation guide | 500+ | ✅ Complete |
-| **Swagger/OpenAPI** | Interactive API docs | Auto-gen | ✅ Complete |
+| Document | Purpose | Status |
+|----------|---------|--------|
+| **[CODE_REVIEW_REPORT.md](CODE_REVIEW_REPORT.md)** | ⚠️ **CRITICAL** - Security issues & fixes | ✅ Nov 24, 2025 |
+| **[README.md](README.md)** | This file - Quick start & overview | ✅ Current |
+| **[BUILD_STATUS.md](BUILD_STATUS.md)** | Build validation status | ✅ Complete |
+| **[TESTING.md](TESTING.md)** | Testing guide & procedures | ✅ Complete |
+| **[COVERAGE_ENFORCEMENT.md](COVERAGE_ENFORCEMENT.md)** | 67% coverage requirements | ✅ Complete |
 
-**Total:** 10,000+ lines of comprehensive documentation
+### Additional Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** - AI assistant development guide (3,500+ lines)
+- **[SKILLS.md](SKILLS.md)** - 18 automated workflow skills
+- **[TASK_LIST.md](TASK_LIST.md)** - Development roadmap
+- **[JWT_AUTHENTICATION_GUIDE.md](JWT_AUTHENTICATION_GUIDE.md)** - Auth setup
+- **[APPROVAL_WORKFLOW_GUIDE.md](APPROVAL_WORKFLOW_GUIDE.md)** - Approval workflow
+- **[SECRET_ROTATION_GUIDE.md](SECRET_ROTATION_GUIDE.md)** - Secret rotation
+- **[PROMETHEUS_METRICS_GUIDE.md](PROMETHEUS_METRICS_GUIDE.md)** - Metrics docs
+- **Swagger/OpenAPI** - Interactive API docs at `/swagger`
+
+**Total:** 21 markdown files, ~10,000+ lines
 
 ---
 
-## Claude Skills
+## 🛡️ Security
 
-**[SKILLS.md](SKILLS.md)** - 18 automated workflow skills (~12,000+ lines)
+### Critical Security Issues (From Code Review)
 
-This project includes specialized Claude Skills that automate complex development workflows, enforce best practices, and prevent common errors.
+**BEFORE PRODUCTION DEPLOYMENT, you MUST fix:**
 
-### Available Skills by Category
+1. 🔴 **TLS Certificate Validation Bypass** (`VaultSecretService.cs:629-641`)
+   - Can be disabled, enabling MITM attacks
+   - **Fix:** Remove `ValidateCertificate` config option
 
-**Project Management Skills:**
-| Skill | Purpose | When to Use |
-|-------|---------|-------------|
-| **thinking-framework** | Meta-orchestrator (Think First, Code Later) | Before any complex task |
-| **project-intake** | Extract requirements from user stories | New features or projects |
-| **scope-guard** | Prevent scope creep and feature bloat | During implementation |
-| **architecture-review** | Right-sized architecture decisions | Before major design changes |
-| **reality-check** | Realistic time/effort estimates | Planning sprints or tasks |
-| **sprint-planner** | Sprint planning & task delegation | Every 1-2 weeks |
+2. 🔴 **Weak Cryptographic RNG** (`VaultSecretService.cs:662-669`)
+   - Uses `Random()` instead of `RandomNumberGenerator`
+   - **Fix:** Use `System.Security.Cryptography.RandomNumberGenerator`
 
-**Development Skills:**
-| Skill | Purpose | When to Use |
-|-------|---------|-------------|
-| **dotnet-setup** | Automate .NET SDK installation | New session setup |
-| **tdd-helper** | Guide Red-Green-Refactor TDD workflow | ANY code changes (mandatory) |
-| **precommit-check** | Validate before commits | Before EVERY commit (mandatory) |
-| **test-coverage-analyzer** | Track and improve coverage (current: 54%) | After features, weekly audits |
-| **api-endpoint-builder** | REST API controller scaffolding | Adding new API endpoints |
+3. 🔴 **Synchronous Blocking** (`TenantContextService.cs:110`)
+   - `.Result` call causing deadlock risk
+   - **Fix:** Refactor to async throughout middleware chain
 
-**Debugging & Optimization Skills:**
-| Skill | Purpose | When to Use |
-|-------|---------|-------------|
-| **race-condition-debugger** | Debug async/await issues | Intermittent test failures |
-| **integration-test-debugger** | Debug hanging/slow tests | Test timeouts or hangs |
-| **performance-optimizer** | Load testing & optimization | Performance issues |
+4. 🟠 **Thread-Safety Bug** (`UsageTrackingService.cs:47-52`)
+   - HashSet locking in ConcurrentDictionary
+   - **Fix:** Use ConcurrentBag or ConcurrentDictionary
 
-**Security & Compliance Skills:**
-| Skill | Purpose | When to Use |
-|-------|---------|-------------|
-| **security-hardening** | Secret rotation & OWASP compliance | Security reviews |
+5. 🟠 **JWT Configuration Bug** (`Program.cs:168`)
+   - Audience uses wrong config key
+   - **Fix:** Change to `builder.Configuration["Jwt:Audience"]`
 
-**Infrastructure Skills:**
-| Skill | Purpose | When to Use |
-|-------|---------|-------------|
-| **doc-sync-check** | Prevent stale documentation | Before commits, monthly audits |
-| **docker-helper** | Docker security & optimization | Docker updates, monthly maintenance |
-| **database-migration-helper** | EF Core migrations for PostgreSQL | Database schema changes |
+**See [CODE_REVIEW_REPORT.md](CODE_REVIEW_REPORT.md) for complete analysis.**
 
-**Quick Usage:**
-```bash
-# Via slash commands (if configured)
-/tdd-helper          # Start TDD workflow
-/precommit-check     # Validate before commit
-/sprint-planner      # Plan sprint tasks
-/security-hardening  # Review security
+### Security Features (Implemented)
 
-# Or follow step-by-step instructions in each skill file
-cat .claude/skills/tdd-helper.md
-```
+✅ **Authentication & Authorization:**
+- JWT with proper validation
+- BCrypt password hashing
+- Role-based access control (RBAC)
+- Account lockout after 5 failed attempts
+- Token expiration enforcement
 
-See **[SKILLS.md](SKILLS.md)** for comprehensive documentation, decision trees, and workflow examples.
+✅ **Network Security:**
+- HTTPS/TLS with HSTS enforcement
+- TLS 1.2+ required
+- Security headers (CSP, X-Frame-Options, etc.)
+
+✅ **Input Validation:**
+- Comprehensive request validation
+- Regex pattern validation
+- Length and format checks
+- Parameterized queries (no SQL injection risk)
+
+✅ **API Protection:**
+- Rate limiting (per-endpoint and per-user)
+- Global exception handling (no info disclosure)
+- CORS with configurable origins
+
+✅ **Code Security:**
+- RSA-2048 module signature verification
+- Approval workflow for Staging/Production
+- Audit logging for all operations
+
+### Recommended for Production
+
+Before deploying to production, additionally:
+
+- [ ] Fix 3 critical security issues listed above
+- [ ] Replace demo users with database-backed user management
+- [ ] Store JWT secret in HashiCorp Vault or Azure Key Vault
+- [ ] Enable MFA for admin accounts
+- [ ] Configure Web Application Firewall (WAF)
+- [ ] Set up security scanning (SAST/DAST)
+- [ ] Run dependency vulnerability audit: `dotnet list package --vulnerable`
+- [ ] Configure network policies (if using Kubernetes)
+- [ ] Implement certificate monitoring and renewal
+- [ ] Enable PostgreSQL audit log retention
 
 ---
 
@@ -708,22 +564,22 @@ See **[SKILLS.md](SKILLS.md)** for comprehensive documentation, decision trees, 
 
 ### Expected Deployment Times
 
-| Environment | Nodes | Strategy | Target Time | Max Time |
-|-------------|-------|----------|-------------|----------|
-| Development | 3 | Direct | 10s | 30s |
-| QA | 5 | Rolling | 2m | 5m |
-| Staging | 10 | Blue-Green | 5m | 10m |
-| Production | 20 | Canary | 15m | 30m |
+| Environment | Nodes | Strategy | Target | Max | Notes |
+|-------------|-------|----------|--------|-----|-------|
+| Development | 3 | Direct | 10s | 30s | All nodes simultaneously |
+| QA | 5 | Rolling | 2m | 5m | Sequential with health checks |
+| Staging | 10 | Blue-Green | 5m | 10m | Parallel with smoke tests |
+| Production | 20 | Canary | 15m | 30m | Gradual 10%→30%→50%→100% |
 
 ### API Performance
 
-| Endpoint | Target | Cached | Notes |
-|----------|--------|--------|-------|
-| GET /health | < 100ms | N/A | Always fast |
-| POST /deployments | < 500ms | N/A | Async processing |
-| GET /clusters/{env} | < 200ms | 10s | Cached metrics |
-| GET /metrics | < 200ms | 10s | Cached aggregation |
-| SignalR notifications | < 50ms | N/A | Real-time push |
+| Endpoint | Target Latency | Caching | Notes |
+|----------|----------------|---------|-------|
+| GET /health | < 100ms | No | Always fast |
+| POST /deployments | < 500ms | No | Async processing |
+| GET /clusters/{env} | < 200ms | 10s | Metrics cached |
+| GET /metrics | < 200ms | 10s | Aggregation cached |
+| SignalR push | < 50ms | No | Real-time |
 
 ### Scalability
 
@@ -731,17 +587,50 @@ See **[SKILLS.md](SKILLS.md)** for comprehensive documentation, decision trees, 
 - 1,000+ deployments per day
 - 100+ concurrent deployments
 - 10,000+ cluster nodes supported
-- 1,000 req/min per API instance (rate limited)
+- 1,000 requests/minute per API instance
 
 **Horizontal Scaling:**
 - API: Multiple instances behind load balancer
-- Cache: In-memory distributed cache with C# MemoryCache
-- SignalR: In-memory backplane (sticky sessions) or Azure SignalR Service for multi-instance
-- Metrics: Distributed cache with in-memory implementation
+- SignalR: Requires sticky sessions or Azure SignalR Service
+- Caching: In-memory (single instance only)
+- Locking: PostgreSQL advisory locks (distributed-safe, multi-instance ready)
+- Message Queue: PostgreSQL LISTEN/NOTIFY (distributed-safe, multi-instance ready)
 
 ---
 
 ## Production Deployment
+
+### ⚠️ Pre-Deployment Checklist
+
+**CRITICAL - Complete BEFORE production:**
+
+1. [ ] **Fix critical security issues** (see [CODE_REVIEW_REPORT.md](CODE_REVIEW_REPORT.md))
+   - [ ] Remove TLS certificate validation bypass
+   - [ ] Replace weak RNG with RandomNumberGenerator
+   - [ ] Fix synchronous blocking calls
+   - [ ] Fix thread-safety bug in UsageTrackingService
+   - [ ] Fix JWT audience configuration
+
+2. [ ] **Security hardening**
+   - [ ] Replace demo credentials
+   - [ ] Store JWT secret in secure vault
+   - [ ] Configure explicit CORS origins
+   - [ ] Set explicit AllowedHosts
+   - [ ] Run dependency vulnerability scan
+
+3. [ ] **Testing validation**
+   - [ ] Fix hanging approval workflow tests
+   - [ ] Verify all integration tests pass
+   - [ ] Run load tests
+   - [ ] Validate rollback scenarios
+
+4. [ ] **Configuration**
+   - [ ] Set production JWT secret (min 32 chars)
+   - [ ] Configure production database
+   - [ ] Enable audit logging
+   - [ ] Configure monitoring/alerting
+
+**Estimated time to production-ready:** 1-2 weeks after fixes.
 
 ### Docker Deployment
 
@@ -759,7 +648,7 @@ curl http://localhost:5000/health
 ### Kubernetes Deployment
 
 ```bash
-# Build and push image
+# Build and push
 docker build -t your-registry/distributed-kernel:1.0.0 .
 docker push your-registry/distributed-kernel:1.0.0
 
@@ -768,12 +657,7 @@ kubectl create namespace distributed-kernel
 
 # Create secrets
 kubectl create secret generic jwt-secret \
-  --from-literal=secret-key='your-secret-key-min-32-chars' \
-  -n distributed-kernel
-
-kubectl create secret generic vault-config \
-  --from-literal=address='http://vault:8200' \
-  --from-literal=token='your-vault-token' \
+  --from-literal=secret-key='<min-32-chars>' \
   -n distributed-kernel
 
 # Deploy
@@ -784,73 +668,157 @@ kubectl get pods -n distributed-kernel
 kubectl logs -f deployment/orchestrator -n distributed-kernel
 ```
 
-### Environment Variables
+### Required Environment Variables
 
-**Required:**
 ```bash
-# JWT Configuration
-Jwt__SecretKey=<min-32-chars>         # JWT signing key
-Jwt__Issuer=YourIssuer                # Token issuer
-Jwt__Audience=YourAudience            # Token audience
-Jwt__ExpirationMinutes=60             # Token expiration
+# JWT (REQUIRED)
+Jwt__SecretKey=<min-32-chars-from-vault>
+Jwt__Issuer=YourIssuer
+Jwt__Audience=YourAudience
+Jwt__ExpirationMinutes=60
 
-# Optional: Vault Configuration
-Vault__Address=http://localhost:8200  # Vault server URL
-Vault__Token=<vault-token>            # Vault authentication token
-Vault__MountPath=secret               # Vault KV mount path
+# PostgreSQL (OPTIONAL for audit logs)
+ConnectionStrings__PostgreSql=<connection-string>
+
+# Vault (OPTIONAL for secret rotation)
+Vault__Address=http://vault:8200
+Vault__Token=<vault-token>
+Vault__MountPath=secret
+Vault__ValidateCertificate=true
 ```
 
-**Optional:**
+---
+
+## Examples
+
+### 1. API Usage Example
+
+Complete demonstration of all API endpoints:
+
 ```bash
-# Telemetry
-OTEL_EXPORTER_JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+cd examples/ApiUsageExample
+./run-example.sh
 
-# Logging
-Serilog__MinimumLevel=Information
-
-# CORS
-Cors__AllowedOrigins__0=https://your-domain.com
+# Or with custom API URL
+./run-example.sh http://your-api:5000
 ```
+
+**Includes:**
+- All deployment strategies (Direct, Rolling, Blue-Green, Canary)
+- JWT authentication flow
+- Approval workflow
+- Cluster monitoring
+- Rollback scenarios
+- Error handling
+
+### 2. SignalR Client Example
+
+Real-time deployment notifications:
+
+```bash
+cd examples/SignalRClientExample
+dotnet run
+
+# Watch real-time updates as deployments execute
+```
+
+See [examples/](examples/) for complete documentation.
 
 ---
 
 ## Contributing
 
-This project follows clean architecture principles and .NET best practices.
+### Before Contributing
 
-**Development Guidelines:**
-- Read **[CLAUDE.md](CLAUDE.md)** for comprehensive development instructions
-- Follow **Test-Driven Development (TDD)** - tests before implementation (mandatory)
-- Run pre-commit checklist before every commit
-- Use **Claude Skills** (`/tdd-helper`, `/precommit-check`) for automation
-- Improve test coverage from current 54% (goal: 75%+)
-- Update documentation with code changes
+1. **Read [CODE_REVIEW_REPORT.md](CODE_REVIEW_REPORT.md)** - Understand current issues
+2. **Read [CLAUDE.md](CLAUDE.md)** - Development guidelines
+3. **Run tests** - Ensure 67% coverage maintained
+4. **Follow TDD** - Tests before implementation
 
-**Quick Start for Contributors:**
+### Development Workflow
+
 ```bash
-# 1. Fork and clone
+# Fork and clone
 git clone https://github.com/your-username/Claude-code-test.git
 
-# 2. Create feature branch
-git checkout -b claude/your-feature-name-sessionid
+# Create feature branch
+git checkout -b claude/your-feature-sessionid
 
-# 3. Install dependencies
+# Install dependencies
 dotnet restore
 
-# 4. Run tests
+# Run tests
 dotnet test
 
-# 5. Make changes following TDD
-# 6. Run pre-commit checklist
-dotnet clean && dotnet restore && dotnet build --no-incremental && dotnet test
+# Make changes following TDD
+# Run pre-commit checks
+dotnet build && dotnet test
 
-# 7. Commit and push
-git add .
-git commit -m "feat: your feature description"
-git push -u origin claude/your-feature-name-sessionid
+# Commit and push
+git commit -m "feat: your feature"
+git push -u origin claude/your-feature-sessionid
 ```
 
-See **[CLAUDE.md](CLAUDE.md)** for detailed workflows, testing requirements, and quality standards.
+**Code Quality Requirements:**
+- ✅ All tests must pass (1,688 tests)
+- ✅ Maintain 67% code coverage minimum
+- ✅ Follow existing patterns (AAA test pattern, Moq, FluentAssertions)
+- ✅ Add XML documentation for public APIs
+- ✅ Update relevant documentation
+
+---
+
+## Known Issues & Limitations
+
+### Critical Issues (See CODE_REVIEW_REPORT.md)
+- 🔴 3 critical security vulnerabilities
+- 🟠 5 high-priority issues
+- 🟡 4 medium-priority issues
+
+### Test Issues
+- ⚠️ 7 approval workflow integration tests hanging
+- ⚠️ Domain model coverage at 34.92% (target: 60%+)
+
+### Concurrency Issues
+- ⚠️ 14 async/await anti-patterns found
+- ⚠️ 4 blocking call locations (.Result, .Wait(), .GetAwaiter().GetResult())
+- ⚠️ 3 fire-and-forget async patterns
+- ⚠️ 5 thread-safety concerns
+
+### Design Limitations
+- In-memory repositories (for demo/testing only)
+- Single-instance SignalR (requires sticky sessions for multi-instance)
+- No load testing suite yet
+- No chaos engineering tests
+
+---
+
+## Roadmap
+
+### Immediate (Before Production)
+- [ ] Fix 3 critical security issues
+- [ ] Fix 5 high-priority issues
+- [ ] Resolve test hanging issues
+- [ ] Security audit sign-off
+
+### Short-Term (Next Sprint)
+- [ ] Increase domain model coverage to 60%+
+- [ ] Add load/stress testing suite
+- [ ] Implement proper user management (database-backed)
+
+### Medium-Term
+- [ ] Chaos engineering test suite
+- [ ] Performance benchmarking baseline
+- [ ] Event sourcing for audit trail
+- [ ] Multi-region support
+
+### Long-Term
+- [ ] GraphQL API
+- [ ] Advanced deployment strategies (traffic mirroring, shadow deployments)
+- [ ] Machine learning for anomaly detection
+- [ ] Self-healing capabilities
+
+See [TASK_LIST.md](TASK_LIST.md) for detailed roadmap.
 
 ---
 
@@ -865,18 +833,9 @@ Copyright (c) 2025 scrawlsbenches
 ## Repository Information
 
 **Repository:** [scrawlsbenches/Claude-code-test](https://github.com/scrawlsbenches/Claude-code-test)
-**Status:** ✅ Production Ready (97% Specification Compliance)
-**Version:** 1.0.0
-**Last Updated:** November 21, 2025
-
-**Sprint Status:**
-- ✅ **Sprint 1 Complete** - JWT Auth, HTTPS, Rate Limiting, Approval Workflow
-- 🔄 **Sprint 2 In Progress** - SignalR, Secret Rotation, Knowledge Graph, Test Coverage
-
-**Next Steps:**
-- See **[TASK_LIST.md](TASK_LIST.md)** for complete roadmap (20+ tasks)
-- See **[ENHANCEMENTS.md](ENHANCEMENTS.md)** for Sprint 2 details
-- See **[PROJECT_STATUS_REPORT.md](PROJECT_STATUS_REPORT.md)** for production readiness
+**Status:** ⚠️ Near Production (critical fixes required)
+**Version:** 1.0.0-rc
+**Last Reviewed:** November 24, 2025
 
 ---
 
@@ -884,11 +843,26 @@ Copyright (c) 2025 scrawlsbenches
 
 For issues, questions, or contributions:
 
-1. Check [CLAUDE.md](CLAUDE.md) for development guidelines
-2. Review [TESTING.md](TESTING.MD) for testing procedures
-3. See [SPEC_COMPLIANCE_REVIEW.md](SPEC_COMPLIANCE_REVIEW.md) for requirements
-4. Create GitHub issue with details
+1. **Read [CODE_REVIEW_REPORT.md](CODE_REVIEW_REPORT.md)** - Current issues & fixes
+2. **Check [CLAUDE.md](CLAUDE.md)** - Development guidelines
+3. **Review [TESTING.md](TESTING.md)** - Testing procedures
+4. **Create GitHub issue** with details
 
 ---
 
-**Built with ❤️ using .NET 8, Claude Code, and clean architecture principles.**
+## Acknowledgments
+
+**Built with:**
+- ✅ .NET 8 and C# 12
+- ✅ Clean architecture principles
+- ✅ Test-driven development (TDD)
+- ✅ Comprehensive code review (Nov 24, 2025)
+
+**Reviewed by:** Claude Code (Automated Comprehensive Review)
+**Review Date:** November 24, 2025
+**Issues Found:** 26 (3 critical, 5 high, 4 medium, 14 concurrency)
+**Recommendations:** See CODE_REVIEW_REPORT.md
+
+---
+
+**This README reflects the true state of the codebase as of November 24, 2025. Production deployment requires addressing critical issues identified in the code review.**

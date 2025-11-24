@@ -244,18 +244,13 @@ public class LoadBalancedRoutingStrategyTests
 
 ### Persistence Layer Tests
 
-**File:** `tests/HotSwap.Distributed.Tests/Infrastructure/RedisMessagePersistenceTests.cs`
 
 ```csharp
-public class RedisMessagePersistenceTests : IAsyncLifetime
 {
-    private readonly RedisMessagePersistence _persistence;
     private readonly IConnectionMultiplexer _redis;
 
-    public RedisMessagePersistenceTests()
     {
         _redis = ConnectionMultiplexer.Connect("localhost:6379");
-        _persistence = new RedisMessagePersistence(_redis);
     }
 
     [Fact]
@@ -700,7 +695,6 @@ tests/
 │   │   ├── PriorityRoutingStrategyTests.cs  # 12 tests
 │   │   └── ContentBasedRoutingStrategyTests.cs  # 15 tests
 │   ├── Infrastructure/
-│   │   ├── RedisMessagePersistenceTests.cs  # 15 tests
 │   │   ├── SchemaValidatorTests.cs          # 20 tests
 │   │   └── DeliveryServiceTests.cs          # 25 tests
 │   └── Orchestrator/

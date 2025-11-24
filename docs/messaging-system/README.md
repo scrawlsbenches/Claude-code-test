@@ -205,7 +205,6 @@ The messaging system leverages the existing HotSwap platform:
 │              Infrastructure Layer (Existing)                 │
 │  - TelemetryProvider (message tracing)                       │
 │  - MetricsProvider (throughput, lag)                         │
-│  - RedisDistributedLock (exactly-once semantics)             │
 │  - HealthMonitoring (queue depth, consumer lag)              │
 └──────────────────────────────────────────────────────────────┘
 ```

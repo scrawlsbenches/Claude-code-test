@@ -5,16 +5,16 @@ using HotSwap.Distributed.Api.Services;
 using HotSwap.Distributed.Domain.Models;
 using HotSwap.Distributed.Infrastructure.Authentication;
 using HotSwap.Distributed.Infrastructure.Coordination;
+using HotSwap.Distributed.Infrastructure.Data;
 using HotSwap.Distributed.Infrastructure.Deployments;
 using HotSwap.Distributed.Infrastructure.Interfaces;
 using HotSwap.Distributed.Infrastructure.Metrics;
 using HotSwap.Distributed.Infrastructure.Notifications;
+using HotSwap.Distributed.Infrastructure.Repositories;
 using HotSwap.Distributed.Infrastructure.Security;
+using HotSwap.Distributed.Infrastructure.Services;
 using HotSwap.Distributed.Infrastructure.Telemetry;
 using HotSwap.Distributed.Infrastructure.Tenants;
-using HotSwap.Distributed.Infrastructure.Data;
-using HotSwap.Distributed.Infrastructure.Repositories;
-using HotSwap.Distributed.Infrastructure.Services;
 using HotSwap.Distributed.Orchestrator.Core;
 using HotSwap.Distributed.Orchestrator.Interfaces;
 using HotSwap.Distributed.Orchestrator.Services;
@@ -165,7 +165,7 @@ var jwtConfig = new JwtConfiguration
 {
     SecretKey = jwtSecretKey,
     Issuer = builder.Configuration["Jwt:Issuer"] ?? "DistributedKernelOrchestrator",
-    Audience = builder.Configuration["Jwt:Issuer"] ?? "DistributedKernelApi",
+    Audience = builder.Configuration["Jwt:Audience"] ?? "DistributedKernelApi",
     ExpirationMinutes = builder.Configuration.GetValue<int>("Jwt:ExpirationMinutes", 60)
 };
 builder.Services.AddSingleton(jwtConfig);
