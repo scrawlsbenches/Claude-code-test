@@ -31,6 +31,13 @@ STATUS_COMPLETED="✅"
 STATUS_BLOCKED="⚠️"
 STATUS_REJECTED="❌"
 
+# Text-based status patterns (for tasks without emojis)
+STATUS_PENDING_TEXT="Not Implemented|Not Created|Pending"
+STATUS_COMPLETED_TEXT="Completed|Complete|COMPLETED"
+STATUS_IN_PROGRESS_TEXT="In Progress|In-Progress|WIP"
+STATUS_BLOCKED_TEXT="Blocked|On Hold"
+STATUS_REJECTED_TEXT="Rejected|Won't Do|Wont Do|Cancelled"
+
 # Usage information
 usage() {
     cat << EOF
@@ -232,29 +239,29 @@ list_tasks() {
     case $filter in
         all)
             print_header "All Tasks"
-            grep -E "^### \d+\." "$TASK_PATH" | while read -r line; do
+            grep -E "^### [0-9]+\." "$TASK_PATH" | while read -r line; do
                 echo "$line"
             done
             ;;
         pending|⏳)
             print_header "Pending Tasks"
-            show_tasks_by_status "$STATUS_PENDING"
+            show_tasks_by_status "$STATUS_PENDING" "$STATUS_PENDING_TEXT"
             ;;
         progress|in-progress|🔄)
             print_header "Tasks In Progress"
-            show_tasks_by_status "$STATUS_IN_PROGRESS"
+            show_tasks_by_status "$STATUS_IN_PROGRESS" "$STATUS_IN_PROGRESS_TEXT"
             ;;
         completed|done|✅)
             print_header "Completed Tasks"
-            show_tasks_by_status "$STATUS_COMPLETED"
+            show_tasks_by_status "$STATUS_COMPLETED" "$STATUS_COMPLETED_TEXT"
             ;;
         blocked|⚠️)
             print_header "Blocked Tasks"
-            show_tasks_by_status "$STATUS_BLOCKED"
+            show_tasks_by_status "$STATUS_BLOCKED" "$STATUS_BLOCKED_TEXT"
             ;;
         rejected|wont-do|wontdo|❌)
             print_header "Rejected Tasks"
-            show_tasks_by_status "$STATUS_REJECTED"
+            show_tasks_by_status "$STATUS_REJECTED" "$STATUS_REJECTED_TEXT"
             ;;
         critical|🔴)
             print_header "Critical Priority Tasks"
@@ -280,9 +287,10 @@ list_tasks() {
     esac
 }
 
-# Show tasks by status
+# Show tasks by status (supports both emoji and text patterns)
 show_tasks_by_status() {
     local status_emoji="$1"
+    local status_text="${2:-}"  # Optional text pattern
     local count=0
 
     # Read task file and extract tasks with matching status
@@ -295,10 +303,20 @@ show_tasks_by_status() {
             task_num="${BASH_REMATCH[1]}"
             task_name="${BASH_REMATCH[2]}"
             in_task=1
-        elif [[ $in_task -eq 1 && $line =~ ^\*\*Status:\*\*.*${status_emoji} ]]; then
-            echo "  #${task_num}: ${task_name}"
-            echo "    ${line}"
-            count=$((count + 1))
+        elif [[ $in_task -eq 1 && $line =~ ^\*\*Status:\*\* ]]; then
+            # Check for emoji match OR text pattern match
+            local matches=0
+            if [[ -n "$status_emoji" && $line =~ $status_emoji ]]; then
+                matches=1
+            elif [[ -n "$status_text" && $line =~ ($status_text) ]]; then
+                matches=1
+            fi
+
+            if [[ $matches -eq 1 ]]; then
+                echo "  #${task_num}: ${task_name}"
+                echo "    ${line}"
+                count=$((count + 1))
+            fi
             in_task=0
         elif [[ $line =~ ^### ]]; then
             in_task=0
@@ -625,16 +643,53 @@ show_stats() {
     print_header "Task Statistics"
 
     local total=$(grep -c "^### [0-9]\+\." "$TASK_PATH" 2>/dev/null || echo "0")
-    local pending=$(grep -c "$STATUS_PENDING" "$TASK_PATH" 2>/dev/null || echo "0")
-    local in_progress=$(grep -c "$STATUS_IN_PROGRESS" "$TASK_PATH" 2>/dev/null || echo "0")
-    local completed=$(grep -c "$STATUS_COMPLETED" "$TASK_PATH" 2>/dev/null || echo "0")
-    local blocked=$(grep -c "$STATUS_BLOCKED" "$TASK_PATH" 2>/dev/null || echo "0")
-    local rejected=$(grep -c "$STATUS_REJECTED" "$TASK_PATH" 2>/dev/null || echo "0")
 
-    local critical=$(grep -c "$PRIORITY_CRITICAL" "$TASK_PATH" 2>/dev/null || echo "0")
-    local high=$(grep -c "$PRIORITY_HIGH" "$TASK_PATH" 2>/dev/null || echo "0")
-    local medium=$(grep -c "$PRIORITY_MEDIUM" "$TASK_PATH" 2>/dev/null || echo "0")
-    local low=$(grep -c "$PRIORITY_LOW" "$TASK_PATH" 2>/dev/null || echo "0")
+    # Count statuses only for main tasks (### N.) - excludes sub-tasks (#### N.N)
+    local pending=0
+    local in_progress=0
+    local completed=0
+    local blocked=0
+    local rejected=0
+    local critical=0
+    local high=0
+    local medium=0
+    local low=0
+
+    local in_main_task=0
+
+    while IFS= read -r line; do
+        # Detect main task header (### N. not #### N.N)
+        if [[ $line =~ ^###\ [0-9]+\. ]]; then
+            in_main_task=1
+        elif [[ $line =~ ^#### ]]; then
+            in_main_task=0  # Sub-task, skip its status
+        elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Status:\*\* ]]; then
+            # Count status for main task only
+            if [[ $line =~ ($STATUS_PENDING|Not\ Implemented|Not\ Created|Pending) ]]; then
+                pending=$((pending + 1))
+            elif [[ $line =~ ($STATUS_IN_PROGRESS|In\ Progress) ]]; then
+                in_progress=$((in_progress + 1))
+            elif [[ $line =~ ($STATUS_COMPLETED|Completed|Complete|COMPLETED) ]]; then
+                completed=$((completed + 1))
+            elif [[ $line =~ ($STATUS_BLOCKED|Blocked) ]]; then
+                blocked=$((blocked + 1))
+            elif [[ $line =~ ($STATUS_REJECTED|Rejected) ]]; then
+                rejected=$((rejected + 1))
+            fi
+            in_main_task=0
+        elif [[ $in_main_task -eq 1 && $line =~ ^\*\*Priority:\*\* ]]; then
+            # Count priority for main task
+            if [[ $line =~ $PRIORITY_CRITICAL ]]; then
+                critical=$((critical + 1))
+            elif [[ $line =~ $PRIORITY_HIGH ]]; then
+                high=$((high + 1))
+            elif [[ $line =~ $PRIORITY_MEDIUM ]]; then
+                medium=$((medium + 1))
+            elif [[ $line =~ $PRIORITY_LOW ]]; then
+                low=$((low + 1))
+            fi
+        fi
+    done < "$TASK_PATH"
 
     echo ""
     echo "Total Tasks: $total"
